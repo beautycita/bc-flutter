@@ -236,12 +236,12 @@ class _BusinessCalendarScreenState
             loading: () => const SizedBox(
               height: 40,
               child: Padding(
-                padding: EdgeInsets.all(8),
+                padding: EdgeInsets.all(AppConstants.paddingSM),
                 child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
               ),
             ),
             error: (e, _) => Padding(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(AppConstants.paddingSM),
               child: Center(child: Text('Error al cargar staff', style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 13))),
             ),
           ),

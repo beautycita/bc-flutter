@@ -11,6 +11,7 @@ import 'package:flutter_stripe/flutter_stripe.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 import '../../widgets/admin/admin_widgets.dart';
+import '../../widgets/empty_state.dart';
 
 // ---------------------------------------------------------------------------
 // Provider
@@ -114,7 +115,7 @@ class _BusinessGiftCardsScreenState
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('Error: $e')),
       data: (biz) {
-        if (biz == null) return const Center(child: Text('Sin negocio'));
+        if (biz == null) return const EmptyState(icon: Icons.storefront_outlined, message: 'Sin negocio');
         final bizId = biz['id'] as String;
         final cardsAsync = ref.watch(giftCardsProvider(bizId));
 
@@ -208,27 +209,11 @@ class _BusinessGiftCardsScreenState
 
                   Expanded(
                     child: filtered.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.card_giftcard_outlined,
-                                    size: 48,
-                                    color: colors.onSurface
-                                        .withValues(alpha: 0.2)),
-                                const SizedBox(height: 12),
-                                Text(
-                                  allCards.isEmpty
-                                      ? 'Todavia no has creado tarjetas de regalo'
-                                      : 'Sin resultados',
-                                  textAlign: TextAlign.center,
-                                  style: GoogleFonts.nunito(
-                                      fontSize: 14,
-                                      color: colors.onSurface
-                                          .withValues(alpha: 0.5)),
-                                ),
-                              ],
-                            ),
+                        ? EmptyState(
+                            icon: Icons.card_giftcard_outlined,
+                            message: allCards.isEmpty
+                                ? 'Todavia no has creado tarjetas de regalo'
+                                : 'Sin resultados',
                           )
                         : ListView.builder(
                             padding:

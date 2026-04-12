@@ -6,6 +6,7 @@ import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/providers/favorites_provider.dart';
 import 'package:beautycita/services/supabase_client.dart';
 import 'package:beautycita/models/provider.dart' as models;
+import '../widgets/empty_state.dart';
 
 /// Provider that fetches full business data for the user's favorited salons.
 final _favoriteSalonsProvider =
@@ -80,35 +81,9 @@ class FavoritesScreen extends ConsumerWidget {
         ),
         data: (salons) {
           if (salons.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(AppConstants.paddingXL),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.favorite_border_rounded,
-                      size: 64,
-                      color: colorScheme.primary.withValues(alpha: 0.3),
-                    ),
-                    const SizedBox(height: AppConstants.paddingLG),
-                    Text(
-                      'Sin favoritos',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: AppConstants.paddingSM),
-                    Text(
-                      'Guarda tus salones preferidos tocando el corazon.',
-                      style: textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurface.withValues(alpha: 0.5),
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
+            return const EmptyState(
+              icon: Icons.favorite_outline,
+              message: 'Sin favoritos\nGuarda tus salones preferidos tocando el corazon.',
             );
           }
 

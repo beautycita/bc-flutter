@@ -7,6 +7,7 @@ import '../../config/constants.dart';
 import '../../config/theme_extension.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
+import '../../widgets/empty_state.dart';
 import '../../widgets/outreach_contact_sheet.dart';
 
 /// Provider to fetch discovered salons with WA-verified status for messaging.
@@ -222,12 +223,7 @@ class _MessageSalonsScreenState extends ConsumerState<MessageSalonsScreen> {
             child: salonsAsync.when(
               data: (salons) {
                 if (salons.isEmpty) {
-                  return Center(
-                    child: Text(
-                      'No hay salones con estos filtros',
-                      style: GoogleFonts.nunito(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4), fontSize: 14),
-                    ),
-                  );
+                  return const EmptyState(icon: Icons.storefront_outlined, message: 'No hay salones con estos filtros');
                 }
                 return ListView.builder(
                   itemCount: salons.length,
@@ -633,7 +629,7 @@ class _MessageSalonsScreenState extends ConsumerState<MessageSalonsScreen> {
                   child: logAsync.when(
                     data: (logs) {
                       if (logs.isEmpty) {
-                        return Center(child: Text('Sin historial', style: GoogleFonts.nunito(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4))));
+                        return const EmptyState(icon: Icons.history_outlined, message: 'Sin historial');
                       }
                       return ListView.builder(
                         controller: scrollCtrl,

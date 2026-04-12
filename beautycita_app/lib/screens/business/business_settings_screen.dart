@@ -7,6 +7,7 @@ import '../../providers/business_provider.dart';
 import '../../providers/feature_toggle_provider.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
+import '../../widgets/empty_state.dart';
 import 'business_closures_screen.dart';
 import 'business_shell_screen.dart';
 
@@ -249,7 +250,7 @@ class _BusinessSettingsScreenState
     return bizAsync.when(
       data: (biz) {
         if (biz == null) {
-          return const Center(child: Text('Sin negocio'));
+          return const EmptyState(icon: Icons.storefront_outlined, message: 'Sin negocio');
         }
 
         _initFromBiz(biz);

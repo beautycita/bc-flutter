@@ -505,7 +505,7 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
               return InkWell(
                 onTap: () => setInner(() => picked = s),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                  padding: const EdgeInsets.symmetric(vertical: AppConstants.paddingSM, horizontal: 4),
                   child: Row(
                     children: [
                       Container(
@@ -1507,11 +1507,11 @@ class _FilterChipsRow extends StatelessWidget {
             // RP user filter chips
             ...rpUsersAsync.when(
               loading: () => [const Padding(
-                padding: EdgeInsets.all(8),
+                padding: EdgeInsets.all(AppConstants.paddingSM),
                 child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
               )],
               error: (e, _) => [Padding(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(AppConstants.paddingSM),
                 child: Text('Error', style: TextStyle(color: Colors.red.shade400, fontSize: 12)),
               )],
               data: (rpUsers) => rpUsers.map((rp) {
@@ -2538,7 +2538,7 @@ class _RpPickerDialogState extends State<_RpPickerDialog> {
                 }),
                 child: Padding(
                   padding:
-                      const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                      const EdgeInsets.symmetric(vertical: AppConstants.paddingSM, horizontal: 4),
                   child: Row(
                     children: [
                       CircleAvatar(

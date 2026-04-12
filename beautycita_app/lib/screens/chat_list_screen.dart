@@ -8,6 +8,7 @@ import '../config/theme_extension.dart';
 import '../models/chat_thread.dart';
 import '../providers/chat_provider.dart';
 import '../providers/feature_toggle_provider.dart';
+import '../widgets/empty_state.dart';
 
 class ChatListScreen extends ConsumerStatefulWidget {
   const ChatListScreen({super.key});
@@ -63,8 +64,11 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
       body: threadsAsync.when(
         data: (threads) {
           if (threads.isEmpty) {
-            return _EmptyState(
-              onTapAphrodite: () => _openAphroditeChat(),
+            return EmptyState(
+              icon: Icons.chat_outlined,
+              message: 'No tienes conversaciones',
+              actionLabel: 'Habla con Afrodita',
+              onAction: () => _openAphroditeChat(),
             );
           }
           return ListView.separated(
@@ -542,97 +546,6 @@ class _ThreadRow extends StatelessWidget {
                   ),
                 ],
               ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Empty state when no conversations exist.
-class _EmptyState extends StatelessWidget {
-  final VoidCallback onTapAphrodite;
-
-  const _EmptyState({required this.onTapAphrodite});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 96,
-              height: 96,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: Theme.of(context).extension<BCThemeExtension>()!.accentGradient,
-                boxShadow: [
-                  BoxShadow(
-                    color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.3),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: const Center(
-                child: Text('🏛️', style: TextStyle(fontSize: 48)),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'No tienes conversaciones',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Tus mensajes con salones aparecerán aquí',
-              style: GoogleFonts.nunito(
-                fontSize: 14,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Conoce a Afrodita',
-              style: GoogleFonts.poppins(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Tu asesora de belleza con actitud divina.\nPregúntale lo que quieras.',
-              style: GoogleFonts.nunito(
-                fontSize: 16,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                height: 1.5,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: onTapAphrodite,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.secondary,
-                foregroundColor: Theme.of(context).colorScheme.onSurface,
-              ),
-              child: Text(
-                'Habla con Afrodita',
-                style: GoogleFonts.nunito(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 16,
-                ),
-              ),
             ),
           ],
         ),

@@ -144,7 +144,7 @@ class _BookingsScreenState extends ConsumerState<BookingsScreen> {
                           )
                         : null,
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: AppConstants.paddingMD, vertical: 12),
                   ),
                 ),
               ),
@@ -316,7 +316,7 @@ class _BookingsScreenState extends ConsumerState<BookingsScreen> {
                 ),
                 Padding(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      const EdgeInsets.symmetric(horizontal: AppConstants.paddingMD, vertical: AppConstants.paddingSM),
                   child: Row(
                     children: [
                       Text(title,
@@ -345,7 +345,7 @@ class _BookingsScreenState extends ConsumerState<BookingsScreen> {
                                       .withValues(alpha: 0.5))))
                       : ListView.separated(
                           controller: scrollCtrl,
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(AppConstants.paddingMD),
                           itemCount: bookings.length,
                           separatorBuilder: (_, _) =>
                               const SizedBox(height: 8),

@@ -7,6 +7,7 @@ import '../../config/theme_extension.dart';
 import '../../providers/business_provider.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
+import '../../widgets/empty_state.dart';
 
 // ---------------------------------------------------------------------------
 // Providers
@@ -95,7 +96,7 @@ class _BusinessMarketingScreenState extends ConsumerState<BusinessMarketingScree
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('Error: $e')),
       data: (biz) {
-        if (biz == null) return const Center(child: Text('Sin negocio'));
+        if (biz == null) return const EmptyState(icon: Icons.storefront_outlined, message: 'Sin negocio');
         final bizId = biz['id'] as String;
         final messagesAsync = ref.watch(_automatedMessagesProvider(bizId));
         final logAsync = ref.watch(_messageLogProvider(bizId));

@@ -10,6 +10,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../config/constants.dart';
 import '../../providers/business_provider.dart';
 import '../../services/toast_service.dart';
+import '../../widgets/empty_state.dart';
 
 class BusinessQrScreen extends ConsumerWidget {
   const BusinessQrScreen({super.key});
@@ -22,7 +23,7 @@ class BusinessQrScreen extends ConsumerWidget {
     return bizAsync.when(
       data: (biz) {
         if (biz == null) {
-          return const Center(child: Text('Sin negocio'));
+          return const EmptyState(icon: Icons.storefront_outlined, message: 'Sin negocio');
         }
 
         final bizId = biz['id'] as String;

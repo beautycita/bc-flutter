@@ -883,7 +883,7 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
                       ),
                     ],
                   ),
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(AppConstants.paddingMD),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1182,7 +1182,7 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
           ),
         ],
       ),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppConstants.paddingMD),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

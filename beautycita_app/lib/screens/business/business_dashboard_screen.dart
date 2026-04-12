@@ -123,7 +123,7 @@ class BusinessDashboardScreen extends ConsumerWidget {
               child: Center(child: CircularProgressIndicator()),
             ),
             error: (e, _) => Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(AppConstants.paddingMD),
               child: Text('No se pudieron cargar las citas',
                   style: TextStyle(color: Theme.of(context).colorScheme.error)),
             ),
@@ -503,7 +503,7 @@ class _DebtCard extends ConsumerWidget {
             side: BorderSide(color: errorColor.withValues(alpha: 0.3)),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AppConstants.paddingMD),
             child: Row(
               children: [
                 Container(
@@ -542,11 +542,11 @@ class _DebtCard extends ConsumerWidget {
         );
       },
       loading: () => const Padding(
-        padding: EdgeInsets.all(16),
+        padding: EdgeInsets.all(AppConstants.paddingMD),
         child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
       ),
       error: (e, _) => Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppConstants.paddingMD),
         child: Center(child: Text('Error al cargar', style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 13))),
       ),
     );
@@ -695,7 +695,7 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
       return Card(
         elevation: 0,
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(AppConstants.paddingLG),
           child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: colors.primary)),
         ),
       );
@@ -724,7 +724,7 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
         side: BorderSide(color: colors.onSurface.withValues(alpha: 0.08)),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppConstants.paddingMD),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -732,7 +732,7 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(AppConstants.paddingSM),
                   decoration: BoxDecoration(
                     color: const Color(0xFF059669).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
@@ -1273,7 +1273,7 @@ class _CfdiSectionState extends ConsumerState<_CfdiSection> {
       return Card(
         elevation: 0,
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(AppConstants.paddingLG),
           child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: colors.primary)),
         ),
       );
@@ -1312,14 +1312,14 @@ class _CfdiSectionState extends ConsumerState<_CfdiSection> {
         side: BorderSide(color: colors.onSurface.withValues(alpha: 0.08)),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppConstants.paddingMD),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(AppConstants.paddingSM),
                   decoration: BoxDecoration(
                     color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
@@ -1525,7 +1525,7 @@ class _BankingBanner extends ConsumerWidget {
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(AppConstants.paddingSM),
                   decoration: BoxDecoration(
                     color: warnColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(AppConstants.radiusSM),

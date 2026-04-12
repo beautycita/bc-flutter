@@ -13,6 +13,7 @@ import 'package:beautycita/providers/booking_flow_provider.dart'
     show bookingFlowProvider, bookingRepositoryProvider;
 import 'package:beautycita/services/supabase_client.dart';
 import 'package:go_router/go_router.dart';
+import '../widgets/empty_state.dart';
 import 'package:beautycita/services/toast_service.dart';
 
 /// Disputes for the current user, keyed by appointment_id.
@@ -1253,30 +1254,9 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
   }
 
   Widget _buildEmptyState(TextTheme textTheme) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppConstants.paddingXL),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.calendar_today_outlined,
-              size: AppConstants.iconSizeXXL,
-              color: colorScheme.onSurface.withValues(alpha: 0.2),
-            ),
-            const SizedBox(height: AppConstants.paddingMD),
-            Text(
-              _emptyMessage(),
-              style: textTheme.bodyLarge?.copyWith(
-                color: colorScheme.onSurface.withValues(alpha: 0.5),
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
+    return EmptyState(
+      icon: Icons.calendar_today_outlined,
+      message: _emptyMessage(),
     );
   }
 
