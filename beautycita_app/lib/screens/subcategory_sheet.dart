@@ -146,11 +146,12 @@ class _SubcategorySheetState extends State<SubcategorySheet>
                       duration: 350.ms,
                       curve: Curves.easeOutCubic),
 
-              // ── Spacer pushes chips into bottom 55% ──
-              SizedBox(height: mq.size.height * 0.15),
+              // ── Spacer: push chips to bottom (thumb-reachable) ──
+              const Spacer(),
 
-              // ── Bottom zone: chips ──
-              Expanded(
+              // ── Bottom zone: chips (thumb-reachable, bottom 55%) ──
+              SizedBox(
+                height: mq.size.height * 0.55,
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 300),
                   switchInCurve: Curves.easeOutCubic,
@@ -281,32 +282,22 @@ class _ItemChips extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
       children: [
-        // Subtitle
-        Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: Text(
-            'Elige el tipo exacto',
-            style: GoogleFonts.nunito(
-              fontSize: 14,
-              color: Colors.white.withValues(alpha: 0.5),
-            ),
-          ),
-        ),
-        ...items.asMap().entries.map((entry) {
-          final index = entry.key;
-          final item = entry.value;
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: _ItemTile(
-              item: item,
-              categoryColor: categoryColor,
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: items.asMap().entries.map((entry) {
+            final index = entry.key;
+            final item = entry.value;
+            return _GlassPill(
+              label: item.nameEs,
+              hasChevron: false,
               onTap: () {
                 final serviceType = item.serviceType;
                 if (serviceType.isEmpty) {
                   ToastService.showWarning('Servicio no disponible');
                   return;
                 }
-                Navigator.of(context).pop(); // pop this full-screen page
+                Navigator.of(context).pop();
                 context.push('/book');
                 ref
                     .read(bookingFlowProvider.notifier)
@@ -317,22 +308,29 @@ class _ItemChips extends ConsumerWidget {
                       category: item.subcategoryId,
                     );
               },
-            ),
-          )
-              .animate()
-              .fadeIn(
-                duration: 300.ms,
-                delay: (60 * index).ms,
-                curve: Curves.easeOut,
-              )
-              .slideY(
-                begin: 0.3,
-                end: 0,
-                duration: 300.ms,
-                delay: (60 * index).ms,
-                curve: Curves.easeOutCubic,
-              );
-        }),
+            )
+                .animate()
+                .fadeIn(
+                  duration: 350.ms,
+                  delay: (65 * index).ms,
+                  curve: Curves.easeOut,
+                )
+                .slideY(
+                  begin: 0.4,
+                  end: 0,
+                  duration: 400.ms,
+                  delay: (65 * index).ms,
+                  curve: Curves.easeOutCubic,
+                )
+                .scale(
+                  begin: const Offset(0.92, 0.92),
+                  end: const Offset(1, 1),
+                  duration: 350.ms,
+                  delay: (65 * index).ms,
+                  curve: Curves.easeOutCubic,
+                );
+          }).toList(),
+        ),
       ],
     );
   }

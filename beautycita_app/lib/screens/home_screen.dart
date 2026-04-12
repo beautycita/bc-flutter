@@ -720,8 +720,8 @@ class _HeroGradientBackgroundState extends State<_HeroGradientBackground> {
     _gyroSub = gyro.stream.listen((offset) {
       if (!mounted) return;
       setState(() {
-        _offsetX = offset.x * 20; // ±20px — intense parallax
-        _offsetY = offset.y * 20;
+        _offsetX = offset.x * 40; // ±40px — VR-ish extended look-around
+        _offsetY = offset.y * 40;
       });
     });
   }
@@ -769,7 +769,7 @@ class _HeroGradientBackgroundState extends State<_HeroGradientBackground> {
       child: Transform.translate(
         offset: Offset(_offsetX, _offsetY),
         child: Transform.scale(
-          scale: 1.2, // oversized so edges don't show during parallax
+          scale: 1.4, // oversized so edges don't show during VR parallax
           child: FittedBox(
             fit: BoxFit.cover,
             child: SizedBox(
@@ -1055,14 +1055,8 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // Base image with parallax — slightly oversized so it can shift
-            ParallaxWindow(
-              intensity: 8,
-              child: Transform.scale(
-                scale: 1.20,
-                child: Image.asset(imagePath, fit: BoxFit.cover),
-              ),
-            ),
+            // Base image — no parallax (BC: remove gyroscope effect)
+            Image.asset(imagePath, fit: BoxFit.cover),
             // Desaturate: pull most color out (brightness-aware wash)
             Container(color: Theme.of(context).brightness == Brightness.dark
                 ? Theme.of(context).colorScheme.scrim.withValues(alpha: 0.35)
@@ -1153,14 +1147,11 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
     final gifPath = _animatedGifs[category.id];
     final showAnimatedGif = _isAnimating && gifPath != null;
 
-    // Default icon-based card with subtle gyro parallax on icon
+    // Default icon-based card (no parallax — BC: remove gyroscope)
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        ParallaxTilt(
-          intensity: 6,
-          perspectiveScale: 0.015,
-          child: Container(
+        Container(
           width: 72,
           height: 72,
           decoration: BoxDecoration(
@@ -1197,7 +1188,6 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
                         size: 36,
                       ),
           ),
-        ),
         ),
         const SizedBox(height: 10),
         Padding(
