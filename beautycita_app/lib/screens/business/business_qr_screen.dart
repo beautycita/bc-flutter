@@ -75,7 +75,7 @@ class _QrContentState extends State<_QrContent> {
             key: _repaintKey,
             child: Card(
               elevation: 0,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
                 side: BorderSide(

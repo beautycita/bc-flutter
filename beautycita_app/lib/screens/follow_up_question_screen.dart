@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../config/constants.dart';
@@ -6,7 +7,7 @@ import '../models/follow_up_question.dart';
 import '../providers/booking_flow_provider.dart';
 import '../widgets/booking_flow_background.dart';
 import '../widgets/cinematic_question_text.dart';
-import '../widgets/parallax_tilt.dart';
+
 
 class FollowUpQuestionScreen extends ConsumerWidget {
   const FollowUpQuestionScreen({super.key});
@@ -132,11 +133,12 @@ class FollowUpQuestionScreen extends ConsumerWidget {
                 ),
               ),
 
-              // ── Spacer to push options into bottom zone ──
-              SizedBox(height: mq.size.height * 0.05),
+              // ── Spacer: push chips to bottom (thumb-reachable) ──
+              const Spacer(),
 
-              // ── Options/answers in bottom ~55% ──
-              Expanded(
+              // ── Bottom zone: chips (thumb-reachable, bottom 55%) ──
+              SizedBox(
+                height: mq.size.height * 0.55,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppConstants.paddingLG,
@@ -208,225 +210,146 @@ class _VisualCardsAnswer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final crossAxisCount = options.length <= 3 ? options.length : 2;
-
-    return GridView.builder(
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: crossAxisCount,
-        crossAxisSpacing: AppConstants.paddingMD,
-        mainAxisSpacing: AppConstants.paddingMD,
-        childAspectRatio: 1.0,
-      ),
-      itemCount: options.length,
-      itemBuilder: (context, index) {
-        final option = options[index];
-        return ParallaxTilt(
-          intensity: 8,
-          perspectiveScale: 0.02,
-          child: _OptionCard(
-            label: option.labelEs,
-            value: option.value,
-            imageUrl: option.imageUrl,
-            onTap: () => onSelect(option.value),
-          ),
-        );
-      },
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(4, 0, 4, 24),
+      children: [
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: options.asMap().entries.map((entry) {
+            final index = entry.key;
+            final option = entry.value;
+            return _OptionChip(
+              label: option.labelEs,
+              value: option.value,
+              onTap: () => onSelect(option.value),
+              delay: index * 65,
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 }
 
-class _OptionCard extends StatefulWidget {
+/// Glass pill chip — matches subcategory chip style from subcategory_sheet.dart.
+/// Used for follow-up question options (lash style, body zone, event type, etc.)
+class _OptionChip extends StatefulWidget {
   final String label;
   final String value;
-  final String? imageUrl;
   final VoidCallback onTap;
+  final int delay;
 
-  const _OptionCard({
+  const _OptionChip({
     required this.label,
     required this.value,
-    this.imageUrl,
     required this.onTap,
+    this.delay = 0,
   });
 
   @override
-  State<_OptionCard> createState() => _OptionCardState();
+  State<_OptionChip> createState() => _OptionChipState();
 }
 
-class _OptionCardState extends State<_OptionCard>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnim;
+class _OptionChipState extends State<_OptionChip> {
+  bool _isPressed = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 80),
-      reverseDuration: const Duration(milliseconds: 250),
-    );
-    _scaleAnim = Tween<double>(begin: 1.0, end: 0.94).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.easeIn,
-        reverseCurve: Curves.elasticOut,
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  // Map option values to meaningful icons
+  // Filled icons (not wireframe/outlined)
   static const _optionIcons = <String, IconData>{
     // Lash styles
-    'natural': Icons.spa_outlined,
+    'natural': Icons.spa,
     'dramatico': Icons.auto_awesome,
-    'extremo': Icons.whatshot_outlined,
-    'mega_volumen': Icons.layers_outlined,
-    'gatita': Icons.visibility_outlined,
-    'hollywood': Icons.star_outline_rounded,
+    'extremo': Icons.whatshot,
+    'mega_volumen': Icons.layers,
+    'gatita': Icons.visibility,
+    'hollywood': Icons.star_rounded,
     'muneca': Icons.face_retouching_natural,
     // Body zones
     'piernas_completas': Icons.accessibility_new_rounded,
     'media_pierna': Icons.airline_seat_legroom_normal_rounded,
-    'axilas': Icons.back_hand_outlined,
-    'bikini': Icons.water_drop_outlined,
-    'brazos': Icons.fitness_center_outlined,
-    'espalda': Icons.accessibility_outlined,
-    'facial': Icons.face_outlined,
-    'cuerpo_completo': Icons.person_outline_rounded,
+    'axilas': Icons.back_hand,
+    'bikini': Icons.water_drop,
+    'brazos': Icons.fitness_center,
+    'espalda': Icons.accessibility,
+    'facial': Icons.face,
+    'cuerpo_completo': Icons.person_rounded,
     // Correction types
-    'cubrir_canas': Icons.color_lens_outlined,
-    'corregir_tono': Icons.tune_outlined,
-    'cambio_radical': Icons.auto_fix_high_outlined,
+    'cubrir_canas': Icons.color_lens,
+    'corregir_tono': Icons.tune,
+    'cambio_radical': Icons.auto_fix_high,
     // Event types
-    'boda': Icons.favorite_outline_rounded,
-    'xv_anos': Icons.cake_outlined,
-    'graduacion': Icons.school_outlined,
-    'cena': Icons.restaurant_outlined,
-    'otro': Icons.celebration_outlined,
+    'boda': Icons.favorite_rounded,
+    'xv_anos': Icons.cake,
+    'graduacion': Icons.school,
+    'cena': Icons.restaurant,
+    'otro': Icons.celebration,
     // Editorial types
-    'moda': Icons.checkroom_outlined,
-    'beauty': Icons.face_retouching_natural_outlined,
-    'artistico': Icons.palette_outlined,
+    'moda': Icons.checkroom,
+    'beauty': Icons.face_retouching_natural,
+    'artistico': Icons.palette,
     // Location
-    'en_salon': Icons.storefront_outlined,
-    'a_domicilio': Icons.home_outlined,
+    'en_salon': Icons.storefront,
+    'a_domicilio': Icons.home,
     // Lip effects
-    'definido': Icons.edit_outlined,
-    'rubor': Icons.gradient_outlined,
+    'definido': Icons.edit,
+    'rubor': Icons.gradient,
     // Model count
-    '1': Icons.person_outline,
-    '2_3': Icons.group_outlined,
-    '4_plus': Icons.groups_outlined,
+    '1': Icons.person,
+    '2_3': Icons.group,
+    '4_plus': Icons.groups,
   };
 
   @override
   Widget build(BuildContext context) {
-    final palette = Theme.of(context).colorScheme;
-    final icon = _optionIcons[widget.value] ?? Icons.circle_outlined;
+    final icon = _optionIcons[widget.value];
 
     return GestureDetector(
-      onTapDown: (_) => _controller.forward(),
+      onTapDown: (_) => setState(() => _isPressed = true),
       onTapUp: (_) {
-        _controller.reverse();
+        setState(() => _isPressed = false);
+        HapticFeedback.lightImpact();
         widget.onTap();
       },
-      onTapCancel: () => _controller.reverse(),
-      child: ScaleTransition(
-        scale: _scaleAnim,
+      onTapCancel: () => setState(() => _isPressed = false),
+      child: AnimatedScale(
+        scale: _isPressed ? 0.95 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        curve: _isPressed ? Curves.easeIn : Curves.elasticOut,
         child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
+            color: _isPressed
+                ? Colors.white.withValues(alpha: 0.25)
+                : Colors.white.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.18),
-              width: 1.5,
-            ),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                palette.primary.withValues(alpha: 0.20),
-                palette.primary.withValues(alpha: 0.08),
-                Colors.white.withValues(alpha: 0.04),
-              ],
+              color: Colors.white.withValues(alpha: 0.2),
+              width: 1,
             ),
             boxShadow: [
               BoxShadow(
-                color: palette.primary.withValues(alpha: 0.10),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
-              ),
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.20),
+                color: Colors.black.withValues(alpha: 0.15),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
             ],
           ),
-          child: Stack(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              // Subtle radial glow behind icon
-              Positioned(
-                top: -10,
-                right: -10,
-                child: Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [
-                        palette.primary.withValues(alpha: 0.15),
-                        Colors.transparent,
-                      ],
-                    ),
+              if (icon != null) ...[
+                Icon(icon, size: 20, color: Colors.white.withValues(alpha: 0.85)),
+                const SizedBox(width: 10),
+              ],
+              Flexible(
+                child: Text(
+                  widget.label,
+                  style: GoogleFonts.poppins(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                    height: 1.2,
                   ),
-                ),
-              ),
-              // Content
-              Padding(
-                padding: const EdgeInsets.all(AppConstants.paddingMD),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Icon with glow
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white.withValues(alpha: 0.10),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.15),
-                        ),
-                      ),
-                      child: Icon(
-                        icon,
-                        size: 24,
-                        color: Colors.white.withValues(alpha: 0.9),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    // Label
-                    Text(
-                      widget.label,
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                        height: 1.25,
-                        letterSpacing: 0.2,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
                 ),
               ),
             ],

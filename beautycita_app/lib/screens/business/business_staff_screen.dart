@@ -1758,7 +1758,7 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
               child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: colors.surface,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: colors.onSurface.withValues(alpha: 0.08)),
                 ),
@@ -1766,7 +1766,7 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
                   data: uploadUrl,
                   version: QrVersions.auto,
                   size: 180,
-                  backgroundColor: Colors.white,
+                  backgroundColor: Colors.white, // QR must stay white for scannability
                   foregroundColor: const Color(0xFF1a1a2e),
                 ),
               ),
