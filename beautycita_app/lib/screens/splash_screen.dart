@@ -181,7 +181,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFE8E8E8),
+      backgroundColor: const Color(0xFFE6E6E6),
       body: Stack(
         fit: StackFit.expand,
         children: [
