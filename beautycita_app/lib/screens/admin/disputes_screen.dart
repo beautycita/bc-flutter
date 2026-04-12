@@ -599,6 +599,7 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text('Evidencia adjunta',
+                              maxLines: 1, overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.nunito(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,

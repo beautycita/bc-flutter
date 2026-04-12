@@ -653,7 +653,7 @@ class _RPCentroScreenState extends ConsumerState<RPCentroScreen> {
                 children: [
                   Expanded(
                     child: ChoiceChip(
-                      label: const Text('Sí, completado'),
+                      label: Text('Sí, completado', maxLines: 1, overflow: TextOverflow.ellipsis),
                       selected: outcome == 'completed',
                       onSelected: (_) => setDialogState(() {
                         outcome = 'completed';

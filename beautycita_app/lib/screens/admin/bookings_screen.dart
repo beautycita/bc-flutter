@@ -687,6 +687,7 @@ class _BookingTile extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text('Detalle de Cita',
+                        maxLines: 1, overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: colors.onSurface)),
                   ),
                   _statusBadge(context, status),
@@ -740,7 +741,7 @@ class _BookingTile extends StatelessWidget {
                             onConfirm: () => _refundBooking(ctx, bookingId),
                           ),
                           icon: const Icon(Icons.undo, size: 18),
-                          label: Text('Reembolsar', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)),
+                          label: Text('Reembolsar', maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: const Color(0xFFF59E0B),
                             side: const BorderSide(color: Color(0xFFF59E0B)),

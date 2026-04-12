@@ -168,7 +168,8 @@ class _QrContentState extends State<_QrContent> {
                 child: OutlinedButton.icon(
                   onPressed: _saving ? null : _saveQrImage,
                   icon: const Icon(Icons.download_rounded, size: 20),
-                  label: const Text('Descargar'),
+                  label: Text('Descargar', maxLines: 1, overflow: TextOverflow.visible, softWrap: false,
+                    style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600)),
                 ),
               ),
               const SizedBox(width: 12),
@@ -176,7 +177,8 @@ class _QrContentState extends State<_QrContent> {
                 child: ElevatedButton.icon(
                   onPressed: _saving ? null : _shareQr,
                   icon: const Icon(Icons.share_rounded, size: 20),
-                  label: const Text('Compartir'),
+                  label: Text('Compartir', maxLines: 1, overflow: TextOverflow.visible, softWrap: false,
+                    style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600)),
                 ),
               ),
             ],

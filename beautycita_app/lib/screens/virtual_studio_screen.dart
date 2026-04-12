@@ -848,7 +848,7 @@ class _ToolViewState extends ConsumerState<_ToolView>
                 child: OutlinedButton.icon(
                   onPressed: _shareResult,
                   icon: const Icon(Icons.share, size: 20),
-                  label: Text('Compartir', style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
+                  label: Text('Compartir', maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: primary,
                     side: BorderSide(color: primary),
@@ -869,7 +869,7 @@ class _ToolViewState extends ConsumerState<_ToolView>
                 child: OutlinedButton.icon(
                   onPressed: _reset,
                   icon: const Icon(Icons.refresh, size: 20),
-                  label: Text('Probar otro', style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
+                  label: Text('Probar otro', maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: onSurfaceLight,
                     side: BorderSide(color: onSurfaceLight.withValues(alpha: 0.4)),
@@ -1508,7 +1508,7 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
                 child: OutlinedButton.icon(
                   onPressed: _shareResult,
                   icon: const Icon(Icons.share, size: 20),
-                  label: Text('Compartir', style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
+                  label: Text('Compartir', maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: primary,
                     side: BorderSide(color: primary),

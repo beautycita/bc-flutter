@@ -177,6 +177,7 @@ class _ServiceRevenueSection extends ConsumerWidget {
             const SizedBox(width: 10),
             Expanded(
               child: Text('Ingresos por Servicio',
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700)),
             ),
             // Export

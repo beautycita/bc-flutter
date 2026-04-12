@@ -367,7 +367,7 @@ class _CashPaymentScreenState extends ConsumerState<CashPaymentScreen> {
                       ToastService.showInfo('Proximamente - generacion automatica');
                     },
                     icon: const Icon(Icons.refresh_rounded, size: 18),
-                    label: const Text('Nuevo codigo'),
+                    label: Text('Nuevo codigo', maxLines: 1, overflow: TextOverflow.ellipsis),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFCC0000),
                       foregroundColor: Theme.of(context).colorScheme.onPrimary,

@@ -1826,7 +1826,7 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
                       Share.share('Sube tus fotos antes/despues en: $uploadUrl\nPIN: $pin', subject: 'Portafolio BeautyCita');
                     },
                     icon: const Icon(Icons.share, size: 16),
-                    label: const Text('Compartir'),
+                    label: Text('Compartir', maxLines: 1, overflow: TextOverflow.ellipsis),
                   ),
                 ),
                 const SizedBox(width: 6),

@@ -819,6 +819,7 @@ class _VisitHistorySectionState extends State<_VisitHistorySection> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text('Historial de visitas',
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: colors.primary)),
                 ),
                 Icon(_expanded ? Icons.expand_less : Icons.expand_more,

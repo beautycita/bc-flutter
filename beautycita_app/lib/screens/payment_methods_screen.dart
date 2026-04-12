@@ -785,6 +785,7 @@ class _GiftCardRedemptionTileState
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text('Canjear tarjeta de regalo',
+                      maxLines: 1, overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.poppins(
                           fontSize: 14, fontWeight: FontWeight.w600)),
                 ),
