@@ -42,8 +42,6 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
   late AnimationController _snapBackController;
   late Animation<Offset> _snapBackAnimation;
 
-  // Shimmer-load controller for card appearance
-  late AnimationController _cardShimmerController;
 
   static const double _dismissThreshold = 0.25; // 25% of card width
   static const double _velocityThreshold = 800.0; // px/s flick speed
@@ -73,8 +71,6 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
             _isDismissing = false;
           });
           _dismissController.reset();
-          // Play shimmer on the new front card
-          _cardShimmerController.forward(from: 0);
         }
       });
 
@@ -111,19 +107,13 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
       curve: Curves.elasticOut,
     ));
 
-    // Card shimmer controller — plays once on each new card
-    _cardShimmerController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    );
-
+  
   }
 
   @override
   void dispose() {
     _dismissController.dispose();
     _snapBackController.dispose();
-    _cardShimmerController.dispose();
     super.dispose();
   }
 
@@ -447,28 +437,24 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
   Widget _buildCard(ResultCard result, bool isTopCard) {
     final ext = Theme.of(context).extension<BCThemeExtension>()!;
 
-    const pxOffset = Offset.zero;
-
-    Widget card = Container(
-      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: ext.cardBorderColor),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF000000).withValues(alpha: isTopCard ? 0.10 : 0.06),
-            blurRadius: isTopCard ? 28 : 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: Transform.translate(
-          offset: pxOffset,
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
+    return RepaintBoundary(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: ext.cardBorderColor),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF000000).withValues(alpha: isTopCard ? 0.08 : 0.04),
+              blurRadius: isTopCard ? 16 : 10,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -499,7 +485,7 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
                   const SizedBox(height: 10),
                   _buildBadges(result),
                 ],
-                const SizedBox(height: 14),
+                const Spacer(),
                 _buildActionButtons(result),
               ],
             ),
@@ -507,37 +493,6 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
         ),
       ),
     );
-
-    // Shimmer-load overlay for the top card after dismiss
-    if (isTopCard) {
-      card = AnimatedBuilder(
-        animation: _cardShimmerController,
-        builder: (context, _) {
-          final shimmerVal = _cardShimmerController.value;
-          if (shimmerVal <= 0 || shimmerVal >= 1.0) return card;
-
-          final shimmerOffset = -1.0 + 2.0 * shimmerVal;
-          return ShaderMask(
-            blendMode: BlendMode.srcATop,
-            shaderCallback: (bounds) {
-              return LinearGradient(
-                begin: Alignment(shimmerOffset - 0.6, -0.3),
-                end: Alignment(shimmerOffset + 0.6, 0.3),
-                colors: [
-                  const Color(0xFFFFFFFF).withValues(alpha: 0.0),
-                  const Color(0xFFFFFFFF).withValues(alpha: 0.25),
-                  const Color(0xFFFFFFFF).withValues(alpha: 0.0),
-                ],
-                stops: const [0.0, 0.5, 1.0],
-              ).createShader(bounds);
-            },
-            child: card,
-          );
-        },
-      );
-    }
-
-    return card;
   }
 
   Widget _buildBusinessHeader(ResultCard result) {

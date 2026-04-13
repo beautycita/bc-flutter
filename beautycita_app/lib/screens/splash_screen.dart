@@ -70,7 +70,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     try {
       // Check for cached video first
       final cacheDir = await getApplicationCacheDirectory();
-      final cachedFile = File('${cacheDir.path}/splash_reveal.mp4');
+      final cachedFile = File('${cacheDir.path}/splash_reveal_v2.mp4');
 
       VideoPlayerController controller;
 

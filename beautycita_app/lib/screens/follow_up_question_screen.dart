@@ -269,6 +269,7 @@ class _OptionCard extends StatefulWidget {
 
 class _OptionCardState extends State<_OptionCard> {
   bool _isPressed = false;
+  bool _isSelected = false;
 
   static const _optionIcons = <String, IconData>{
     // Lash styles
@@ -321,9 +322,12 @@ class _OptionCardState extends State<_OptionCard> {
     return GestureDetector(
       onTapDown: (_) => setState(() => _isPressed = true),
       onTapUp: (_) {
-        setState(() => _isPressed = false);
+        setState(() {
+          _isPressed = false;
+          _isSelected = true;
+        });
         HapticFeedback.lightImpact();
-        widget.onTap();
+        Future.delayed(const Duration(milliseconds: 150), widget.onTap);
       },
       onTapCancel: () => setState(() => _isPressed = false),
       child: AnimatedScale(
@@ -337,15 +341,20 @@ class _OptionCardState extends State<_OptionCard> {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: _isPressed
+              colors: _isSelected
                   ? [
-                      Colors.white.withValues(alpha: 0.28),
-                      Colors.white.withValues(alpha: 0.18),
+                      const Color(0xFF22C55E).withValues(alpha: 0.35),
+                      const Color(0xFF22C55E).withValues(alpha: 0.20),
                     ]
-                  : [
-                      Colors.white.withValues(alpha: 0.16),
-                      Colors.white.withValues(alpha: 0.08),
-                    ],
+                  : _isPressed
+                      ? [
+                          Colors.white.withValues(alpha: 0.28),
+                          Colors.white.withValues(alpha: 0.18),
+                        ]
+                      : [
+                          Colors.white.withValues(alpha: 0.16),
+                          Colors.white.withValues(alpha: 0.08),
+                        ],
             ),
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
@@ -372,7 +381,13 @@ class _OptionCardState extends State<_OptionCard> {
                     color: Colors.white.withValues(alpha: 0.18),
                   ),
                 ),
-                child: Icon(icon, size: 22, color: Colors.white.withValues(alpha: 0.9)),
+                child: Icon(
+                  _isSelected ? Icons.check_rounded : icon,
+                  size: 22,
+                  color: _isSelected
+                      ? const Color(0xFF22C55E)
+                      : Colors.white.withValues(alpha: 0.9),
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
