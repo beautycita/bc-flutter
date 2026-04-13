@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter/services.dart';
@@ -11,7 +10,6 @@ import '../config/constants.dart';
 import '../config/theme_extension.dart';
 import '../models/curate_result.dart';
 import '../providers/booking_flow_provider.dart';
-import '../services/gyro_parallax_service.dart';
 import '../services/supabase_client.dart';
 import '../services/toast_service.dart';
 import '../widgets/cinematic_question_text.dart';
@@ -47,16 +45,10 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
   // Shimmer-load controller for card appearance
   late AnimationController _cardShimmerController;
 
-  // Gyro parallax
-  final GyroParallaxService _gyro = GyroParallaxService.instance;
-  StreamSubscription<ParallaxOffset>? _gyroSub;
-  ParallaxOffset _parallax = ParallaxOffset.zero;
-
   static const double _dismissThreshold = 0.25; // 25% of card width
   static const double _velocityThreshold = 800.0; // px/s flick speed
   static const double _maxRotation = 0.15; // radians (~8.5 degrees)
   static const double _verticalDamping = 0.3; // reduce vertical movement
-  static const double _parallaxIntensity = 8.0; // max px shift from gyro
 
   @override
   void initState() {
@@ -125,11 +117,6 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
       duration: const Duration(milliseconds: 800),
     );
 
-    // Gyro parallax
-    _gyro.addListener();
-    _gyroSub = _gyro.stream.listen((offset) {
-      if (mounted) setState(() => _parallax = offset);
-    });
   }
 
   @override
@@ -137,8 +124,6 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
     _dismissController.dispose();
     _snapBackController.dispose();
     _cardShimmerController.dispose();
-    _gyroSub?.cancel();
-    _gyro.removeListener();
     super.dispose();
   }
 
@@ -462,13 +447,7 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
   Widget _buildCard(ResultCard result, bool isTopCard) {
     final ext = Theme.of(context).extension<BCThemeExtension>()!;
 
-    // Gyro parallax offset for top card content
-    final pxOffset = isTopCard
-        ? Offset(
-            _parallax.x * _parallaxIntensity,
-            _parallax.y * _parallaxIntensity,
-          )
-        : Offset.zero;
+    const pxOffset = Offset.zero;
 
     Widget card = Container(
       margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
@@ -611,7 +590,7 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
                   ],
                 ],
               ),
-              if (displayRating != null)
+              if (displayRating != null && displayRating > 0 && displayReviews > 0)
                 Row(
                   children: [
                     const Icon(Icons.star,

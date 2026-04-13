@@ -45,3 +45,28 @@ docs/consult/
 # SAT compliance — CONFIDENTIAL, never publish
 docs/sat-api-guide.html
 docs/escrito-libre-sat-30b.html
+
+# Video assets — stored on R2, not in git (large binaries)
+beautycita_app/assets/video/
+beautycita_web/assets/video/
+
+# Scraper data & output — local backup only
+scripts/outscraper_output/
+beautycita_app/supabase/import_*.sql
+beautycita_app/supabase/*.csv
+
+# MCP server — separate project
+beautycita-mcp/
+
+# Analysis & audit docs — local reference only
+docs/analysis/
+docs/audit/
+docs/security/
+
+# Plans — local working docs
+docs/plans/
+
+# Scraper scripts — local tools
+scripts/outscraper*.py
+scripts/import_outscraper*.py
+scripts/test_sat_api.sh

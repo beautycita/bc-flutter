@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../config/constants.dart';
@@ -210,51 +211,65 @@ class _VisualCardsAnswer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (options.isEmpty) {
+      return Center(
+        child: Text(
+          'Sin opciones disponibles',
+          style: GoogleFonts.poppins(
+            fontSize: 15,
+            color: Colors.white.withValues(alpha: 0.4),
+          ),
+        ),
+      );
+    }
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(4, 0, 4, 24),
-      children: [
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: options.asMap().entries.map((entry) {
-            final index = entry.key;
-            final option = entry.value;
-            return _OptionChip(
-              label: option.labelEs,
-              value: option.value,
-              onTap: () => onSelect(option.value),
-              delay: index * 65,
-            );
-          }).toList(),
-        ),
-      ],
+      children: options.asMap().entries.map((entry) {
+        final index = entry.key;
+        final option = entry.value;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: _OptionCard(
+            label: option.labelEs,
+            value: option.value,
+            onTap: () => onSelect(option.value),
+          )
+              .animate()
+              .fadeIn(duration: 350.ms, delay: (80 * index).ms)
+              .slideX(
+                begin: 0.08,
+                end: 0,
+                duration: 350.ms,
+                delay: (80 * index).ms,
+                curve: Curves.easeOutCubic,
+              ),
+        );
+      }).toList(),
     );
   }
 }
 
-/// Glass pill chip — matches subcategory chip style from subcategory_sheet.dart.
-/// Used for follow-up question options (lash style, body zone, event type, etc.)
-class _OptionChip extends StatefulWidget {
+/// Full-width glass card for follow-up question options.
+/// Renders as a proper visual card (not a tiny chip) with icon + label.
+class _OptionCard extends StatefulWidget {
   final String label;
   final String value;
   final VoidCallback onTap;
-  final int delay;
 
-  const _OptionChip({
+  const _OptionCard({
     required this.label,
     required this.value,
     required this.onTap,
-    this.delay = 0,
   });
 
   @override
-  State<_OptionChip> createState() => _OptionChipState();
+  State<_OptionCard> createState() => _OptionCardState();
 }
 
-class _OptionChipState extends State<_OptionChip> {
+class _OptionCardState extends State<_OptionCard> {
   bool _isPressed = false;
 
-  // Filled icons (not wireframe/outlined)
   static const _optionIcons = <String, IconData>{
     // Lash styles
     'natural': Icons.spa,
@@ -301,7 +316,7 @@ class _OptionChipState extends State<_OptionChip> {
 
   @override
   Widget build(BuildContext context) {
-    final icon = _optionIcons[widget.value];
+    final icon = _optionIcons[widget.value] ?? Icons.auto_awesome;
 
     return GestureDetector(
       onTapDown: (_) => setState(() => _isPressed = true),
@@ -312,45 +327,71 @@ class _OptionChipState extends State<_OptionChip> {
       },
       onTapCancel: () => setState(() => _isPressed = false),
       child: AnimatedScale(
-        scale: _isPressed ? 0.95 : 1.0,
+        scale: _isPressed ? 0.97 : 1.0,
         duration: const Duration(milliseconds: 120),
         curve: _isPressed ? Curves.easeIn : Curves.elasticOut,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
           decoration: BoxDecoration(
-            color: _isPressed
-                ? Colors.white.withValues(alpha: 0.25)
-                : Colors.white.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: _isPressed
+                  ? [
+                      Colors.white.withValues(alpha: 0.28),
+                      Colors.white.withValues(alpha: 0.18),
+                    ]
+                  : [
+                      Colors.white.withValues(alpha: 0.16),
+                      Colors.white.withValues(alpha: 0.08),
+                    ],
+            ),
+            borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.2),
+              color: Colors.white.withValues(alpha: 0.25),
               width: 1,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.15),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
+                color: Colors.black.withValues(alpha: 0.2),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
           child: Row(
-            mainAxisSize: MainAxisSize.min,
             children: [
-              if (icon != null) ...[
-                Icon(icon, size: 20, color: Colors.white.withValues(alpha: 0.85)),
-                const SizedBox(width: 10),
-              ],
-              Flexible(
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.12),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.18),
+                  ),
+                ),
+                child: Icon(icon, size: 22, color: Colors.white.withValues(alpha: 0.9)),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
                 child: Text(
                   widget.label,
                   style: GoogleFonts.poppins(
-                    fontSize: 15,
+                    fontSize: 17,
                     fontWeight: FontWeight.w600,
                     color: Colors.white,
                     height: 1.2,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: Colors.white.withValues(alpha: 0.4),
+                size: 22,
               ),
             ],
           ),

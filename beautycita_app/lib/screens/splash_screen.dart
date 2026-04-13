@@ -94,7 +94,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       if (!mounted) return;
 
       controller.addListener(_onVideoProgress);
-      controller.setPlaybackSpeed(0.5);
       controller.play();
       setState(() => _videoReady = true);
     } catch (e) {
@@ -181,7 +180,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFE6E6E6),
+      backgroundColor: const Color(0xFFDADADA),
       body: Stack(
         fit: StackFit.expand,
         children: [
