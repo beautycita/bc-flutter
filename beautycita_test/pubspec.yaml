@@ -1,0 +1,24 @@
+name: beautycita_test
+description: "BeautyCita Integration Test Suite — INTERNAL USE ONLY"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+  supabase_flutter: ^2.8.4
+  google_fonts: ^6.2.1
+  crypto: ^3.0.6
+  http: ^1.3.0
+  intl: ^0.20.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
