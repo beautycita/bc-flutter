@@ -227,6 +227,56 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 ),
                 const SizedBox(height: BCSpacing.md),
 
+                // ── QR Login — prominent card ─────────────────────────────
+                InkWell(
+                  onTap: () => context.go(WebRoutes.qr),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      color: theme.colorScheme.primary.withValues(alpha: 0.04),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.qr_code_2_rounded,
+                            size: 32, color: theme.colorScheme.primary),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Iniciar con QR',
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: theme.colorScheme.primary,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Escanea desde la app: Ajustes > Vincular con la Web',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurface
+                                      .withValues(alpha: 0.5),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.arrow_forward_ios_rounded,
+                            size: 16,
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.3)),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: BCSpacing.md),
+
                 // ── Google button ──────────────────────────────────────────
                 OutlinedButton.icon(
                   onPressed: authState.isLoading
@@ -259,12 +309,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 TextButton(
                   onPressed: () => context.go(WebRoutes.register),
                   child: const Text('No tienes cuenta? Registrate'),
-                ),
-
-                // ── QR login link ──────────────────────────────────────────
-                TextButton(
-                  onPressed: () => context.go(WebRoutes.qr),
-                  child: const Text('Iniciar con QR'),
                 ),
               ],
             ),

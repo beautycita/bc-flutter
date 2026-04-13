@@ -1017,7 +1017,7 @@ class _ContactMatchesBanner extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Tus salones favoritos',
+                        Text('Tus salones visitados',
                             style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600)),
                         Text('Encuentra salones que ya conoces e invitalos',
                             style: GoogleFonts.nunito(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.5))),

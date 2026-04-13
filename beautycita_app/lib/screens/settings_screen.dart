@@ -136,8 +136,8 @@ class SettingsScreen extends ConsumerWidget {
             onTap: () => context.push('/my-bookings'),
           ),
           SettingsTile(
-            icon: Icons.favorite_rounded,
-            label: 'Mis favoritos',
+            icon: Icons.storefront_rounded,
+            label: 'Salones visitados',
             onTap: () => context.push('/favorites'),
           ),
           SettingsTile(
@@ -149,6 +149,11 @@ class SettingsScreen extends ConsumerWidget {
             icon: Icons.shield_outlined,
             label: 'Seguridad y cuenta',
             onTap: () => context.push('/settings/security'),
+          ),
+          SettingsTile(
+            icon: Icons.qr_code_scanner_rounded,
+            label: 'Vincular con la Web',
+            onTap: () => context.push('/qr-scan'),
           ),
 
           // ── Admin panel (only for admin/superadmin) ──

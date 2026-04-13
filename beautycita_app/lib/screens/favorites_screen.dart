@@ -44,7 +44,7 @@ class FavoritesScreen extends ConsumerWidget {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
-          'Mis Favoritos',
+          'Salones Visitados',
           style: textTheme.titleLarge?.copyWith(
             color: colorScheme.primary,
             fontWeight: FontWeight.bold,
@@ -69,7 +69,7 @@ class FavoritesScreen extends ConsumerWidget {
               Icon(Icons.error_outline, size: 48,
                   color: colorScheme.error),
               const SizedBox(height: AppConstants.paddingMD),
-              Text('Error al cargar favoritos',
+              Text('Error al cargar salones',
                   style: textTheme.titleMedium),
               const SizedBox(height: AppConstants.paddingMD),
               TextButton(
@@ -82,8 +82,8 @@ class FavoritesScreen extends ConsumerWidget {
         data: (salons) {
           if (salons.isEmpty) {
             return const EmptyState(
-              icon: Icons.favorite_outline,
-              message: 'Sin favoritos\nGuarda tus salones preferidos tocando el corazon.',
+              icon: Icons.storefront_rounded,
+              message: 'Sin salones visitados\nAqui apareceran los salones donde hayas reservado.',
             );
           }
 

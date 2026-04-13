@@ -928,9 +928,9 @@ class _NoSlotsView extends StatelessWidget {
           // If no nearby salons, show invite card
           if (state.error == 'no_nearby_salons') ...[
             _ActionCard(
-              icon: Icons.favorite_rounded,
+              icon: Icons.share_rounded,
               title: 'Recomienda tu salon',
-              subtitle: 'Invita a tu salon favorito a unirse a BeautyCita',
+              subtitle: 'Invita a tu salon a unirse a BeautyCita',
               color: colors.primary,
               onTap: () => context.push('/invite-salon'),
             ),
