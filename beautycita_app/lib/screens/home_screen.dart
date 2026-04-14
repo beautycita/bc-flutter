@@ -973,16 +973,22 @@ class _BrandShimmerTextState extends State<_BrandShimmerText>
           child: child!,
         );
       },
-      child: Text(
-        widget.text,
-        style: GoogleFonts.playfairDisplay(
-          fontSize: 24,
-          fontWeight: FontWeight.w700,
-          color: Colors.white, // ShaderMask replaces this
-          letterSpacing: -0.5,
-          height: 1.3,
-        ),
-      ),
+      child: Builder(builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return Text(
+          widget.text,
+          style: GoogleFonts.playfairDisplay(
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+            color: Colors.white, // ShaderMask replaces this
+            letterSpacing: -0.5,
+            height: 1.3,
+            shadows: isDark
+                ? const [Shadow(color: Color(0xCC000000), blurRadius: 10)]
+                : const [Shadow(color: Color(0x99FFFFFF), blurRadius: 14), Shadow(color: Color(0x33EC4899), blurRadius: 20)],
+          ),
+        );
+      }),
     );
   }
 }
