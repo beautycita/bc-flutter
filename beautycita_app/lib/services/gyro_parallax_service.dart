@@ -12,8 +12,10 @@ class GyroParallaxService {
   StreamSubscription<GyroscopeEvent>? _sub;
   final _controller = StreamController<ParallaxOffset>.broadcast();
 
-  double _x = 0;
+  double _x = 0;   // Current smoothed position
   double _y = 0;
+  double _tx = 0;  // Target position (raw gyro integrated)
+  double _ty = 0;
   int _listenerCount = 0;
 
   /// Smoothed parallax offset stream. Values range from -1.0 to 1.0.
@@ -39,14 +41,18 @@ class GyroParallaxService {
     _sub = gyroscopeEventStream(
       samplingPeriod: const Duration(milliseconds: 16), // ~60fps
     ).listen((event) {
-      // Integrate gyroscope angular velocity into position
-      // Lower smoothing = more resistance to movement
-      // Lower decay = faster return to center (more resistance)
-      const smoothing = 0.018;
-      const decay = 0.88;
+      // Gyro input feeds a target, then we lerp toward it smoothly.
+      // This prevents snapping — the offset glides to the tilt position.
+      const inputGain = 0.05;   // How much raw gyro moves the target
+      const targetDecay = 0.96; // Target drifts back to center slowly
+      const lerpSpeed = 0.08;   // How fast current position chases target (lower = smoother glide)
 
-      _x = (_x * decay + event.y * smoothing).clamp(-1.0, 1.0);
-      _y = (_y * decay - event.x * smoothing).clamp(-1.0, 1.0);
+      _tx = (_tx * targetDecay + event.y * inputGain).clamp(-1.0, 1.0);
+      _ty = (_ty * targetDecay - event.x * inputGain).clamp(-1.0, 1.0);
+
+      // Smooth interpolation toward target — no snapping
+      _x += (_tx - _x) * lerpSpeed;
+      _y += (_ty - _y) * lerpSpeed;
 
       if (!_controller.isClosed) {
         _controller.add(ParallaxOffset(_x, _y));
@@ -61,6 +67,8 @@ class GyroParallaxService {
     _sub = null;
     _x = 0;
     _y = 0;
+    _tx = 0;
+    _ty = 0;
   }
 
   void dispose() {

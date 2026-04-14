@@ -720,8 +720,8 @@ class _HeroGradientBackgroundState extends State<_HeroGradientBackground> {
     _gyroSub = gyro.stream.listen((offset) {
       if (!mounted) return;
       setState(() {
-        _offsetX = offset.x * 14; // ±14px — subtle look-around with resistance
-        _offsetY = offset.y * 14;
+        _offsetX = offset.x * 30; // ±30px — smooth glide parallax
+        _offsetY = offset.y * 30;
       });
     });
   }
@@ -769,7 +769,7 @@ class _HeroGradientBackgroundState extends State<_HeroGradientBackground> {
       child: Transform.translate(
         offset: Offset(_offsetX, _offsetY),
         child: Transform.scale(
-          scale: 1.12, // slight oversize to hide edges during parallax
+          scale: 1.25, // oversize to hide edges during parallax glide
           child: FittedBox(
             fit: BoxFit.cover,
             child: SizedBox(
