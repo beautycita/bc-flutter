@@ -26,6 +26,7 @@ import '../config/theme_extension.dart';
 import '../services/gesture_exclusion_service.dart';
 import '../services/notification_service.dart';
 import '../services/updater_service.dart';
+import '../services/video_precache_service.dart';
 import '../themes/category_icons.dart';
 import '../themes/theme_variant.dart';
 import '../widgets/cinematic_question_text.dart';
@@ -79,6 +80,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         .addPostFrameCallback((_) => _checkReviewPrompt());
     WidgetsBinding.instance
         .addPostFrameCallback((_) => _checkOnboarding());
+    // Precache category background videos for instant loading
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => VideoPrecacheService.instance.precacheAll());
   }
 
   void _checkReviewPrompt() {

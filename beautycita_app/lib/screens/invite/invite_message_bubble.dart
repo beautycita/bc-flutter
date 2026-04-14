@@ -16,7 +16,16 @@ class InviteMessageBubble extends StatelessWidget {
     this.onRedo,
   });
 
-  static const _bubbleBg = Color(0xFFDCF8C6);
+  // Adapt bubble color to theme — light green in light mode, dark green-tint in dark
+  Color _bubbleBg(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return isDark ? const Color(0xFF1A3A2A) : const Color(0xFFDCF8C6);
+  }
+
+  Color _textColor(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return isDark ? const Color(0xFFE0E0E0) : const Color(0xFF1B1B1B);
+  }
   static const _tailSize = 8.0;
 
   @override
@@ -29,15 +38,15 @@ class InviteMessageBubble extends StatelessWidget {
         Flexible(
           flex: 5,
           child: CustomPaint(
-            painter: _BubbleTailPainter(color: _bubbleBg),
+            painter: _BubbleTailPainter(color: _bubbleBg(context)),
             child: Container(
               margin: const EdgeInsets.only(right: _tailSize),
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
               decoration: BoxDecoration(
-                color: _bubbleBg,
+                color: _bubbleBg(context),
                 borderRadius: BorderRadius.circular(AppConstants.radiusSM),
               ),
-              child: isGenerating ? _buildShimmer() : _buildContent(),
+              child: isGenerating ? _buildShimmer() : _buildContent(context),
             ),
           ),
         ),
@@ -45,7 +54,7 @@ class InviteMessageBubble extends StatelessWidget {
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -55,7 +64,7 @@ class InviteMessageBubble extends StatelessWidget {
             message!,
             style: GoogleFonts.nunito(
               fontSize: 14,
-              color: const Color(0xFF1B1B1B),
+              color: _textColor(context),
               height: 1.4,
             ),
           ),

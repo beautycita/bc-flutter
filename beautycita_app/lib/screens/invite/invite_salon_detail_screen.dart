@@ -135,14 +135,26 @@ class _InviteSalonDetailScreenState
           else
             _gradientPlaceholder(),
 
-          // Dark gradient overlay for text readability
+          // Vignette overlay — darker edges, lighter center + bottom gradient for text
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment.center,
+                radius: 0.9,
+                colors: [
+                  Colors.transparent,
+                  Colors.black.withValues(alpha: 0.35),
+                ],
+              ),
+            ),
+          ),
           DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Colors.transparent, Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54)],
-                stops: [0.4, 1.0],
+                colors: [Colors.transparent, Colors.black.withValues(alpha: 0.55)],
+                stops: const [0.4, 1.0],
               ),
             ),
           ),
@@ -433,7 +445,10 @@ class _InviteSalonDetailScreenState
         return Container(
           height: AppConstants.minTouchHeight,
           decoration: BoxDecoration(
-            color: const Color(0xFF25D366),
+            gradient: const LinearGradient(
+              colors: [Color(0xFF075E54), Color(0xFF25D366), Color(0xFF075E54)],
+              stops: [0.0, 0.5, 1.0],
+            ),
             borderRadius: BorderRadius.circular(AppConstants.radiusLG),
           ),
           child: Row(

@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import '../services/gyro_parallax_service.dart';
+import '../services/video_precache_service.dart';
 
 const _r2Base = 'https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/video/';
 
@@ -105,10 +106,18 @@ class _BookingFlowBackgroundState extends State<BookingFlowBackground> {
     _initGyro();
   }
 
-  void _initVideo() {
-    final file = _categoryVideoMap[widget.categoryId] ?? _defaultVideo;
-    final url = Uri.parse('$_r2Base$file');
-    _controller = VideoPlayerController.networkUrl(url)
+  void _initVideo() async {
+    final filename = _categoryVideoMap[widget.categoryId] ?? _defaultVideo;
+
+    // Try cached file first (precached by VideoPrecacheService)
+    final cached = await VideoPrecacheService.instance.getCached(filename);
+    if (cached != null) {
+      _controller = VideoPlayerController.file(cached);
+    } else {
+      _controller = VideoPlayerController.networkUrl(Uri.parse('$_r2Base$filename'));
+    }
+
+    _controller!
       ..setLooping(true)
       ..setVolume(0)
       ..initialize().then((_) {
