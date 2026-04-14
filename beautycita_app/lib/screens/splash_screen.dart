@@ -58,8 +58,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     _fadeController.forward();
 
-    // Try loading video in parallel
-    _initVideo();
+    // No video — use fallback animation only
+    _startFallbackTimer();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAuthAndNavigate();
@@ -184,12 +184,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Layer 1: Fallback animated splash (always present)
+          // Animated splash (logo + shimmer)
           _buildFallbackSplash(isDark),
-
-          // Layer 2: Video on top (covers fallback when ready)
-          if (_videoReady && _videoController != null)
-            _buildVideoSplash(_videoController!),
         ],
       ),
     );

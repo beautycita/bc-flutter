@@ -691,7 +691,7 @@ class _HeroGradientBackgroundState extends State<_HeroGradientBackground> {
 
       controller.setLooping(true);
       controller.setVolume(0);
-      controller.setPlaybackSpeed(0.5);
+      controller.setPlaybackSpeed(1.0);
       controller.play();
       setState(() => _videoReady = true);
     } catch (e) {
