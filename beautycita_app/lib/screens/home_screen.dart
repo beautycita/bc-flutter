@@ -720,8 +720,8 @@ class _HeroGradientBackgroundState extends State<_HeroGradientBackground> {
     _gyroSub = gyro.stream.listen((offset) {
       if (!mounted) return;
       setState(() {
-        _offsetX = offset.x * 40; // ±40px — VR-ish extended look-around
-        _offsetY = offset.y * 40;
+        _offsetX = offset.x * 14; // ±14px — subtle look-around with resistance
+        _offsetY = offset.y * 14;
       });
     });
   }
@@ -769,7 +769,7 @@ class _HeroGradientBackgroundState extends State<_HeroGradientBackground> {
       child: Transform.translate(
         offset: Offset(_offsetX, _offsetY),
         child: Transform.scale(
-          scale: 1.4, // oversized so edges don't show during VR parallax
+          scale: 1.12, // slight oversize to hide edges during parallax
           child: FittedBox(
             fit: BoxFit.cover,
             child: SizedBox(

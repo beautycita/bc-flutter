@@ -35,6 +35,8 @@ class WebInviteState {
   final double? lng;
   final String? error;
   final String? waUrl;
+  final int invitesTodayCount;
+  final bool showRpPopup;
 
   const WebInviteState({
     this.step = WebInviteStep.loading,
@@ -49,6 +51,8 @@ class WebInviteState {
     this.lng,
     this.error,
     this.waUrl,
+    this.invitesTodayCount = 0,
+    this.showRpPopup = false,
   });
 
   WebInviteState copyWith({
@@ -72,6 +76,8 @@ class WebInviteState {
     bool clearSearchQuery = false,
     bool clearError = false,
     bool clearWaUrl = false,
+    int? invitesTodayCount,
+    bool? showRpPopup,
   }) {
     return WebInviteState(
       step: step ?? this.step,
@@ -91,6 +97,8 @@ class WebInviteState {
       lng: lng ?? this.lng,
       error: clearError ? null : (error ?? this.error),
       waUrl: clearWaUrl ? null : (waUrl ?? this.waUrl),
+      invitesTodayCount: invitesTodayCount ?? this.invitesTodayCount,
+      showRpPopup: showRpPopup ?? this.showRpPopup,
     );
   }
 }
@@ -99,6 +107,74 @@ class WebInviteState {
 
 class WebInviteNotifier extends StateNotifier<WebInviteState> {
   WebInviteNotifier() : super(const WebInviteState());
+
+  static const _rpPopupThreshold = 3;
+
+  /// Emit a behavioral event to user_behavior_events.
+  Future<void> _emitEvent({
+    required String eventType,
+    String? targetType,
+    String? targetId,
+    Map<String, dynamic>? metadata,
+    String source = 'organic',
+  }) async {
+    try {
+      final userId = BCSupabase.client.auth.currentUser?.id;
+      if (userId == null) return; // Not logged in — skip silently
+
+      await BCSupabase.client.from('user_behavior_events').insert({
+        'user_id': userId,
+        'event_type': eventType,
+        'target_type': targetType,
+        'target_id': targetId,
+        'metadata': metadata ?? {},
+        'source': source,
+      });
+    } catch (e) {
+      debugPrint('[BehaviorEvent] Failed to emit $eventType: $e');
+    }
+  }
+
+  /// Check how many invites the user sent today and show RP popup if threshold met.
+  Future<void> _checkInviteCount() async {
+    try {
+      final userId = BCSupabase.client.auth.currentUser?.id;
+      if (userId == null) return;
+
+      final today = DateTime.now().toUtc().toIso8601String().substring(0, 10);
+      final result = await BCSupabase.client
+          .from('user_behavior_events')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('event_type', 'invite_sent')
+          .gte('created_at', '${today}T00:00:00Z');
+
+      final count = (result as List).length;
+      state = state.copyWith(
+        invitesTodayCount: count,
+        showRpPopup: count >= _rpPopupThreshold,
+      );
+    } catch (e) {
+      debugPrint('[BehaviorEvent] Failed to check invite count: $e');
+    }
+  }
+
+  /// Dismiss the RP popup (user tapped "not now" or closed it).
+  void dismissRpPopup() {
+    state = state.copyWith(showRpPopup: false);
+  }
+
+  /// Record that user expressed interest in the RP/ambassador role.
+  Future<void> recordRpInterest() async {
+    await _emitEvent(
+      eventType: 'rp_interest_shown',
+      metadata: {
+        'invites_today': state.invitesTodayCount,
+        'context': 'invite_popup',
+      },
+    );
+    dismissRpPopup();
+  }
 
   /// Bootstrap: load nearby salons from discovered_salons via edge function.
   /// [lat]/[lng] come from browser geolocation (page resolves them).
@@ -237,6 +313,17 @@ class WebInviteNotifier extends StateNotifier<WebInviteState> {
       clearWaUrl: true,
       clearError: true,
     );
+
+    // Emit salon_viewed event
+    _emitEvent(
+      eventType: 'salon_viewed',
+      targetType: 'salon',
+      targetId: salon['id']?.toString(),
+      metadata: {
+        'salon_name': salon['business_name'] ?? salon['name'],
+        'context': 'invite_flow',
+      },
+    );
   }
 
   /// Generate bio + invite message for the selected salon via Aphrodite AI.
@@ -319,6 +406,24 @@ class WebInviteNotifier extends StateNotifier<WebInviteState> {
         step: WebInviteStep.sent,
         waUrl: waUrl,
       );
+
+      // Emit behavioral event
+      await _emitEvent(
+        eventType: 'invite_sent',
+        targetType: 'salon',
+        targetId: salonId,
+        metadata: {
+          'salon_name': salon['business_name'] ?? salon['name'],
+          'city': salon['location_city'],
+          'state': salon['location_state'],
+          'platform': 'wa',
+          if (state.lat != null) 'user_lat': state.lat,
+          if (state.lng != null) 'user_lng': state.lng,
+        },
+      );
+
+      // Check if RP popup should show
+      await _checkInviteCount();
     } catch (e) {
       debugPrint('[WebInviteNotifier.sendInvite] Error: $e');
       state = state.copyWith(

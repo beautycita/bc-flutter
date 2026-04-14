@@ -53,6 +53,9 @@ import '../pages/public/invite_public_page.dart';
 import '../pages/public/porque_page.dart';
 import '../pages/public/porque_cinema.dart';
 import '../pages/public/privacidad_page.dart';
+import '../pages/public/directory_national_page.dart';
+import '../pages/public/directory_state_page.dart';
+import '../pages/public/directory_city_page.dart';
 import '../pages/public/salon_page.dart';
 import '../pages/public/terminos_page.dart';
 import '../pages/auth/callback_page.dart';
@@ -287,6 +290,29 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: WebRoutes.invitarPublic,
         builder: (context, state) => const InvitePublicPage(),
+      ),
+
+      // ── Salon directory (public, no shell) ────────────────────────────
+      GoRoute(
+        path: '/salones',
+        builder: (context, state) => const DirectoryNationalPage(),
+        routes: [
+          GoRoute(
+            path: ':stateSlug',
+            builder: (context, state) => DirectoryStatePage(
+              stateSlug: state.pathParameters['stateSlug'] ?? '',
+            ),
+            routes: [
+              GoRoute(
+                path: ':citySlug',
+                builder: (context, state) => DirectoryCityPage(
+                  stateSlug: state.pathParameters['stateSlug'] ?? '',
+                  citySlug: state.pathParameters['citySlug'] ?? '',
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
 
       // ── Public salon page (no shell, no auth) ─────────────────────────

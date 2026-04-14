@@ -150,12 +150,6 @@ class SettingsScreen extends ConsumerWidget {
             label: 'Seguridad y cuenta',
             onTap: () => context.push('/settings/security'),
           ),
-          SettingsTile(
-            icon: Icons.qr_code_scanner_rounded,
-            label: 'Vincular con la Web',
-            onTap: () => context.push('/qr-scan'),
-          ),
-
           // ── Admin panel (only for admin/superadmin) ──
           ref.watch(isAdminProvider).when(
             data: (isAdmin) => isAdmin

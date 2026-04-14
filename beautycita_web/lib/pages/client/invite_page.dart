@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../config/breakpoints.dart';
 import '../../providers/web_invite_provider.dart';
+import '../../widgets/invite/rp_scout_popup.dart';
 import '../../widgets/invite/salon_detail_panel.dart';
 import '../../widgets/invite/salon_list_panel.dart';
 
@@ -51,13 +52,30 @@ class _InvitePageState extends ConsumerState<InvitePage> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (WebBreakpoints.isDesktop(constraints.maxWidth)) {
-          return _DesktopLayout();
-        }
-        return _CompactLayout(isTablet: !WebBreakpoints.isMobile(constraints.maxWidth));
-      },
+    final inviteState = ref.watch(webInviteProvider);
+
+    return Stack(
+      children: [
+        LayoutBuilder(
+          builder: (context, constraints) {
+            if (WebBreakpoints.isDesktop(constraints.maxWidth)) {
+              return _DesktopLayout();
+            }
+            return _CompactLayout(isTablet: !WebBreakpoints.isMobile(constraints.maxWidth));
+          },
+        ),
+        // RP Scout popup overlay
+        if (inviteState.showRpPopup)
+          Container(
+            color: Colors.black26,
+            child: RpScoutPopup(
+              onDismiss: () => ref.read(webInviteProvider.notifier).dismissRpPopup(),
+              onInterested: () {
+                ref.read(webInviteProvider.notifier).recordRpInterest();
+              },
+            ),
+          ),
+      ],
     );
   }
 }

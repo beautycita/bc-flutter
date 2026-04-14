@@ -310,11 +310,25 @@ class _LandingPageState extends State<LandingPage>
                       const SizedBox(width: 28),
                       _navLink('Precios', _pricingKey),
                       const SizedBox(width: 28),
+                      _navRouteLink(context, 'Directorio', '/salones'),
+                      const SizedBox(width: 28),
                       _navLink('Descargar', _downloadKey),
                       const SizedBox(width: 28),
                     ],
                     // Booking CTA
                     if (!isMobile) ...[
+                      _HoverScaleButton(
+                        onTap: () => context.go('/auth'),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.login_rounded, size: 16, color: _textSecondary),
+                            const SizedBox(width: 6),
+                            Text('Iniciar sesion', style: TextStyle(color: _textSecondary, fontWeight: FontWeight.w600, fontSize: 14)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
                       _HoverScaleButton(
                         onTap: () => context.go('/reservar'),
                         child: Container(
@@ -393,7 +407,28 @@ class _LandingPageState extends State<LandingPage>
           _mobileNavItem('Para Clientes', _forClientsKey),
           _mobileNavItem('Demo', _demoKey),
           _mobileNavItem('Precios', _pricingKey),
+          GestureDetector(
+            onTap: () { setState(() => _mobileMenuOpen = false); context.go('/salones'); },
+            child: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Text('Directorio', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: _textPrimary)),
+            ),
+          ),
           _mobileNavItem('Descargar', _downloadKey),
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: () { setState(() => _mobileMenuOpen = false); context.go('/auth'); },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                children: [
+                  Icon(Icons.login_rounded, size: 18, color: _textSecondary),
+                  const SizedBox(width: 8),
+                  Text('Iniciar sesion', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: _textSecondary)),
+                ],
+              ),
+            ),
+          ),
           const SizedBox(height: 16),
           _HoverScaleButton(
             onTap: () {
@@ -2140,6 +2175,17 @@ class _LandingPageState extends State<LandingPage>
           _FooterLink('Centro de ayuda', route: '/soporte'),
           _FooterLink('WhatsApp', url: 'https://wa.me/527206777800'),
           _FooterLink('soporte@beautycita.com', url: 'mailto:soporte@beautycita.com'),
+        ]),
+        _footerCol('Ciudades populares', [
+          _FooterLink('CDMX', route: '/salones/ciudad-de-mexico/ciudad-de-mexico'),
+          _FooterLink('Guadalajara', route: '/salones/jalisco/guadalajara'),
+          _FooterLink('Monterrey', route: '/salones/nuevo-leon/monterrey'),
+          _FooterLink('Puebla', route: '/salones/puebla/puebla'),
+          _FooterLink('Tijuana', route: '/salones/baja-california/tijuana'),
+          _FooterLink('Cancun', route: '/salones/quintana-roo/cancun'),
+          _FooterLink('Puerto Vallarta', route: '/salones/jalisco/puerto-vallarta'),
+          _FooterLink('Merida', route: '/salones/yucatan/merida'),
+          _FooterLink('Ver todas', route: '/salones'),
         ]),
       ],
     );

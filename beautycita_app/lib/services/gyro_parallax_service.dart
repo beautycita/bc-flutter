@@ -41,9 +41,9 @@ class GyroParallaxService {
     ).listen((event) {
       // Integrate gyroscope angular velocity into position
       // Lower smoothing = more resistance to movement
-      // Higher decay = slower, softer drift back to center
-      const smoothing = 0.06;
-      const decay = 0.94;
+      // Lower decay = faster return to center (more resistance)
+      const smoothing = 0.018;
+      const decay = 0.88;
 
       _x = (_x * decay + event.y * smoothing).clamp(-1.0, 1.0);
       _y = (_y * decay - event.x * smoothing).clamp(-1.0, 1.0);
