@@ -292,20 +292,21 @@ class _CinematicContent extends StatelessWidget {
     return textContent;
   }
 
-  /// Light mode: warm white glow lifts text off the video.
-  /// Dark mode: dark shadow with subtle stroke effect.
+  /// Light mode: strong white glow halo behind text.
+  /// Dark mode: heavy black shadow for contrast.
   List<Shadow> _textGlow(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     if (isDark) {
       return const [
-        Shadow(color: Color(0xCC000000), blurRadius: 12),
-        Shadow(color: Color(0x80000000), blurRadius: 4),
+        Shadow(color: Color(0xFF000000), blurRadius: 20),
+        Shadow(color: Color(0xFF000000), blurRadius: 8),
+        Shadow(color: Color(0xCC000000), blurRadius: 40),
       ];
     }
     return const [
-      Shadow(color: Color(0x99FFFFFF), blurRadius: 16),
-      Shadow(color: Color(0x66FFFFFF), blurRadius: 6),
-      Shadow(color: Color(0x33EC4899), blurRadius: 24),
+      Shadow(color: Color(0xFFFFFFFF), blurRadius: 20),
+      Shadow(color: Color(0xFFFFFFFF), blurRadius: 8),
+      Shadow(color: Color(0xCCFFFFFF), blurRadius: 40),
     ];
   }
 }

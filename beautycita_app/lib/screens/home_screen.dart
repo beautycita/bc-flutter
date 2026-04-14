@@ -720,8 +720,8 @@ class _HeroGradientBackgroundState extends State<_HeroGradientBackground> {
     _gyroSub = gyro.stream.listen((offset) {
       if (!mounted) return;
       setState(() {
-        _offsetX = offset.x * 30; // ±30px — smooth glide parallax
-        _offsetY = offset.y * 30;
+        _offsetX = offset.x * 50; // ±50px — wide angle smooth glide
+        _offsetY = offset.y * 50;
       });
     });
   }
@@ -769,7 +769,7 @@ class _HeroGradientBackgroundState extends State<_HeroGradientBackground> {
       child: Transform.translate(
         offset: Offset(_offsetX, _offsetY),
         child: Transform.scale(
-          scale: 1.25, // oversize to hide edges during parallax glide
+          scale: 1.45, // oversize to hide edges during wide parallax
           child: FittedBox(
             fit: BoxFit.cover,
             child: SizedBox(
@@ -816,10 +816,6 @@ class _CurvePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-
     final path = Path()
       ..moveTo(0, size.height)
       ..lineTo(size.width, size.height)
@@ -831,6 +827,15 @@ class _CurvePainter extends CustomPainter {
         size.height * 0.6,
       )
       ..close();
+
+    // Gradient: opaque at bottom → transparent at top of curve
+    final paint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.bottomCenter,
+        end: Alignment.topCenter,
+        colors: [color, color.withValues(alpha: 0)],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
+      ..style = PaintingStyle.fill;
 
     canvas.drawPath(path, paint);
   }
@@ -984,8 +989,8 @@ class _BrandShimmerTextState extends State<_BrandShimmerText>
             letterSpacing: -0.5,
             height: 1.3,
             shadows: isDark
-                ? const [Shadow(color: Color(0xCC000000), blurRadius: 10)]
-                : const [Shadow(color: Color(0x99FFFFFF), blurRadius: 14), Shadow(color: Color(0x33EC4899), blurRadius: 20)],
+                ? const [Shadow(color: Color(0xFF000000), blurRadius: 20), Shadow(color: Color(0xFF000000), blurRadius: 8)]
+                : const [Shadow(color: Color(0xFFFFFFFF), blurRadius: 20), Shadow(color: Color(0xFFFFFFFF), blurRadius: 8)],
           ),
         );
       }),
