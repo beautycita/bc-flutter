@@ -181,7 +181,7 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
     return Scaffold(
       backgroundColor: waGreen,
       appBar: AppBar(
-        backgroundColor: waGreen,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back_rounded, color: Theme.of(context).colorScheme.onPrimary, size: 24),
@@ -195,16 +195,33 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
             fontSize: 17,
           ),
         ),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: RadialGradient(
+              center: Alignment.center,
+              radius: 1.2,
+              colors: [Color(0xFF128C7E), Color(0xFF075E54)],
+            ),
+          ),
+        ),
       ),
       body: Column(
         children: [
-          // Subtitle
-          Padding(
-            padding: const EdgeInsets.symmetric(
+          // Subtitle on gradient
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.symmetric(
               horizontal: AppConstants.paddingLG,
             ),
+            decoration: const BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment(0, -2),
+                radius: 2.0,
+                colors: [Color(0xFF128C7E), Color(0xFF075E54)],
+              ),
+            ),
             child: Text(
-              'que aún no están en BeautyCita',
+              'que aun no estan en BeautyCita',
               style: GoogleFonts.nunito(
                 fontSize: 13,
                 color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
