@@ -285,12 +285,7 @@ class _LandingPageState extends State<LandingPage>
                               ),
                             ),
                             const SizedBox(width: 10),
-                            Text.rich(
-                              TextSpan(children: [
-                                const TextSpan(text: 'Beauty', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: _textPrimary)),
-                                TextSpan(text: 'Cita', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 22, foreground: Paint()..shader = _brandGradient.createShader(const Rect.fromLTWH(0, 0, 60, 30)))),
-                              ]),
-                            ),
+                            _AnimatedBrandText(),
                           ],
                         ),
                       ),
@@ -304,53 +299,36 @@ class _LandingPageState extends State<LandingPage>
                       const SizedBox(width: 28),
                       _navRouteLink(context, 'Por que BC?', '/porque-beautycita'),
                       const SizedBox(width: 28),
-                      _navLink('Para Clientes', _forClientsKey),
-                      const SizedBox(width: 28),
                       _navLink('Demo', _demoKey),
-                      const SizedBox(width: 28),
-                      _navLink('Precios', _pricingKey),
                       const SizedBox(width: 28),
                       _navRouteLink(context, 'Directorio', '/salones'),
                       const SizedBox(width: 28),
                       _navLink('Descargar', _downloadKey),
                       const SizedBox(width: 28),
                     ],
-                    // Booking CTA
+                    // CTAs
                     if (!isMobile) ...[
                       _HoverScaleButton(
-                        onTap: () => context.go('/auth'),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.login_rounded, size: 16, color: _textSecondary),
-                            const SizedBox(width: 6),
-                            Text('Iniciar sesion', style: TextStyle(color: _textSecondary, fontWeight: FontWeight.w600, fontSize: 14)),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      _HoverScaleButton(
-                        onTap: () => context.go('/reservar'),
+                        onTap: () => context.go('/explorar'),
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                           decoration: BoxDecoration(
                             border: Border.all(color: _brandPink, width: 2),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Text('Reserva tu cita', style: TextStyle(color: _brandPink, fontWeight: FontWeight.w700, fontSize: 14)),
+                          child: const Text('Explorar', style: TextStyle(color: _brandPink, fontWeight: FontWeight.w700, fontSize: 14)),
                         ),
                       ),
                       const SizedBox(width: 10),
-                      // Salon CTA
                       _HoverScaleButton(
-                        onTap: () => _scrollToSection(_demoKey),
+                        onTap: () => context.go('/auth/register'),
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                           decoration: BoxDecoration(
                             gradient: _brandGradient,
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Text('Registra tu Salon', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
+                          child: const Text('Registrate', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
                         ),
                       ),
                     ],
@@ -404,9 +382,7 @@ class _LandingPageState extends State<LandingPage>
               child: Text('Por que BC?', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: _brandPurple)),
             ),
           ),
-          _mobileNavItem('Para Clientes', _forClientsKey),
           _mobileNavItem('Demo', _demoKey),
-          _mobileNavItem('Precios', _pricingKey),
           GestureDetector(
             onTap: () { setState(() => _mobileMenuOpen = false); context.go('/salones'); },
             child: const Padding(
@@ -433,7 +409,7 @@ class _LandingPageState extends State<LandingPage>
           _HoverScaleButton(
             onTap: () {
               setState(() => _mobileMenuOpen = false);
-              context.go('/reservar');
+              context.go('/explorar');
             },
             child: Container(
               width: double.infinity,
@@ -443,7 +419,7 @@ class _LandingPageState extends State<LandingPage>
                 borderRadius: BorderRadius.circular(16),
               ),
               child: const Center(
-                child: Text('Reserva tu cita', style: TextStyle(color: _brandPink, fontWeight: FontWeight.w700, fontSize: 16)),
+                child: Text('Explorar', style: TextStyle(color: _brandPink, fontWeight: FontWeight.w700, fontSize: 16)),
               ),
             ),
           ),
@@ -451,7 +427,7 @@ class _LandingPageState extends State<LandingPage>
           _HoverScaleButton(
             onTap: () {
               setState(() => _mobileMenuOpen = false);
-              _scrollToSection(_demoKey);
+              context.go('/auth/register');
             },
             child: Container(
               width: double.infinity,
@@ -461,7 +437,7 @@ class _LandingPageState extends State<LandingPage>
                 borderRadius: BorderRadius.circular(16),
               ),
               child: const Center(
-                child: Text('Registra tu Salon', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16)),
+                child: Text('Registrate', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16)),
               ),
             ),
           ),
@@ -3156,4 +3132,62 @@ class _FooterLink {
   final String? route;
   final String? url; // external URL (opens in new tab)
   const _FooterLink(this.label, {this.key, this.route, this.url});
+}
+
+/// Animated brand text with shimmer sweep across gradient.
+class _AnimatedBrandText extends StatefulWidget {
+  @override
+  State<_AnimatedBrandText> createState() => _AnimatedBrandTextState();
+}
+
+class _AnimatedBrandTextState extends State<_AnimatedBrandText>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 6),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final sweep = -1.0 + (_controller.value * 3.0);
+        return ShaderMask(
+          blendMode: BlendMode.srcIn,
+          shaderCallback: (bounds) {
+            return LinearGradient(
+              begin: Alignment(sweep, 0),
+              end: Alignment(sweep + 2.0, 0),
+              colors: const [
+                Color(0xFFEC4899),
+                Color(0xFF9333EA),
+                Color(0xFF3B82F6),
+                Color(0xFFEC4899),
+              ],
+              stops: const [0.0, 0.33, 0.66, 1.0],
+              tileMode: TileMode.repeated,
+            ).createShader(bounds);
+          },
+          child: child!,
+        );
+      },
+      child: const Text(
+        'BeautyCita',
+        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: Colors.white),
+      ),
+    );
+  }
 }

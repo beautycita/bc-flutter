@@ -54,10 +54,10 @@ class DirectoryNav extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Text.rich(TextSpan(children: [
-                          const TextSpan(text: 'Beauty', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20, color: _textPrimary)),
-                          TextSpan(text: 'Cita', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20, foreground: Paint()..shader = _brandGradient.createShader(const Rect.fromLTWH(0, 0, 50, 25)))),
-                        ])),
+                        ShaderMask(
+                          shaderCallback: (bounds) => _brandGradient.createShader(bounds),
+                          child: const Text('BeautyCita', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20, color: Colors.white)),
+                        ),
                       ],
                     ),
                   ),
