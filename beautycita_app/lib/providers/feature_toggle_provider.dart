@@ -7,10 +7,10 @@ const _defaults = <String, bool>{
   // Payments
   'enable_stripe_payments': true,
   'enable_cash_payments': true,
-  'enable_deposit_required': false,
+  'enable_deposit_required': true,
   // Booking
   'enable_time_inference': true,
-  'enable_uber_integration': false,
+  'enable_uber_integration': true,
   // Social
   'enable_reviews': true,
   'enable_salon_chat': true,
@@ -41,7 +41,7 @@ const _defaults = <String, bool>{
   'enable_disputes': true,
   'enable_on_demand_scrape': true,
   'enable_outreach_pipeline': true,
-  'enable_screenshot_report': true,
+  'enable_screenshot_report': false,
   'enable_qr_auth': true,
   'enable_contact_match': true,
   // UI Experiments

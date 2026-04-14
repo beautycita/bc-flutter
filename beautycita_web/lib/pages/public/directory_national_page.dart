@@ -35,7 +35,7 @@ class _DirectoryNationalPageState extends State<DirectoryNationalPage> {
       final result = await BCSupabase.client
           .rpc('get_directory_states');
       setState(() {
-        _states = result as List;
+        _states = (result as List?) ?? [];
         _loading = false;
       });
     } catch (e) {

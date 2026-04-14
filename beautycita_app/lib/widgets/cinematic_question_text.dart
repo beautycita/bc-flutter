@@ -264,7 +264,6 @@ class _CinematicContent extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                   color: Colors.white, // ShaderMask replaces this
                   height: 1.4,
-                  shadows: _textGlow(context),
                 ),
               ),
             ),
@@ -292,21 +291,4 @@ class _CinematicContent extends StatelessWidget {
     return textContent;
   }
 
-  /// Light mode: strong white glow halo behind text.
-  /// Dark mode: heavy black shadow for contrast.
-  List<Shadow> _textGlow(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    if (isDark) {
-      return const [
-        Shadow(color: Color(0xFF000000), blurRadius: 20),
-        Shadow(color: Color(0xFF000000), blurRadius: 8),
-        Shadow(color: Color(0xCC000000), blurRadius: 40),
-      ];
-    }
-    return const [
-      Shadow(color: Color(0xFFFFFFFF), blurRadius: 20),
-      Shadow(color: Color(0xFFFFFFFF), blurRadius: 8),
-      Shadow(color: Color(0xCCFFFFFF), blurRadius: 40),
-    ];
-  }
 }

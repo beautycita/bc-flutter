@@ -81,17 +81,22 @@ class _DirectoryCityPageState extends State<DirectoryCityPage> {
   }
 
   Future<void> _loadDiscovered() async {
-    final result = await BCSupabase.client.rpc('get_city_salons', params: {
-      'p_state_slug': widget.stateSlug,
-      'p_city_slug': widget.citySlug,
-      'p_offset': _page * _discoveredPageSize,
-      'p_limit': _discoveredPageSize,
-    });
-    final data = result as Map<String, dynamic>;
-    _discovered = (data['salons'] as List?) ?? [];
-    _cityName = data['city'] as String? ?? _slugToName(widget.citySlug);
-    _stateName = data['state'] as String? ?? _slugToName(widget.stateSlug);
-    _totalDiscovered = (data['total'] as num?)?.toInt() ?? 0;
+    try {
+      final result = await BCSupabase.client.rpc('get_city_salons', params: {
+        'p_state_slug': widget.stateSlug,
+        'p_city_slug': widget.citySlug,
+        'p_offset': _page * _discoveredPageSize,
+        'p_limit': _discoveredPageSize,
+      });
+      final data = (result as Map<String, dynamic>?) ?? <String, dynamic>{};
+      _discovered = (data['salons'] as List?) ?? [];
+      _cityName = data['city'] as String? ?? _slugToName(widget.citySlug);
+      _stateName = data['state'] as String? ?? _slugToName(widget.stateSlug);
+      _totalDiscovered = (data['total'] as num?)?.toInt() ?? 0;
+    } catch (_) {
+      _discovered = [];
+      _totalDiscovered = 0;
+    }
   }
 
   int get _totalDiscoveredPages => (_totalDiscovered / _discoveredPageSize).ceil();
