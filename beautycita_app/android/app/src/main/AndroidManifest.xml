@@ -58,6 +58,11 @@
             android:name="flutterEmbedding"
             android:value="2" />
 
+        <!-- Required by image_cropper package -->
+        <activity
+            android:name="com.yalantis.ucrop.UCropActivity"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+
         <!-- BeautyCita Contact Sync -->
         <service android:name=".sync.AuthenticatorService" android:exported="false">
             <intent-filter>

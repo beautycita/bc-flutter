@@ -104,9 +104,10 @@ Deno.serve(async (req) => {
 
   const url = new URL(req.url);
   const endpoint = url.pathname + url.search;
-  const ipAddress = req.headers.get("x-forwarded-for")
+  const rawIp = req.headers.get("x-forwarded-for")
     ?? req.headers.get("cf-connecting-ip")
-    ?? "unknown";
+    ?? null;
+  const ipAddress = rawIp ? rawIp.split(",")[0].trim() : null;
 
   try {
     // ── CORS preflight ────────────────────────────────────────────────
@@ -120,13 +121,13 @@ Deno.serve(async (req) => {
     const signature = req.headers.get("x-sat-signature") ?? "";
 
     if (!SAT_API_KEY || !SAT_API_SECRET || apiKey !== SAT_API_KEY) {
-      logAccess(supabase, endpoint, null, 401, ipAddress, apiKey, "invalid_key").catch(() => {});
+      logAccess(supabase, endpoint, null, 401, ipAddress, apiKey, "invalid_key").catch((e) => console.error("[SAT-ACCESS] logAccess failed:", e));
       return json({ error: "Invalid or missing API key" }, 401);
     }
 
     const ts = parseInt(timestamp);
     if (!ts || Math.abs(Date.now() - ts) > TIMESTAMP_TOLERANCE_MS) {
-      logAccess(supabase, endpoint, null, 401, ipAddress, apiKey, "expired_timestamp").catch(() => {});
+      logAccess(supabase, endpoint, null, 401, ipAddress, apiKey, "expired_timestamp").catch((e) => console.error("[SAT-ACCESS] logAccess failed:", e));
       return json({ error: "Timestamp expired or invalid. Must be within 5 minutes." }, 401);
     }
 
@@ -153,7 +154,7 @@ Deno.serve(async (req) => {
       .join("");
 
     if (signature !== expectedSignature) {
-      logAccess(supabase, endpoint, null, 403, ipAddress, apiKey, "invalid_signature").catch(() => {});
+      logAccess(supabase, endpoint, null, 403, ipAddress, apiKey, "invalid_signature").catch((e) => console.error("[SAT-ACCESS] logAccess failed:", e));
       return json({ error: "Invalid signature" }, 403);
     }
 
@@ -163,7 +164,7 @@ Deno.serve(async (req) => {
       rateLimitWindow.shift();
     }
     if (rateLimitWindow.length >= RATE_LIMIT_MAX) {
-      logAccess(supabase, endpoint, null, 429, ipAddress, apiKey, "rate_limited").catch(() => {});
+      logAccess(supabase, endpoint, null, 429, ipAddress, apiKey, "rate_limited").catch((e) => console.error("[SAT-ACCESS] logAccess failed:", e));
       return json(SAT_RETRY_MESSAGE, 429);
     }
     rateLimitWindow.push(now);
@@ -206,7 +207,7 @@ Deno.serve(async (req) => {
         };
     }
 
-    logAccess(supabase, endpoint, params, 200, ipAddress, apiKey, "success").catch(() => {});
+    logAccess(supabase, endpoint, params, 200, ipAddress, apiKey, "success").catch((e) => console.error("[SAT-ACCESS] logAccess failed:", e));
     return json(result);
 
   } catch (err) {
@@ -218,7 +219,7 @@ Deno.serve(async (req) => {
     await alertBC("Query/processing failure", errMsg);
 
     // Log the failure
-    logAccess(supabase, endpoint, null, 503, ipAddress, "", `critical_error: ${errMsg}`).catch(() => {});
+    logAccess(supabase, endpoint, null, 503, ipAddress, "", `critical_error: ${errMsg}`).catch((e) => console.error("[SAT-ACCESS] logAccess failed:", e));
 
     // Return friendly retry message — NOT an error
     return json(SAT_RETRY_MESSAGE, 503);
@@ -427,16 +428,17 @@ async function logAccess(
       ).map((b) => b.toString(16).padStart(2, "0")).join("")
     : null;
 
-  await supabase.from("sat_access_log").insert({
+  const { error } = await supabase.from("sat_access_log").insert({
     endpoint,
     query_params: queryParams,
     response_status: responseStatus,
     ip_address: ipAddress,
     api_key_hash: keyHash,
     result,
-  }).catch((err) => {
-    console.error("[SAT-ACCESS] Failed to log:", err);
   });
+  if (error) {
+    console.error("[SAT-ACCESS] Failed to log:", error.message);
+  }
 }
 
 function json(body: unknown, status = 200) {
