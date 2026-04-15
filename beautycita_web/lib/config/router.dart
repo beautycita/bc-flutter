@@ -59,6 +59,7 @@ import '../pages/public/directory_city_page.dart';
 import '../pages/public/salon_page.dart';
 import '../pages/public/terminos_page.dart';
 import '../pages/auth/callback_page.dart';
+import '../pages/auth/google_calendar_callback_page.dart';
 import '../pages/auth/forgot_page.dart';
 import '../pages/auth/login_page.dart';
 import '../pages/auth/qr_page.dart';
@@ -339,6 +340,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'callback',
             builder: (context, state) => const CallbackPage(),
+          ),
+          GoRoute(
+            path: 'google-calendar-callback',
+            builder: (context, state) =>
+                const GoogleCalendarCallbackPage(),
           ),
           GoRoute(
             path: 'forgot',

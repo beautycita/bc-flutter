@@ -29,8 +29,93 @@ class _BizCalendarSyncPageState extends ConsumerState<BizCalendarSyncPage> {
   bool _isExporting = false;
   bool _isImporting = false;
   bool _isSyncing = false;
+  bool _isConnecting = false;
+  bool _isDisconnecting = false;
+  bool _googleConnected = false;
+  String? _googleLastSync;
+  String? _googleError;
   String? _feedUrl;
   String? _bizFeedUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkGoogleStatus();
+  }
+
+  Future<void> _checkGoogleStatus() async {
+    try {
+      final response = await BCSupabase.client.functions.invoke(
+        'google-calendar-connect',
+        body: {'action': 'status'},
+      );
+      final data = response.data;
+      if (data is Map && mounted) {
+        setState(() {
+          _googleConnected = data['connected'] == true;
+          _googleLastSync = data['last_synced_at'] as String?;
+          _googleError = data['sync_error'] as String?;
+        });
+      }
+    } catch (_) {
+      // Silently fail — status check is best-effort
+    }
+  }
+
+  Future<void> _connectGoogle() async {
+    setState(() => _isConnecting = true);
+    try {
+      final response = await BCSupabase.client.functions.invoke(
+        'google-calendar-connect',
+        body: {'action': 'oauth_url'},
+      );
+      final data = response.data;
+      if (data is Map && data['url'] is String) {
+        final url = data['url'] as String;
+        // Navigate to Google OAuth consent screen
+        web.window.location.href = url;
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isConnecting = false);
+    }
+  }
+
+  Future<void> _disconnectGoogle() async {
+    setState(() => _isDisconnecting = true);
+    try {
+      await BCSupabase.client.functions.invoke(
+        'google-calendar-connect',
+        body: {'action': 'disconnect'},
+      );
+      if (mounted) {
+        setState(() {
+          _googleConnected = false;
+          _googleLastSync = null;
+          _googleError = null;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Google Calendar desconectado'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isDisconnecting = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,12 +136,19 @@ class _BizCalendarSyncPageState extends ConsumerState<BizCalendarSyncPage> {
           isExporting: _isExporting,
           isImporting: _isImporting,
           isSyncing: _isSyncing,
+          isConnecting: _isConnecting,
+          isDisconnecting: _isDisconnecting,
+          googleConnected: _googleConnected,
+          googleLastSync: _googleLastSync,
+          googleError: _googleError,
           feedUrl: _feedUrl,
           bizFeedUrl: _bizFeedUrl,
           onExport: isDemo ? null : _exportICS,
           onImport: isDemo ? null : _importICS,
           onGetFeedUrl: isDemo ? null : _getFeedUrl,
           onSyncGoogle: isDemo ? null : _syncGoogle,
+          onConnectGoogle: isDemo ? null : _connectGoogle,
+          onDisconnectGoogle: isDemo ? null : _disconnectGoogle,
         );
       },
     );
@@ -223,12 +315,19 @@ class _Content extends StatelessWidget {
     required this.isExporting,
     required this.isImporting,
     required this.isSyncing,
+    required this.isConnecting,
+    required this.isDisconnecting,
+    required this.googleConnected,
+    required this.googleLastSync,
+    required this.googleError,
     required this.feedUrl,
     required this.bizFeedUrl,
     required this.onExport,
     required this.onImport,
     required this.onGetFeedUrl,
     required this.onSyncGoogle,
+    required this.onConnectGoogle,
+    required this.onDisconnectGoogle,
   });
 
   final String bizId;
@@ -237,12 +336,19 @@ class _Content extends StatelessWidget {
   final bool isExporting;
   final bool isImporting;
   final bool isSyncing;
+  final bool isConnecting;
+  final bool isDisconnecting;
+  final bool googleConnected;
+  final String? googleLastSync;
+  final String? googleError;
   final String? feedUrl;
   final String? bizFeedUrl;
   final VoidCallback? onExport;
   final VoidCallback? onImport;
   final VoidCallback? onGetFeedUrl;
   final VoidCallback? onSyncGoogle;
+  final VoidCallback? onConnectGoogle;
+  final VoidCallback? onDisconnectGoogle;
 
   @override
   Widget build(BuildContext context) {
@@ -584,6 +690,9 @@ class _GoogleCalendarCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final connected = parent.googleConnected;
+
     return WebCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -591,33 +700,108 @@ class _GoogleCalendarCard extends StatelessWidget {
           WebInfoRow(
             icon: Icons.g_mobiledata_outlined,
             iconColor: const Color(0xFF4285F4),
-            label: 'Sincronizacion bidireccional via OAuth',
+            label: connected
+                ? 'Conectado — importa eventos automaticamente'
+                : 'Conecta tu calendario de Google',
             value: 'Google Calendar',
           ),
+          const SizedBox(height: 12),
+
+          // Status badge
+          if (connected) ...[
+            _CompatBadge(label: 'Conectado'),
+            if (parent.googleLastSync != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                'Ultima sincronizacion: ${_formatDate(parent.googleLastSync!)}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: kWebTextSecondary,
+                  fontSize: 11,
+                ),
+              ),
+            ],
+            if (parent.googleError != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                'Error: ${parent.googleError}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: const Color(0xFFEF4444),
+                  fontSize: 11,
+                ),
+              ),
+            ],
+          ],
+
           const SizedBox(height: 16),
+
           if (!parent.isDemo) ...[
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: parent.onSyncGoogle,
-                    icon: parent.isSyncing
+            if (!connected) ...[
+              // Connect button
+              SizedBox(
+                width: double.infinity,
+                child: WebGradientButton(
+                  onPressed: parent.isConnecting ? null : parent.onConnectGoogle,
+                  isLoading: parent.isConnecting,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (!parent.isConnecting) const Icon(Icons.link_outlined, size: 18, color: Colors.white),
+                      if (!parent.isConnecting) const SizedBox(width: 8),
+                      Text(parent.isConnecting ? 'Conectando...' : 'Conectar Google Calendar'),
+                    ],
+                  ),
+                ),
+              ),
+            ] else ...[
+              // Sync + Disconnect buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: parent.isSyncing ? null : parent.onSyncGoogle,
+                      icon: parent.isSyncing
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.sync_outlined, size: 18),
+                      label: Text(parent.isSyncing ? 'Sincronizando...' : 'Sincronizar'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    onPressed: parent.isDisconnecting ? null : parent.onDisconnectGoogle,
+                    icon: parent.isDisconnecting
                         ? const SizedBox(
                             width: 16,
                             height: 16,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Icon(Icons.sync_outlined, size: 18),
-                    label: Text(parent.isSyncing ? 'Sincronizando...' : 'Sincronizar'),
+                        : const Icon(Icons.link_off_outlined, size: 18),
+                    tooltip: 'Desconectar',
+                    style: IconButton.styleFrom(
+                      foregroundColor: const Color(0xFFEF4444),
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
+            ],
           ] else
             _DemoBadge(),
         ],
       ),
     );
+  }
+
+  String _formatDate(String iso) {
+    try {
+      final dt = DateTime.parse(iso).toLocal();
+      return '${dt.day}/${dt.month}/${dt.year} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    } catch (_) {
+      return iso;
+    }
   }
 }
 
