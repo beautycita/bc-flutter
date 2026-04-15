@@ -70,6 +70,36 @@ function esc(str: string): string {
     .replace(/'/g, "&#039;");
 }
 
+// Cute username generator — same word lists as mobile app
+const _adjectives = [
+  'velvet','golden','coral','moonlit','sparkle','crystal','honey','cherry','pearl','silk',
+  'rose','amber','jade','lavender','crimson','ivory','scarlet','emerald','sapphire','ruby',
+  'opal','cosmic','dreamy','mystic','starlit','twilight','radiant','shimmer','glitter','frosted',
+  'blushing','dewy','luminous','enchanted','serene','ethereal','celestial','divine','precious','dazzling',
+  'strawberry','blissful','whispering','dancing','singing','blazing','glowing','shining','twinkling','sparkling',
+];
+const _nouns = [
+  'blonde','bee','rose','lash','glow','dream','queen','blossom','mist','curl',
+  'nail','star','moon','petal','jewel','crown','butterfly','orchid','dahlia','peony',
+  'lily','iris','violet','gem','tiara','goddess','swan','dove','phoenix','angel',
+  'muse','diva','belle','charm','pixie','fairy','bloom','aurora','luna','stella',
+  'sky','sun','flame','breeze','wave','rain','shine','diamond','sapphire',
+];
+const _midWords = [
+  'burning','dancing','falling','hidden','flying','rising','floating','wild','gentle','silent',
+  'bright','sweet','soft','bold','deep','warm','cool','rare','pure','true',
+  'little','lucky','magic','misty','sunny',
+];
+
+function generateCuteUsername(threeWords = false): string {
+  const pick = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
+  const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
+  if (threeWords) {
+    return pick(_adjectives) + cap(pick(_midWords)) + cap(pick(_nouns));
+  }
+  return pick(_adjectives) + cap(pick(_nouns));
+}
+
 function generateOtp(): string {
   const array = new Uint32Array(1);
   crypto.getRandomValues(array);
@@ -1236,12 +1266,23 @@ Deno.serve(async (req: Request) => {
           }
         }
 
-        // Update/create profile
+        // Update/create profile with cute username (two-word, three-word on collision)
+        let username = generateCuteUsername();
+        for (let i = 0; i < 5; i++) {
+          const { data: existing } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("username", username)
+            .maybeSingle();
+          if (!existing) break;
+          username = generateCuteUsername(true); // three-word on collision
+        }
+
         const { error: profileErr } = await supabase.from("profiles").upsert(
           {
             id: userId,
             full_name: ownerName,
-            username: "user_" + userId!.substring(0, 8),
+            username,
             phone,
             phone_verified: true,
             phone_verified_at: new Date().toISOString(),

@@ -131,8 +131,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       // Create anonymous Supabase session first (needed for collision check)
       await _userSession.ensureSupabaseSession();
 
-      // Generate username with suffix (220K combos) + collision retry
-      String username = UsernameGenerator.generateUsernameWithSuffix();
+      // Generate username: try two-word first, three-word on collision
+      String username = UsernameGenerator.generateUsername();
       bool unique = false;
       for (int attempt = 0; attempt < 5; attempt++) {
         final existing = await SupabaseClientService.client
@@ -141,7 +141,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
             .eq('username', username)
             .maybeSingle();
         if (existing == null) { unique = true; break; }
-        username = UsernameGenerator.generateUsernameWithSuffix();
+        // Collision: escalate to three-word username
+        username = UsernameGenerator.generateThreeWordUsername();
       }
       if (!unique) {
         throw Exception('No se pudo generar un nombre de usuario unico. Intenta de nuevo.');

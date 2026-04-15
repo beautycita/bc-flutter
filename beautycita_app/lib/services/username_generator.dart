@@ -130,17 +130,31 @@ class UsernameGenerator {
     return '$adjective$capitalizedNoun';
   }
 
-  /// Generates a random username with a guaranteed 2-digit suffix.
-  ///
-  /// Example: velvetRose42, strawberryBlonde17, moonlitLash88
-  ///
-  /// Use this when collision risk exists or you always want a numeric suffix.
-  static String generateUsernameWithSuffix() {
-    final baseUsername = generateUsername();
-    final suffix = _random.nextInt(90) + 10; // 10-99
+  // Third word for three-word usernames (used on collision)
+  static const List<String> _midWords = [
+    'burning', 'dancing', 'falling', 'hidden', 'flying',
+    'rising', 'floating', 'wild', 'gentle', 'silent',
+    'bright', 'sweet', 'soft', 'bold', 'deep',
+    'warm', 'cool', 'rare', 'pure', 'true',
+    'little', 'lucky', 'magic', 'misty', 'sunny',
+  ];
 
-    return '$baseUsername$suffix';
+  /// Generates a three-word username for collision recovery.
+  ///
+  /// Example: mysticBurningFlame, velvetSilentRose, goldenWildBloom
+  static String generateThreeWordUsername() {
+    final adjective = _adjectives[_random.nextInt(_adjectives.length)];
+    final mid = _midWords[_random.nextInt(_midWords.length)];
+    final noun = _nouns[_random.nextInt(_nouns.length)];
+
+    final capitalizedMid = mid[0].toUpperCase() + mid.substring(1);
+    final capitalizedNoun = noun[0].toUpperCase() + noun.substring(1);
+
+    return '$adjective$capitalizedMid$capitalizedNoun';
   }
+
+  /// @deprecated Use [generateUsername] with collision retry via [generateThreeWordUsername].
+  static String generateUsernameWithSuffix() => generateThreeWordUsername();
 
   /// Generates multiple unique username suggestions.
   ///
