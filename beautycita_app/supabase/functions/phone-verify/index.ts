@@ -57,7 +57,7 @@ async function sendWhatsApp(phone: string, code: string): Promise<{ sent: boolea
   if (!BEAUTYPI_WA_URL) return { sent: false, channel: "whatsapp" };
   try {
     const ac1 = new AbortController();
-    const t1 = setTimeout(() => ac1.abort(), 5000);
+    const t1 = setTimeout(() => ac1.abort(), 15000);
     const checkRes = await fetch(`${BEAUTYPI_WA_URL}/api/wa/check`, {
       method: "POST",
       headers: {
