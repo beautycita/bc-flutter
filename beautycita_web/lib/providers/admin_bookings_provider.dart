@@ -2,9 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita_core/supabase.dart';
 
-/// Strip PostgREST filter metacharacters to prevent filter injection via .or().
-String _sanitize(String input) =>
-    input.replaceAll(RegExp(r'[.,()\\]'), '').trim();
+import '../utils/sanitize.dart';
 
 // ── Data classes ──────────────────────────────────────────────────────────────
 
@@ -204,7 +202,7 @@ final adminBookingsProvider = FutureProvider<BookingsPageData>((ref) async {
 
     final List data;
     if (filter.searchText.isNotEmpty) {
-      final q = _sanitize(filter.searchText);
+      final q = sanitizeSearch(filter.searchText);
       data = await query
           .or('service_name.ilike.%$q%,businesses.name.ilike.%$q%')
           .order(sortCol, ascending: filter.sortAscending)
@@ -236,7 +234,7 @@ final adminBookingsProvider = FutureProvider<BookingsPageData>((ref) async {
     }
     final int totalCount;
     if (filter.searchText.isNotEmpty) {
-      final cq = _sanitize(filter.searchText);
+      final cq = sanitizeSearch(filter.searchText);
       final r = await countQuery
           .or('service_name.ilike.%$cq%,businesses.name.ilike.%$cq%')
           .count();

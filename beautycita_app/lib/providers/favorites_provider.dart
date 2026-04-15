@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../repositories/favorites_repository.dart';
 
@@ -20,8 +21,9 @@ class FavoritesNotifier extends StateNotifier<Set<String>> {
   Future<void> _load() async {
     try {
       state = await _repo.getFavoriteBusinessIds();
-    } catch (_) {
-      // Silently fail — user may not be authenticated yet
+    } catch (e) {
+      // User may not be authenticated yet
+      debugPrint('[FavoritesNotifier._load] error: $e');
     }
   }
 
@@ -33,7 +35,8 @@ class FavoritesNotifier extends StateNotifier<Set<String>> {
       state = Set.from(state)..remove(businessId);
       try {
         await _repo.removeFavorite(businessId);
-      } catch (_) {
+      } catch (e) {
+        debugPrint('[FavoritesNotifier.toggle] remove error: $e');
         // Revert on error
         state = Set.from(state)..add(businessId);
       }
@@ -42,7 +45,8 @@ class FavoritesNotifier extends StateNotifier<Set<String>> {
       state = Set.from(state)..add(businessId);
       try {
         await _repo.addFavorite(businessId);
-      } catch (_) {
+      } catch (e) {
+        debugPrint('[FavoritesNotifier.toggle] add error: $e');
         // Revert on error
         state = Set.from(state)..remove(businessId);
       }

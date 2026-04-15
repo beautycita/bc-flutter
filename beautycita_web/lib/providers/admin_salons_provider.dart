@@ -4,9 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita_core/supabase.dart';
 
-/// Strip PostgREST filter metacharacters to prevent filter injection via .or().
-String _sanitize(String input) =>
-    input.replaceAll(RegExp(r'[.,()\\]'), '').trim();
+import '../utils/sanitize.dart';
 
 // ── Registered salon (businesses table) ──────────────────────────────────────
 
@@ -424,9 +422,9 @@ final registeredSalonsProvider =
   if (searchText.isNotEmpty) {
     data = await query
         .or(
-          'name.ilike.%${_sanitize(searchText)}%,'
-          'city.ilike.%${_sanitize(searchText)}%,'
-          'phone.ilike.%${_sanitize(searchText)}%',
+          'name.ilike.%${sanitizeSearch(searchText)}%,'
+          'city.ilike.%${sanitizeSearch(searchText)}%,'
+          'phone.ilike.%${sanitizeSearch(searchText)}%',
         )
         .order(sortCol, ascending: filter.sortAscending)
         .range(from, to);
@@ -451,9 +449,9 @@ final registeredSalonsProvider =
   if (searchText.isNotEmpty) {
     final r = await countQuery
         .or(
-          'name.ilike.%${_sanitize(searchText)}%,'
-          'city.ilike.%${_sanitize(searchText)}%,'
-          'phone.ilike.%${_sanitize(searchText)}%',
+          'name.ilike.%${sanitizeSearch(searchText)}%,'
+          'city.ilike.%${sanitizeSearch(searchText)}%,'
+          'phone.ilike.%${sanitizeSearch(searchText)}%',
         )
         .count();
     totalCount = r.count;
@@ -542,9 +540,9 @@ final discoveredSalonsProvider =
   if (searchText.isNotEmpty) {
     data = await query
         .or(
-          'business_name.ilike.%${_sanitize(searchText)}%,'
-          'location_city.ilike.%${_sanitize(searchText)}%,'
-          'phone.ilike.%${_sanitize(searchText)}%',
+          'business_name.ilike.%${sanitizeSearch(searchText)}%,'
+          'location_city.ilike.%${sanitizeSearch(searchText)}%,'
+          'phone.ilike.%${sanitizeSearch(searchText)}%',
         )
         .order(sortCol, ascending: filter.sortAscending)
         .range(from, to);
@@ -598,9 +596,9 @@ final discoveredSalonsProvider =
   if (searchText.isNotEmpty) {
     final r = await countQuery
         .or(
-          'business_name.ilike.%${_sanitize(searchText)}%,'
-          'location_city.ilike.%${_sanitize(searchText)}%,'
-          'phone.ilike.%${_sanitize(searchText)}%',
+          'business_name.ilike.%${sanitizeSearch(searchText)}%,'
+          'location_city.ilike.%${sanitizeSearch(searchText)}%,'
+          'phone.ilike.%${sanitizeSearch(searchText)}%',
         )
         .count();
     totalCount = r.count;

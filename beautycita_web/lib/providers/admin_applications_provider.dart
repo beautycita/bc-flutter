@@ -4,9 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita_core/supabase.dart';
 
-/// Strip PostgREST filter metacharacters to prevent filter injection.
-String _sanitize(String input) =>
-    input.replaceAll(RegExp(r'[.,()\\]'), '').trim();
+import '../utils/sanitize.dart';
 
 // ── Application business model ───────────────────────────────────────────────
 
@@ -177,9 +175,9 @@ final applicationsProvider = FutureProvider<ApplicationsData>((ref) async {
   if (searchText.isNotEmpty) {
     data = await query
         .or(
-          'name.ilike.%${_sanitize(searchText)}%,'
-          'city.ilike.%${_sanitize(searchText)}%,'
-          'phone.ilike.%${_sanitize(searchText)}%',
+          'name.ilike.%${sanitizeSearch(searchText)}%,'
+          'city.ilike.%${sanitizeSearch(searchText)}%,'
+          'phone.ilike.%${sanitizeSearch(searchText)}%',
         )
         .order(sortCol, ascending: filter.sortAscending)
         .range(from, to);
@@ -198,9 +196,9 @@ final applicationsProvider = FutureProvider<ApplicationsData>((ref) async {
   if (searchText.isNotEmpty) {
     final r = await countQuery
         .or(
-          'name.ilike.%${_sanitize(searchText)}%,'
-          'city.ilike.%${_sanitize(searchText)}%,'
-          'phone.ilike.%${_sanitize(searchText)}%',
+          'name.ilike.%${sanitizeSearch(searchText)}%,'
+          'city.ilike.%${sanitizeSearch(searchText)}%,'
+          'phone.ilike.%${sanitizeSearch(searchText)}%',
         )
         .count();
     totalCount = r.count;

@@ -1,3 +1,4 @@
+import 'package:beautycita_core/supabase.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -90,7 +91,7 @@ class _WelcomeHeader extends StatelessWidget {
     if (isMobile) {
       return WebSectionHeader(
         label: formattedDate,
-        title: 'Bienvenido, BC',
+        title: 'Bienvenido, ${BCSupabase.client.auth.currentUser?.userMetadata?['full_name'] ?? BCSupabase.client.auth.currentUser?.email?.split('@')[0] ?? 'Admin'}',
         centered: false,
         titleSize: 28,
       );
@@ -101,7 +102,7 @@ class _WelcomeHeader extends StatelessWidget {
         Expanded(
           child: WebSectionHeader(
             label: formattedDate,
-            title: 'Bienvenido, BC',
+            title: 'Bienvenido, ${BCSupabase.client.auth.currentUser?.userMetadata?['full_name'] ?? BCSupabase.client.auth.currentUser?.email?.split('@')[0] ?? 'Admin'}',
             centered: false,
             titleSize: 36,
           ),

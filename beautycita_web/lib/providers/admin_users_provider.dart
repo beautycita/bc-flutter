@@ -2,9 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita_core/supabase.dart';
 
-/// Strip PostgREST filter metacharacters to prevent filter injection via .or().
-String _sanitize(String input) =>
-    input.replaceAll(RegExp(r'[.,()\\]'), '').trim();
+import '../utils/sanitize.dart';
 
 // ── Data classes ──────────────────────────────────────────────────────────────
 
@@ -168,7 +166,7 @@ final adminUsersProvider = FutureProvider<UsersPageData>((ref) async {
     final result = await client.rpc('admin_list_users', params: {
       'p_role': filter.role,
       'p_status': filter.status,
-      'p_search': _sanitize(filter.searchText),
+      'p_search': sanitizeSearch(filter.searchText),
       'p_sort': filter.sortColumn ?? 'created_at',
       'p_asc': filter.sortAscending,
       'p_offset': filter.page * filter.pageSize,

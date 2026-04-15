@@ -63,7 +63,9 @@ class VideoPrecacheService {
       final cacheDir = await getApplicationCacheDirectory();
       final file = File('${cacheDir.path}/bg_$filename');
       if (file.existsSync() && file.lengthSync() > 100000) return file;
-    } catch (_) {}
+    } catch (e) {
+      if (kDebugMode) debugPrint('[VideoPrecacheService.getCached] error: $e');
+    }
     return null;
   }
 }

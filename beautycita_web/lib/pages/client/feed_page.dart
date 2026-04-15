@@ -28,6 +28,7 @@ class _FeedPageState extends ConsumerState<FeedPage> {
   bool _hasMore = true;
   int _page = 0;
   String? _selectedCategory;
+  String? _errorMessage;
   static const int _pageSize = 20;
 
   // Categories shown in the filter sidebar / chips
@@ -101,13 +102,26 @@ class _FeedPageState extends ConsumerState<FeedPage> {
             _page++;
             _hasMore = newItems.length >= _pageSize;
             _isLoading = false;
+            _errorMessage = null;
           });
         }
       } else {
-        if (mounted) setState(() => _isLoading = false);
+        debugPrint('[FeedPage._loadFeed] HTTP ${response.statusCode}: ${response.body}');
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _errorMessage = 'Error al cargar el feed (${response.statusCode})';
+          });
+        }
       }
-    } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
+    } catch (e) {
+      debugPrint('[FeedPage._loadFeed] error: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'No se pudo conectar al servidor';
+        });
+      }
     }
   }
 
@@ -118,6 +132,7 @@ class _FeedPageState extends ConsumerState<FeedPage> {
       _items.clear();
       _page = 0;
       _hasMore = true;
+      _errorMessage = null;
     });
     _loadFeed();
   }
@@ -202,6 +217,50 @@ class _FeedPageState extends ConsumerState<FeedPage> {
     if (_items.isEmpty && _isLoading) {
       return const Center(
         child: CircularProgressIndicator(color: kWebPrimary),
+      );
+    }
+
+    if (_errorMessage != null && _items.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.cloud_off_outlined,
+                  size: 40, color: kWebTextHint),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _errorMessage!,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: kWebTextSecondary,
+                fontFamily: 'system-ui',
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            TextButton.icon(
+              onPressed: () {
+                setState(() {
+                  _errorMessage = null;
+                  _hasMore = true;
+                });
+                _loadFeed();
+              },
+              icon: const Icon(Icons.refresh),
+              label: const Text('Reintentar'),
+              style: TextButton.styleFrom(foregroundColor: kWebPrimary),
+            ),
+          ],
+        ),
       );
     }
 

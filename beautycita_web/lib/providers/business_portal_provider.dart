@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita_core/supabase.dart';
 import '../data/demo_data.dart';
@@ -560,8 +561,9 @@ final businessTaxSummaryProvider =
     for (final e in expenses as List) {
       ytdExpenses += ((e as Map<String, dynamic>)['amount'] as num?)?.toDouble() ?? 0;
     }
-  } catch (_) {
+  } catch (e) {
     // Table may not exist yet
+    debugPrint('[businessTaxSummaryProvider] expenses query error: $e');
   }
 
   // Outstanding debt
@@ -595,7 +597,8 @@ final businessCfdiProvider =
         .limit(20);
 
     return List<Map<String, dynamic>>.from(response as List);
-  } catch (_) {
+  } catch (e) {
+    debugPrint('[businessCfdiProvider] error: $e');
     return [];
   }
 });
@@ -619,7 +622,8 @@ final businessPayoutRecordsProvider =
         .limit(50);
 
     return List<Map<String, dynamic>>.from(response as List);
-  } catch (_) {
+  } catch (e) {
+    debugPrint('[businessPayoutRecordsProvider] error: $e');
     return [];
   }
 });
@@ -643,7 +647,8 @@ final businessCommissionRecordsProvider =
         .limit(50);
 
     return List<Map<String, dynamic>>.from(response as List);
-  } catch (_) {
+  } catch (e) {
+    debugPrint('[businessCommissionRecordsProvider] error: $e');
     return [];
   }
 });

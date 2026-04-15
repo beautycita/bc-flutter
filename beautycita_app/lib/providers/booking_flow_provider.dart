@@ -184,8 +184,9 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
         // No follow-ups — go straight to engine
         await _acquireLocationAndFetch();
       }
-    } catch (_) {
+    } catch (e) {
       // If fetching questions fails, go straight to engine
+      debugPrint('[BookingFlowNotifier.selectService] follow-up fetch error: $e');
       await _acquireLocationAndFetch();
     }
   }

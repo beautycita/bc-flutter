@@ -105,7 +105,8 @@ final systemHealthProvider = FutureProvider<SystemHealth>((ref) async {
     try {
       await client.from(BCTables.profiles).select('id').limit(1);
       dbOnline = true;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[systemHealthProvider] DB connectivity check error: $e');
       dbOnline = false;
     }
 
@@ -122,7 +123,9 @@ final systemHealthProvider = FutureProvider<SystemHealth>((ref) async {
           .gte('created_at', last24h)
           .count();
       edgeFunctionErrors = errorRows.count;
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[systemHealthProvider] edge function errors query error: $e');
+    }
 
     // Last backup from app_config
     DateTime? lastBackupAt;
@@ -141,7 +144,9 @@ final systemHealthProvider = FutureProvider<SystemHealth>((ref) async {
           lastBackupStatus = val['status'] as String?;
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[systemHealthProvider] backup config query error: $e');
+    }
 
     return SystemHealth(
       databaseOnline: dbOnline,
@@ -289,7 +294,9 @@ final opsLogsProvider = FutureProvider<List<OpsLogEntry>>((ref) async {
           actor: row['actor_id']?.toString(),
         ));
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[opsLogsProvider] audit log query error: $e');
+    }
 
     try {
       final failedPayments = await client
@@ -310,7 +317,9 @@ final opsLogsProvider = FutureProvider<List<OpsLogEntry>>((ref) async {
                   DateTime.now(),
         ));
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[opsLogsProvider] failed payments query error: $e');
+    }
 
     entries.sort((a, b) => b.timestamp.compareTo(a.timestamp));
     return entries.take(30).toList();
