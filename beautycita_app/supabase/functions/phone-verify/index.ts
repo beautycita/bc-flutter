@@ -326,10 +326,10 @@ Deno.serve(async (req) => {
           .eq("business_id", existingBiz.id)
           .eq("user_id", oldOwnerId);
 
-        // Update current user's role to salon_owner
+        // Update current user's role to stylist (constraint: customer/stylist/admin/superadmin/rp)
         await db
           .from("profiles")
-          .update({ role: "salon_owner" })
+          .update({ role: "stylist" })
           .eq("id", user.id);
 
         // Delete the orphaned web-created auth user + profile

@@ -1245,7 +1245,7 @@ Deno.serve(async (req: Request) => {
             phone,
             phone_verified: true,
             phone_verified_at: new Date().toISOString(),
-            role: "salon_owner",
+            role: "stylist",
           },
           { onConflict: "id" },
         );
