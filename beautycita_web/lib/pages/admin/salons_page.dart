@@ -11,6 +11,7 @@ import '../../widgets/filter_bar.dart';
 import '../../widgets/master_detail_layout.dart';
 import '../../widgets/admin_typeahead_search.dart';
 import '../../widgets/pagination_bar.dart';
+import '../../widgets/salon_segments_dashboard.dart';
 import 'salon_detail_panel.dart';
 
 /// Admin salons management page with two tabs:
@@ -547,7 +548,13 @@ class _DiscoveredTab extends ConsumerWidget {
     final isLoading = salonsAsync.isLoading;
     final totalPages = (totalCount / filter.pageSize).ceil();
 
-    return MasterDetailLayout<DiscoveredSalon>(
+    return Column(
+      children: [
+        // Collapsible segmentation dashboard
+        const _SegmentsSummaryBar(),
+        // Main table
+        Expanded(
+          child: MasterDetailLayout<DiscoveredSalon>(
       items: items,
       isLoading: isLoading,
       selectedItem: selectedSalon,
@@ -905,6 +912,9 @@ class _DiscoveredTab extends ConsumerWidget {
               },
             )
           : null,
+    ),
+        ),
+      ],
     );
   }
 
@@ -1319,6 +1329,26 @@ class _CityFilterDropdown extends StatelessWidget {
           },
         ),
       ),
+    );
+  }
+}
+
+class _SegmentsSummaryBar extends StatelessWidget {
+  const _SegmentsSummaryBar();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return ExpansionTile(
+      initiallyExpanded: false,
+      tilePadding: const EdgeInsets.symmetric(horizontal: BCSpacing.md),
+      childrenPadding: const EdgeInsets.fromLTRB(BCSpacing.md, 0, BCSpacing.md, BCSpacing.md),
+      leading: Icon(Icons.analytics_outlined, size: 20, color: theme.colorScheme.primary),
+      title: Text(
+        'Inteligencia de Mercado',
+        style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+      ),
+      children: const [SalonSegmentsDashboard()],
     );
   }
 }
