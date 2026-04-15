@@ -8,10 +8,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 final adminChatThreadsProvider =
     FutureProvider<List<ChatThread>>((ref) async {
   if (!BCSupabase.isInitialized) return [];
+  final user = BCSupabase.client.auth.currentUser;
+  if (user == null) return [];
 
   final data = await BCSupabase.client
       .from('chat_threads')
       .select()
+      .inFilter('contact_type', ['support', 'support_ai', 'salon'])
       .order('last_message_at', ascending: false, nullsFirst: false)
       .limit(200);
 
@@ -29,6 +32,8 @@ final adminSelectedThreadProvider = StateProvider<ChatThread?>((ref) => null);
 final adminChatMessagesProvider =
     FutureProvider.family<List<ChatMessage>, String>((ref, threadId) async {
   if (!BCSupabase.isInitialized) return [];
+  final user = BCSupabase.client.auth.currentUser;
+  if (user == null) return [];
 
   final data = await BCSupabase.client
       .from('chat_messages')

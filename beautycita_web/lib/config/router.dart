@@ -67,6 +67,7 @@ import '../pages/auth/register_page.dart';
 import '../pages/auth/verify_page.dart';
 import '../pages/error/not_found_page.dart';
 import '../pages/landing_page.dart';
+import '../pages/registrar_page.dart';
 import '../pages/registro_page.dart';
 import '../pages/support/soporte_page.dart';
 import '../shells/admin_shell.dart';
@@ -161,6 +162,7 @@ abstract final class WebRoutes {
   // Public
   static const String soporte = '/soporte';
   static const String registro = '/registro';
+  static const String registrar = '/registrar';
   static const String terminos = '/terminos';
   static const String privacidad = '/privacidad';
 }
@@ -201,6 +203,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           path.startsWith('/explorar') ||
           path.startsWith('/reservar') ||
           path.startsWith('/registro') ||
+          path == '/registrar' ||
           path == '/invitar' ||
           path.startsWith('/salon');
 
@@ -279,7 +282,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const PrivacidadPage(),
       ),
 
-      // ── Salon registration (public, no shell) ─────────────────────────
+      // ── Salon self-registration search (public, no shell) ──────────────
+      GoRoute(
+        path: WebRoutes.registrar,
+        builder: (context, state) => const RegistrarPage(),
+      ),
+
+      // ── Salon registration with pre-fill (public, no shell) ───────────
       GoRoute(
         path: '/registro/:salonId',
         builder: (context, state) => RegistroPage(

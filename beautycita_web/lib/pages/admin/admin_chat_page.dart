@@ -113,7 +113,7 @@ class _ThreadSidebar extends ConsumerWidget {
             child: Row(
               children: [
                 Text(
-                  'Chats',
+                  'Soporte',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: kWebTextPrimary,
@@ -396,14 +396,14 @@ class _EmptyConversation extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'Selecciona un chat',
+            'Cola de soporte',
             style: theme.textTheme.titleMedium?.copyWith(
               color: kWebTextSecondary,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Elige un hilo de la lista para ver la conversación',
+            'Selecciona un hilo para responder como Soporte BeautyCita',
             style: theme.textTheme.bodySmall?.copyWith(
               color: kWebTextHint,
             ),
@@ -616,7 +616,7 @@ class _ConversationPanelState
                   textInputAction: TextInputAction.newline,
                   style: theme.textTheme.bodySmall,
                   decoration: InputDecoration(
-                    hintText: 'Escribe un mensaje...',
+                    hintText: 'Responder como Soporte BeautyCita...',
                     hintStyle: theme.textTheme.bodySmall?.copyWith(
                       color: kWebTextHint,
                     ),
@@ -790,7 +790,7 @@ class _MessageBubble extends StatelessWidget {
       'user' => 'Usuario',
       'aphrodite' => 'Afrodita',
       'eros' => 'Eros',
-      'support' || 'admin' => 'Soporte BC',
+      'support' || 'admin' => 'Soporte BeautyCita',
       'system' => 'Sistema',
       _ => senderType,
     };
