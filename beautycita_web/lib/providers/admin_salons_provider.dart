@@ -275,6 +275,8 @@ class DiscoveredSalonsData {
 class SalonsFilter {
   final String? city;
   final String? country;
+  final String? state;
+  final String? source; // 'google_maps', 'denue', 'facebook', 'bing', 'manual'
   final String searchText;
   final bool? verified;
   final String? enrichmentFilter; // 'ig_enriched', 'wa_verified', 'wa_checked', 'has_photo', 'has_website'
@@ -287,6 +289,8 @@ class SalonsFilter {
   const SalonsFilter({
     this.city,
     this.country,
+    this.state,
+    this.source,
     this.searchText = '',
     this.verified,
     this.enrichmentFilter,
@@ -300,6 +304,8 @@ class SalonsFilter {
   SalonsFilter copyWith({
     String? Function()? city,
     String? Function()? country,
+    String? Function()? state,
+    String? Function()? source,
     String? searchText,
     bool? Function()? verified,
     String? Function()? enrichmentFilter,
@@ -312,6 +318,8 @@ class SalonsFilter {
     return SalonsFilter(
       city: city != null ? city() : this.city,
       country: country != null ? country() : this.country,
+      state: state != null ? state() : this.state,
+      source: source != null ? source() : this.source,
       searchText: searchText ?? this.searchText,
       verified: verified != null ? verified() : this.verified,
       enrichmentFilter: enrichmentFilter != null ? enrichmentFilter() : this.enrichmentFilter,
@@ -326,6 +334,8 @@ class SalonsFilter {
   bool get hasActiveFilters =>
       city != null ||
       country != null ||
+      state != null ||
+      source != null ||
       searchText.isNotEmpty ||
       verified != null ||
       enrichmentFilter != null ||
@@ -497,6 +507,12 @@ final discoveredSalonsProvider =
       query = query.eq('country', filter.country!);
     }
   }
+  if (filter.state != null) {
+    query = query.eq('location_state', filter.state!);
+  }
+  if (filter.source != null) {
+    query = query.eq('source', filter.source!);
+  }
   // Enrichment filters
   switch (filter.enrichmentFilter) {
     case 'ig_enriched':
@@ -548,6 +564,12 @@ final discoveredSalonsProvider =
     } else {
       countQuery = countQuery.eq('country', filter.country!);
     }
+  }
+  if (filter.state != null) {
+    countQuery = countQuery.eq('location_state', filter.state!);
+  }
+  if (filter.source != null) {
+    countQuery = countQuery.eq('source', filter.source!);
   }
   switch (filter.enrichmentFilter) {
     case 'ig_enriched':

@@ -606,6 +606,30 @@ class _DiscoveredTab extends ConsumerWidget {
                   filter.copyWith(city: () => value, page: 0);
             },
           ),
+          _StateFilterDropdown(
+            value: filter.state,
+            country: filter.country,
+            onChanged: (value) {
+              ref.read(discoveredSalonsFilterProvider.notifier).state =
+                  filter.copyWith(state: () => value, city: () => null, page: 0);
+            },
+          ),
+          _SalonFilterDropdown(
+            value: filter.source,
+            hint: 'Fuente',
+            items: const {
+              null: 'Todas',
+              'google_maps': 'Google Maps',
+              'denue': 'DENUE',
+              'facebook': 'Facebook',
+              'bing': 'Bing',
+              'manual': 'Manual',
+            },
+            onChanged: (value) {
+              ref.read(discoveredSalonsFilterProvider.notifier).state =
+                  filter.copyWith(source: () => value, page: 0);
+            },
+          ),
           _SalonFilterDropdown(
             value: filter.enrichmentFilter,
             hint: 'Enrichment',
@@ -1274,6 +1298,61 @@ class _CityFilterDropdown extends StatelessWidget {
             if (v != null && v.startsWith('__')) return;
             onChanged(v);
           },
+        ),
+      ),
+    );
+  }
+}
+
+class _StateFilterDropdown extends StatelessWidget {
+  const _StateFilterDropdown({
+    required this.value,
+    required this.country,
+    required this.onChanged,
+  });
+
+  final String? value;
+  final String? country;
+  final ValueChanged<String?> onChanged;
+
+  static const _mxStates = [
+    'Aguascalientes', 'Baja California', 'Baja California Sur', 'Campeche',
+    'Chiapas', 'Chihuahua', 'Ciudad de Mexico', 'Coahuila', 'Colima',
+    'Durango', 'Guanajuato', 'Guerrero', 'Hidalgo', 'Jalisco',
+    'Mexico', 'Michoacan', 'Morelos', 'Nayarit', 'Nuevo Leon',
+    'Oaxaca', 'Puebla', 'Queretaro', 'Quintana Roo', 'San Luis Potosi',
+    'Sinaloa', 'Sonora', 'Tabasco', 'Tamaulipas', 'Tlaxcala',
+    'Veracruz', 'Yucatan', 'Zacatecas',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    final items = <DropdownMenuItem<String?>>[];
+    items.add(const DropdownMenuItem(value: null, child: Text('Todos')));
+
+    final states = (country == null || country == 'MX') ? _mxStates : <String>[];
+    for (final s in states) {
+      items.add(DropdownMenuItem(value: s, child: Text(s)));
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: BCSpacing.sm),
+      decoration: BoxDecoration(
+        border: Border.all(color: colors.outlineVariant),
+        borderRadius: BorderRadius.circular(BCSpacing.radiusXs),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String?>(
+          value: value,
+          isDense: true,
+          hint: Text('Estado', style: theme.textTheme.bodySmall),
+          style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurface),
+          menuMaxHeight: 400,
+          items: items,
+          onChanged: onChanged,
         ),
       ),
     );

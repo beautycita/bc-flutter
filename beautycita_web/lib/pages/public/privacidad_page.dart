@@ -27,7 +27,7 @@ class PrivacidadPage extends StatelessWidget {
                 Text('Aviso de Privacidad Integral',
                     style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-                Text('Ultima actualizacion: 10 de abril de 2026',
+                Text('Ultima actualizacion: 15 de abril de 2026',
                     style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey)),
                 const SizedBox(height: 32),
 
@@ -171,6 +171,33 @@ class PrivacidadPage extends StatelessWidget {
                     '  - Cookies de seguimiento entre sitios\n'
                     '  - Redes de publicidad de terceros'),
 
+                _section('Analisis de Comportamiento y Perfilado',
+                    'BeautyCita analiza patrones de uso de la plataforma para mejorar el servicio, '
+                    'prevenir fraude y personalizar la experiencia. Este analisis incluye:\n\n'
+                    'Datos que analizamos:\n'
+                    '  - Frecuencia y patrones de reservas\n'
+                    '  - Categorias de servicios utilizados\n'
+                    '  - Patrones geograficos de uso (a nivel ciudad, no coordenadas exactas)\n'
+                    '  - Interacciones con la plataforma (busquedas, invitaciones, resenas)\n'
+                    '  - Patrones de gasto y metodos de pago preferidos\n\n'
+                    'Lo que generamos:\n'
+                    '  - Puntuaciones de comportamiento (traits) que describen sus habitos de uso\n'
+                    '  - Segmentos de usuario para personalizar recomendaciones\n'
+                    '  - Senales de riesgo para prevencion de fraude\n\n'
+                    'Lo que NO hacemos:\n'
+                    '  - No inferimos datos sensibles (salud, preferencias sexuales, religion, origen etnico, opiniones politicas)\n'
+                    '  - No tomamos decisiones automatizadas que afecten sus derechos sin revision humana\n'
+                    '  - No compartimos perfiles individuales con terceros\n'
+                    '  - No utilizamos estos datos para publicidad de terceros\n\n'
+                    'Su control:\n'
+                    '  - Puede desactivar el analisis de comportamiento en cualquier momento desde '
+                    'Ajustes > Privacidad > "Analisis de actividad" en la aplicacion\n'
+                    '  - Al desactivar, detenemos la recopilacion y eliminamos sus puntuaciones dentro de 30 dias\n'
+                    '  - Los registros transaccionales (reservas, pagos) se mantienen por obligacion legal independiente\n'
+                    '  - Puede solicitar acceso a su perfil de comportamiento via soporte@beautycita.com (Art. 27 LFPDPPP)\n\n'
+                    'Base legal: Consentimiento implicito para datos no sensibles (Art. 8 LFPDPPP). '
+                    'Interes legitimo para prevencion de fraude (Art. 12 Reglamento LFPDPPP).'),
+
                 _section('Menores de Edad',
                     'La Plataforma esta dirigida a personas mayores de 18 anos. No recopilamos intencionalmente datos de menores de edad. Si detectamos que un menor ha creado una cuenta, procederemos a eliminarla y sus datos asociados.'),
 
@@ -188,7 +215,7 @@ class PrivacidadPage extends StatelessWidget {
                     'Telefono: +52 (720) 677-7800\n'
                     'WhatsApp: +52 (720) 677-7800\n'
                     'Domicilio: Avenida Manuel Corona, Alazan 11A, C.P. 48290, Jalisco, Mexico\n\n'
-                    'Si considera que su derecho a la proteccion de datos personales ha sido vulnerado, puede presentar una queja ante el INAI (Instituto Nacional de Transparencia, Acceso a la Informacion y Proteccion de Datos Personales) en www.inai.org.mx.'),
+                    'Si considera que su derecho a la proteccion de datos personales ha sido vulnerado, puede presentar una queja ante la Secretaria de Anticorrupcion y Buen Gobierno (SABG), autoridad garante en materia de proteccion de datos personales.'),
 
                 const SizedBox(height: 48),
               ],

@@ -1093,9 +1093,44 @@ const _privacySections = [
         'enviando correo a legal@beautycita.com.',
   ),
 
-  // ── 13. Menores ──
+  // ── 13. Analisis de comportamiento y perfilado ──
   _Section(
-    heading: '13. Menores de edad',
+    heading: '13. Analisis de comportamiento y perfilado',
+    body:
+        'BeautyCita analiza patrones de uso de la plataforma para mejorar el '
+        'servicio, prevenir fraude y personalizar la experiencia.\n\n'
+        'DATOS QUE ANALIZAMOS:\n'
+        '• Frecuencia y patrones de reservas.\n'
+        '• Categorias de servicios utilizados.\n'
+        '• Patrones geograficos de uso (a nivel ciudad, no coordenadas exactas).\n'
+        '• Interacciones con la plataforma (busquedas, invitaciones, resenas).\n'
+        '• Patrones de gasto y metodos de pago preferidos.\n\n'
+        'LO QUE GENERAMOS:\n'
+        '• Puntuaciones de comportamiento que describen sus habitos de uso.\n'
+        '• Segmentos de usuario para personalizar recomendaciones.\n'
+        '• Senales de riesgo para prevencion de fraude.\n\n'
+        'LO QUE NO HACEMOS:\n'
+        '• No inferimos datos sensibles (salud, preferencias sexuales, religion, '
+        'origen etnico, opiniones politicas).\n'
+        '• No tomamos decisiones automatizadas que afecten sus derechos sin '
+        'revision humana.\n'
+        '• No compartimos perfiles individuales con terceros.\n\n'
+        'SU CONTROL:\n'
+        '• Puede desactivar el analisis de comportamiento en cualquier momento '
+        'desde Ajustes > Privacidad > "Analisis de actividad".\n'
+        '• Al desactivar, detenemos la recopilacion y eliminamos sus puntuaciones '
+        'dentro de 30 dias.\n'
+        '• Los registros transaccionales (reservas, pagos) se mantienen por '
+        'obligacion legal independiente.\n'
+        '• Puede solicitar acceso a su perfil de comportamiento via '
+        'soporte@beautycita.com (derecho de Acceso, Art. 27 LFPDPPP).\n\n'
+        'Base legal: Consentimiento implicito para datos no sensibles (Art. 8 '
+        'LFPDPPP). Interes legitimo para prevencion de fraude (Art. 12 Reglamento).',
+  ),
+
+  // ── 14. Menores ──
+  _Section(
+    heading: '14. Menores de edad',
     body:
         'BeautyCita no esta dirigida a menores de 16 anos y no recopilamos '
         'intencionalmente datos de menores. Si detectamos que un menor de '
@@ -1105,22 +1140,20 @@ const _privacySections = [
         'consentimiento de su padre, madre o tutor.',
   ),
 
-  // ── 14. Quejas ante el INAI ──
+  // ── 15. Quejas ante la autoridad ──
   _Section(
-    heading: '14. Derecho a presentar queja ante el INAI',
+    heading: '15. Derecho a presentar queja',
     body:
         'Si usted considera que su derecho a la proteccion de datos '
-        'personales ha sido vulnerado, tiene derecho a acudir al '
-        'Instituto Nacional de Transparencia, Acceso a la Informacion '
-        'y Proteccion de Datos Personales (INAI) para hacer valer sus '
-        'derechos.\n\n'
-        'Sitio web: www.inai.org.mx\n'
-        'Telefono ATENEA: 800-835-4324',
+        'personales ha sido vulnerado, tiene derecho a acudir a la '
+        'Secretaria de Anticorrupcion y Buen Gobierno (SABG), autoridad '
+        'garante en materia de proteccion de datos personales, para '
+        'hacer valer sus derechos.',
   ),
 
-  // ── 15. Cambios al aviso ──
+  // ── 16. Cambios al aviso ──
   _Section(
-    heading: '15. Modificaciones al aviso de privacidad',
+    heading: '16. Modificaciones al aviso de privacidad',
     body:
         'Nos reservamos el derecho de modificar este aviso de privacidad '
         'en cualquier momento. Cualquier cambio sustancial sera notificado '
@@ -1131,18 +1164,22 @@ const _privacySections = [
         'cambios constituye aceptacion del aviso actualizado.',
   ),
 
-  // ── 16. Consentimiento ──
+  // ── 17. Consentimiento ──
   _Section(
-    heading: '16. Consentimiento',
+    heading: '17. Consentimiento',
     body:
         'Al registrarse en BeautyCita y aceptar el presente Aviso de '
         'Privacidad, usted otorga su consentimiento para el tratamiento '
-        'de sus datos personales conforme a los terminos aqui descritos.\n\n'
+        'de sus datos personales conforme a los terminos aqui descritos, '
+        'incluyendo el analisis de comportamiento descrito en la seccion 13.\n\n'
         'Para datos sensibles (fotografias con rasgos fisicos), su '
         'consentimiento expreso se obtiene al momento de utilizar la '
         'funcion de estudio virtual, mediante confirmacion explicita '
         'en pantalla antes del procesamiento.\n\n'
-        'Fecha de ultima actualizacion: 30 de marzo de 2026.',
+        'Puede revocar el consentimiento para el analisis de comportamiento '
+        'en cualquier momento desde Ajustes > Privacidad sin afectar su uso '
+        'de la plataforma.\n\n'
+        'Fecha de ultima actualizacion: 15 de abril de 2026.',
   ),
 ];
 
