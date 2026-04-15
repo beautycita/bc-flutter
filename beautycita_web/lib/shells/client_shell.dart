@@ -226,9 +226,31 @@ class _DesktopNavLinkState extends State<_DesktopNavLink> {
 
 // ── Avatar Circle with Dropdown ─────────────────────────────────────────────
 
-class _AvatarCircle extends ConsumerWidget {
+class _AvatarCircle extends ConsumerStatefulWidget {
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_AvatarCircle> createState() => _AvatarCircleState();
+}
+
+class _AvatarCircleState extends ConsumerState<_AvatarCircle> {
+  String? _role;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRole();
+  }
+
+  Future<void> _loadRole() async {
+    final role = await ref.read(authProvider.notifier).getUserRole();
+    if (mounted) setState(() => _role = role);
+  }
+
+  bool get _isBusinessUser =>
+      _role == 'stylist' || _role == 'business' ||
+      _role == 'admin' || _role == 'superadmin';
+
+  @override
+  Widget build(BuildContext context) {
     return PopupMenuButton<String>(
       offset: const Offset(0, 48),
       shape: RoundedRectangleBorder(
@@ -238,6 +260,9 @@ class _AvatarCircle extends ConsumerWidget {
       color: kWebSurface,
       onSelected: (value) async {
         switch (value) {
+          case 'negocio':
+            context.go(WebRoutes.negocio);
+            break;
           case 'mis_citas':
             context.go(WebRoutes.misCitas);
             break;
@@ -254,6 +279,8 @@ class _AvatarCircle extends ConsumerWidget {
         }
       },
       itemBuilder: (context) => [
+        if (_isBusinessUser)
+          _menuItem('negocio', Icons.storefront_outlined, 'Mi Negocio'),
         _menuItem('mis_citas', Icons.event_note_outlined, 'Mis Citas'),
         _menuItem('invitar', Icons.share_outlined, 'Invitar Salon'),
         _menuItem('soporte', Icons.help_outline_rounded, 'Soporte'),

@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita_core/theme.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show OtpType, RealtimeChannel;
+import 'package:supabase_flutter/supabase_flutter.dart' show RealtimeChannel;
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/router.dart';
@@ -169,23 +169,19 @@ class _QrPageState extends ConsumerState<QrPage> {
         body: {'action': 'verify', 'session_id': sessionId, 'verify_token': _verifyToken},
       );
       final data = response.data as Map<String, dynamic>?;
-      final email = data?['email'] as String?;
-      final emailOtp = data?['email_otp'] as String?;
+      final accessToken = data?['access_token'] as String?;
+      final refreshToken = data?['refresh_token'] as String?;
 
-      if (email == null || emailOtp == null) {
+      if (accessToken == null || refreshToken == null) {
         setState(() {
-          _error = 'Error al verificar sesion.';
+          _error = data?['error'] as String? ?? 'Error al verificar sesion.';
           _isSigningIn = false;
         });
         return;
       }
 
-      // Sign in with the magic link OTP
-      await BCSupabase.client.auth.verifyOTP(
-        email: email,
-        token: emailOtp,
-        type: OtpType.magiclink,
-      );
+      // Set the session directly using server-verified tokens
+      await BCSupabase.client.auth.setSession(refreshToken);
 
       if (!mounted) return;
 

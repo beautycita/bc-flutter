@@ -36,6 +36,7 @@ const _navItems = <_NavItem>[
   _NavDivider(),
   _NavItem(label: 'Finanzas CEO', icon: Icons.account_balance_outlined, route: WebRoutes.adminFinanceDashboard),
   _NavItem(label: 'Operaciones', icon: Icons.monitor_heart_outlined, route: WebRoutes.adminOperations),
+  _NavItem(label: 'Inteligencia', icon: Icons.psychology_outlined, route: WebRoutes.adminIntelligence),
   _NavDivider(),
   _NavItem(label: 'Motor', icon: Icons.settings_outlined, route: WebRoutes.adminEngine),
   _NavItem(label: 'Outreach', icon: Icons.campaign_outlined, route: WebRoutes.adminOutreach),

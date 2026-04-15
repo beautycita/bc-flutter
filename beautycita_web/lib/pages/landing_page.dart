@@ -303,6 +303,8 @@ class _LandingPageState extends State<LandingPage>
                       const SizedBox(width: 28),
                       _navRouteLink(context, 'Directorio', '/salones'),
                       const SizedBox(width: 28),
+                      _navRouteLink(context, 'Panel Negocio', '/negocio'),
+                      const SizedBox(width: 28),
                       _navLink('Descargar', _downloadKey),
                       const SizedBox(width: 28),
                     ],
@@ -388,6 +390,19 @@ class _LandingPageState extends State<LandingPage>
             child: const Padding(
               padding: EdgeInsets.symmetric(vertical: 8),
               child: Text('Directorio', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: _textPrimary)),
+            ),
+          ),
+          GestureDetector(
+            onTap: () { setState(() => _mobileMenuOpen = false); context.go('/negocio'); },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                children: [
+                  Icon(Icons.storefront_outlined, size: 18, color: _brandPurple),
+                  const SizedBox(width: 8),
+                  Text('Panel de Negocio', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: _brandPurple)),
+                ],
+              ),
             ),
           ),
           _mobileNavItem('Descargar', _downloadKey),
@@ -1137,6 +1152,37 @@ class _LandingPageState extends State<LandingPage>
                         );
                       }).toList(),
                     ),
+                  ),
+                  const SizedBox(height: 48),
+                  // CTA buttons for salon owners
+                  Wrap(
+                    spacing: 16,
+                    runSpacing: 12,
+                    alignment: WrapAlignment.center,
+                    children: [
+                      _HoverScaleButton(
+                        onTap: () => context.go('/registrar'),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                          decoration: BoxDecoration(
+                            gradient: _brandGradient,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Text('Registra tu Salon — Gratis', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16)),
+                        ),
+                      ),
+                      _HoverScaleButton(
+                        onTap: () => context.go('/negocio'),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: _brandPurple, width: 2),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Text('Ya tienes cuenta? Accede al Panel', style: TextStyle(color: _brandPurple, fontWeight: FontWeight.w700, fontSize: 16)),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -2136,6 +2182,7 @@ class _LandingPageState extends State<LandingPage>
       children: [
         _footerCol('Plataforma', [
           _FooterLink('Para Salones', key: _forSalonsKey),
+          _FooterLink('Panel de Negocio', route: '/negocio'),
           _FooterLink('Por que BeautyCita?', route: '/porque-beautycita'),
           _FooterLink('Para Clientes', key: _forClientsKey),
           _FooterLink('Precios', key: _pricingKey),

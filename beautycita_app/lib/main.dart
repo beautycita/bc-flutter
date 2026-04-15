@@ -27,6 +27,7 @@ import 'package:beautycita/services/toast_service.dart';
 import 'package:beautycita/services/debug_log.dart';
 import 'package:beautycita/services/presence_service.dart';
 import 'package:beautycita/services/contact_match_service.dart';
+import 'package:beautycita/services/behavior_event_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
 
@@ -97,6 +98,8 @@ Future<void> main() async {
     ContactMatchService.autoSyncRegisteredSalons();
     PresenceService.instance.start();
     if (kDebugMode) debugPrint('[Init] Presence heartbeat started');
+    // Track app open event for behavioral intelligence
+    BehaviorEventService.instance.appOpened();
     supabaseReady.complete();
   }).catchError((e) {
     if (kDebugMode) debugPrint('[Init] ERROR: Supabase initialization failed: $e');

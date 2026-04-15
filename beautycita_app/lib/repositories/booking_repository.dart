@@ -1,6 +1,7 @@
 import 'package:beautycita/models/booking.dart';
 import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita/services/supabase_client.dart';
+import 'package:beautycita/services/behavior_event_service.dart';
 
 class BookingRepository {
   /// Create a new booking for the currently authenticated user.
@@ -137,6 +138,8 @@ class BookingRepository {
       'p_booking_id': bookingId,
       'p_cancelled_by': 'customer',
     }) as Map<String, dynamic>;
+
+    BehaviorEventService.instance.bookingCancelled(bookingId: bookingId);
 
     return CancelResult(
       refundAmount: (result['refund_amount'] as num?)?.toDouble() ?? 0,

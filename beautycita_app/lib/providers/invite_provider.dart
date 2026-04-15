@@ -6,6 +6,7 @@ import '../services/invite_service.dart';
 import '../services/location_service.dart';
 import 'package:beautycita_core/supabase.dart';
 import '../services/supabase_client.dart';
+import '../services/behavior_event_service.dart';
 
 // ---------------------------------------------------------------------------
 // Invite Flow State
@@ -285,6 +286,14 @@ class InviteNotifier extends StateNotifier<InviteState> {
       state = state.copyWith(
         step: InviteStep.sent,
         waUrl: waUrl,
+      );
+
+      // Emit behavioral event
+      BehaviorEventService.instance.inviteSent(
+        salonId: salon.id,
+        salonName: salon.name,
+        city: salon.city,
+        state: salon.state,
       );
     } catch (e) {
       if (kDebugMode) debugPrint('[INVITE] sendInvite error: $e');

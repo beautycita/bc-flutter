@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita/services/supabase_client.dart';
+import 'package:beautycita/services/behavior_event_service.dart';
 
 /// Checks for the most recent completed appointment that has no review yet.
 /// Returns null if nothing to review, or a map with appointment + business info.
@@ -65,4 +66,10 @@ Future<void> submitReview({
     if (comment != null && comment.trim().isNotEmpty)
       'comment': comment.trim(),
   });
+
+  BehaviorEventService.instance.reviewSubmitted(
+    businessId: businessId,
+    rating: rating,
+    appointmentId: appointmentId,
+  );
 }

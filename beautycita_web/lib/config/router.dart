@@ -6,6 +6,7 @@ import 'package:beautycita_core/supabase.dart';
 import '../providers/auth_provider.dart';
 
 import '../pages/admin/admin_chat_page.dart';
+import '../pages/admin/admin_intelligence_page.dart';
 import '../pages/admin/admin_notification_templates_page.dart';
 import '../pages/admin/admin_rp_tracking_page.dart';
 import '../pages/admin/admin_tax_reports_page.dart';
@@ -113,6 +114,7 @@ abstract final class WebRoutes {
   static const String adminRpTracking = '/admin/rp-tracking';
   static const String adminNotificationTemplates = '/admin/notification-templates';
   static const String adminChat = '/admin/chat';
+  static const String adminIntelligence = '/admin/intelligence';
 
   // Business
   static const String negocio = '/negocio';
@@ -465,6 +467,11 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: 'chat',
                 builder: (context, state) => const AdminChatPage(),
+              ),
+              GoRoute(
+                path: 'intelligence',
+                builder: (context, state) =>
+                    const AdminIntelligencePage(),
               ),
             ],
           ),

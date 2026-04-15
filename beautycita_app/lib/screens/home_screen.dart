@@ -450,7 +450,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 ),
 
-          // Fade from scaffold bg → transparent (hard at top, softens downward)
+          // Fade from transparent → scaffold bg (hero blends into content below)
           Container(
             height: 40,
             decoration: BoxDecoration(
@@ -458,8 +458,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Theme.of(context).scaffoldBackgroundColor,
                   Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0),
+                  Theme.of(context).scaffoldBackgroundColor,
                 ],
               ),
             ),

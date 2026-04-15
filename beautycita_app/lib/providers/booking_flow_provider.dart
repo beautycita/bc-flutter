@@ -19,6 +19,7 @@ import '../services/follow_up_service.dart';
 import '../services/location_service.dart';
 import '../services/places_service.dart';
 import 'package:beautycita/services/supabase_client.dart';
+import 'package:beautycita/services/behavior_event_service.dart';
 import 'user_preferences_provider.dart';
 import 'profile_provider.dart' show tempSearchLocationProvider;
 import 'theme_provider.dart';
@@ -391,6 +392,16 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
     );
 
     if (kDebugMode) debugPrint('[PAYMENT] Booking created: ${booking.id} (pending payment)');
+
+    // Emit behavioral event
+    BehaviorEventService.instance.bookingCreated(
+      bookingId: bookingId,
+      businessId: result.business.id,
+      serviceId: serviceId,
+      price: price,
+      paymentMethod: oxxoOnly ? 'oxxo' : 'card',
+      city: result.business.city,
+    );
 
     try {
       if (serviceId.isNotEmpty && (result.service.price ?? 0) > 0) {

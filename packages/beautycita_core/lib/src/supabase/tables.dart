@@ -85,6 +85,7 @@ abstract final class BCTables {
   static const String userTraitScores = 'user_trait_scores';
   static const String userBehaviorSummaries = 'user_behavior_summaries';
   static const String behaviorTriggers = 'behavior_triggers';
+  static const String behaviorTriggerLog = 'behavior_trigger_log';
 
   // ── Auth / WebAuthn ─────────────────────────────────────────────
   static const String webauthnCredentials = 'webauthn_credentials';
