@@ -15,7 +15,6 @@ const _brandGradient = LinearGradient(
   colors: [Color(0xFFEC4899), Color(0xFF9333EA), Color(0xFF3B82F6)],
 );
 const _maxWidth = 1200.0;
-const _discoveredPageSize = 10;
 
 class DirectoryCityPage extends StatefulWidget {
   final String stateSlug;
@@ -26,14 +25,14 @@ class DirectoryCityPage extends StatefulWidget {
 }
 
 class _DirectoryCityPageState extends State<DirectoryCityPage> {
-  // Registered businesses in this city
+  // Registered businesses in this city (opted into platform — safe to show)
   List<dynamic> _registered = [];
-  // Discovered (not yet on platform)
-  List<dynamic> _discovered = [];
+  // Aggregate stats only — never expose individual discovered salons
   String _cityName = '';
   String _stateName = '';
   int _totalDiscovered = 0;
-  int _page = 0;
+  List<String> _topCategories = [];
+  double? _avgRating;
   bool _loading = true;
   String? _error;
 
@@ -46,14 +45,11 @@ class _DirectoryCityPageState extends State<DirectoryCityPage> {
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      // Load both registered businesses and discovered salons
-      final results = await Future.wait([
+      await Future.wait([
         _loadRegistered(),
-        _loadDiscovered(),
+        _loadAggregateStats(),
       ]);
-      setState(() {
-        _loading = false;
-      });
+      setState(() => _loading = false);
     } catch (e) {
       setState(() {
         _error = e.toString();
@@ -63,7 +59,6 @@ class _DirectoryCityPageState extends State<DirectoryCityPage> {
   }
 
   Future<void> _loadRegistered() async {
-    // Get registered businesses that match this city
     final cityName = _slugToName(widget.citySlug);
     final stateName = _slugToName(widget.stateSlug);
     try {
@@ -80,26 +75,30 @@ class _DirectoryCityPageState extends State<DirectoryCityPage> {
     _stateName = stateName;
   }
 
-  Future<void> _loadDiscovered() async {
+  Future<void> _loadAggregateStats() async {
     try {
       final result = await BCSupabase.client.rpc('get_city_salons', params: {
         'p_state_slug': widget.stateSlug,
         'p_city_slug': widget.citySlug,
-        'p_offset': _page * _discoveredPageSize,
-        'p_limit': _discoveredPageSize,
+        'p_offset': 0,
+        'p_limit': 1, // We only need the aggregate, not the list
       });
       final data = (result as Map<String, dynamic>?) ?? <String, dynamic>{};
-      _discovered = (data['salons'] as List?) ?? [];
       _cityName = data['city'] as String? ?? _slugToName(widget.citySlug);
       _stateName = data['state'] as String? ?? _slugToName(widget.stateSlug);
       _totalDiscovered = (data['total'] as num?)?.toInt() ?? 0;
+      // Extract top categories from the single returned salon if available
+      final salons = (data['salons'] as List?) ?? [];
+      final catSet = <String>{};
+      for (final s in salons) {
+        final cats = (s['categories'] as List?)?.cast<String>() ?? [];
+        catSet.addAll(cats);
+      }
+      _topCategories = catSet.take(6).toList();
     } catch (_) {
-      _discovered = [];
       _totalDiscovered = 0;
     }
   }
-
-  int get _totalDiscoveredPages => (_totalDiscovered / _discoveredPageSize).ceil();
 
   @override
   Widget build(BuildContext context) {
@@ -172,15 +171,11 @@ class _DirectoryCityPageState extends State<DirectoryCityPage> {
                             const SizedBox(height: 32),
                           ],
 
-                          // === DISCOVERED SALONS (not yet on platform) ===
-                          _buildDiscoveredHeader(isMobile),
-                          const SizedBox(height: 12),
-                          ..._discovered.map((s) => _buildDiscoveredCard(s, isMobile)),
-                          const SizedBox(height: 24),
-
-                          // Pagination
-                          if (_totalDiscoveredPages > 1) _buildPagination(),
-                          const SizedBox(height: 32),
+                          // === DISCOVERED STATS (aggregate only — no individual salon data) ===
+                          if (_totalDiscovered > 0) ...[
+                            _buildDiscoveredStats(isMobile),
+                            const SizedBox(height: 32),
+                          ],
 
                           // Invite CTA
                           _buildInviteCta(isMobile),
@@ -310,132 +305,62 @@ class _DirectoryCityPageState extends State<DirectoryCityPage> {
     );
   }
 
-  // === DISCOVERED SECTION HEADER ===
-  Widget _buildDiscoveredHeader(bool isMobile) {
+  // === AGGREGATE STATS (no individual salon data exposed) ===
+  Widget _buildDiscoveredStats(bool isMobile) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(isMobile ? 20 : 28),
       decoration: BoxDecoration(
         color: const Color(0xFFFFF8F0),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFF0EBE6)),
       ),
-      child: Row(
-        children: [
-          Icon(Icons.explore_rounded, size: 22, color: _brandPurple),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '$_totalDiscovered salones mas en $_cityName',
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _textPrimary),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Estos salones aun no estan en BeautyCita. Conoces alguno? Invitalos a unirse gratis.',
-                  style: TextStyle(fontSize: 12, color: _textSecondary),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // === DISCOVERED SALON CARD (with invite button) ===
-  Widget _buildDiscoveredCard(dynamic salon, bool isMobile) {
-    final name = salon['name'] as String? ?? 'Sin nombre';
-    final address = salon['address'] as String? ?? '';
-    final rating = (salon['rating'] as num?)?.toDouble();
-    final reviews = (salon['reviews'] as num?)?.toInt() ?? 0;
-    final categories = (salon['categories'] as List?)?.cast<String>() ?? [];
-    final photo = salon['photo'] as String?;
-    final phone = salon['phone'] as String?;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFF0EBE6)),
-      ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: photo != null
-                ? Image.network(photo, width: isMobile ? 52 : 68, height: isMobile ? 52 : 68, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _placeholderSmall(isMobile))
-                : _placeholderSmall(isMobile),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: _textPrimary), maxLines: 1, overflow: TextOverflow.ellipsis),
-                if (address.isNotEmpty)
-                  Padding(padding: const EdgeInsets.only(top: 3), child: Text(address, style: const TextStyle(fontSize: 11, color: _textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                const SizedBox(height: 4),
-                Row(children: [
-                  if (rating != null && rating > 0) ...[
-                    const Icon(Icons.star_rounded, size: 12, color: Color(0xFFF59E0B)),
-                    const SizedBox(width: 2),
-                    Text('$rating ($reviews)', style: const TextStyle(fontSize: 11, color: _textSecondary)),
-                    const SizedBox(width: 8),
-                  ],
-                  ...categories.take(2).map((cat) => Padding(
-                    padding: const EdgeInsets.only(right: 4),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(color: const Color(0xFFF8F4F0), borderRadius: BorderRadius.circular(6)),
-                      child: Text(_categoryLabel(cat), style: const TextStyle(fontSize: 10, color: _textSecondary)),
-                    ),
-                  )),
-                ]),
-              ],
-            ),
-          ),
-          // Invite button
-          MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: GestureDetector(
-              onTap: () => _inviteSalon(name, phone),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  border: Border.all(color: _brandPink.withValues(alpha: 0.5)),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.send_rounded, size: 12, color: _brandPink),
-                    const SizedBox(width: 4),
-                    Text('Invitar', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: _brandPink)),
-                  ],
+          Row(
+            children: [
+              Icon(Icons.explore_rounded, size: 24, color: _brandPurple),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  '$_totalDiscovered salones de belleza en $_cityName',
+                  style: TextStyle(fontSize: isMobile ? 17 : 20, fontWeight: FontWeight.w700, color: _textPrimary),
                 ),
               ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Hemos identificado $_totalDiscovered salones y esteticas en $_cityName, $_stateName. '
+            'Estamos invitando a los mejores a unirse a BeautyCita para que puedas reservar en linea.',
+            style: TextStyle(fontSize: 14, color: _textSecondary, height: 1.5),
+          ),
+          if (_topCategories.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text('Servicios disponibles en $_cityName:', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _textPrimary)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: _topCategories.map((cat) => Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFFF0EBE6)),
+                ),
+                child: Text(_categoryLabel(cat), style: const TextStyle(fontSize: 12, color: _textSecondary)),
+              )).toList(),
             ),
+          ],
+          const SizedBox(height: 20),
+          Text(
+            'Conoces un salon en $_cityName? Invitalo a unirse — es gratis para ellos.',
+            style: TextStyle(fontSize: 13, color: _brandPurple, fontWeight: FontWeight.w500),
           ),
         ],
       ),
     );
-  }
-
-  void _inviteSalon(String salonName, String? phone) {
-    if (phone != null && phone.isNotEmpty) {
-      final msg = Uri.encodeComponent(
-        'Hola $salonName! Te invito a unirte a BeautyCita, una plataforma gratuita para gestionar citas de tu salon. Registrate aqui: https://beautycita.com/invitar'
-      );
-      launchUrl(Uri.parse('https://wa.me/${phone.replaceAll(RegExp(r'[^0-9+]'), '')}?text=$msg'), mode: LaunchMode.externalApplication);
-    } else {
-      // No phone — share generic invite link
-      launchUrl(Uri.parse('https://beautycita.com/invitar'), mode: LaunchMode.externalApplication);
-    }
   }
 
   Widget _placeholder(bool isMobile) {
@@ -448,40 +373,6 @@ class _DirectoryCityPageState extends State<DirectoryCityPage> {
     final size = isMobile ? 52.0 : 68.0;
     return Container(width: size, height: size, decoration: BoxDecoration(color: const Color(0xFFF0EBE6), borderRadius: BorderRadius.circular(8)),
       child: Icon(Icons.storefront_rounded, color: _textSecondary.withValues(alpha: 0.3), size: 24));
-  }
-
-  Widget _buildPagination() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        IconButton(onPressed: _page > 0 ? () { setState(() => _page--); _loadDiscoveredOnly(); } : null, icon: const Icon(Icons.chevron_left_rounded)),
-        ...List.generate(_totalDiscoveredPages.clamp(0, 7), (i) {
-          final pageIdx = _totalDiscoveredPages <= 7 ? i : _pageIndex(i);
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 2),
-            child: MouseRegion(cursor: SystemMouseCursors.click, child: GestureDetector(
-              onTap: () { setState(() => _page = pageIdx); _loadDiscoveredOnly(); },
-              child: Container(width: 36, height: 36, alignment: Alignment.center,
-                decoration: BoxDecoration(color: pageIdx == _page ? _brandPink : Colors.transparent, borderRadius: BorderRadius.circular(8)),
-                child: Text('${pageIdx + 1}', style: TextStyle(fontSize: 13, fontWeight: pageIdx == _page ? FontWeight.w700 : FontWeight.w500, color: pageIdx == _page ? Colors.white : _textSecondary))),
-            )),
-          );
-        }),
-        IconButton(onPressed: _page < _totalDiscoveredPages - 1 ? () { setState(() => _page++); _loadDiscoveredOnly(); } : null, icon: const Icon(Icons.chevron_right_rounded)),
-      ],
-    );
-  }
-
-  Future<void> _loadDiscoveredOnly() async {
-    setState(() => _loading = true);
-    await _loadDiscovered();
-    setState(() => _loading = false);
-  }
-
-  int _pageIndex(int i) {
-    if (i < 3) return i;
-    if (i == 3) return (_totalDiscoveredPages ~/ 2);
-    return _totalDiscoveredPages - (7 - i);
   }
 
   Widget _buildInviteCta(bool isMobile) {
