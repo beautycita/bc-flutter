@@ -568,6 +568,7 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
   double _commissionProducts = 0;
   bool _loading = true;
   final List<Map<String, dynamic>> _monthlyData = [];
+  List<Map<String, dynamic>> _expenseRows = [];
 
   @override
   void initState() {
@@ -603,9 +604,10 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
       // Expenses YTD
       final expRows = await SupabaseClientService.client
           .from(BCTables.businessExpenses)
-          .select('amount, month')
+          .select('id, amount, month, description, created_at')
           .eq('business_id', bizId)
-          .eq('year', year);
+          .eq('year', year)
+          .order('created_at', ascending: false);
 
       double exp = 0;
       for (final r in expRows) {
@@ -673,6 +675,7 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
           _ivaWithheld = actualIva;
           _isrWithheld = actualIsr;
           _expensesYtd = exp;
+          _expenseRows = List<Map<String, dynamic>>.from(expRows);
           _commissionServices = commSvc;
           _commissionProducts = commProd;
           _monthlyData.clear();
@@ -812,7 +815,11 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
             Divider(height: 20, color: colors.onSurface.withValues(alpha: 0.08)),
 
             // Deductions
-            _TaxRow(label: 'Gastos deducibles registrados', value: '\$${_fmt(_expensesYtd)}', color: colors.secondary),
+            GestureDetector(
+              onTap: _expenseRows.isNotEmpty ? () => _showExpenseList(context) : null,
+              child: _TaxRow(label: 'Gastos deducibles registrados', value: '\$${_fmt(_expensesYtd)}', color: colors.secondary,
+                trailing: _expenseRows.isNotEmpty ? Icon(Icons.chevron_right, size: 16, color: colors.secondary) : null),
+            ),
             const SizedBox(height: 4),
             _TaxRow(
               label: 'Presupuesto deducible disponible',
@@ -1135,6 +1142,137 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
       ),
     );
   }
+
+  void _showExpenseList(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    const monthNames = ['', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          return DraggableScrollableSheet(
+            expand: false,
+            initialChildSize: 0.5,
+            maxChildSize: 0.8,
+            minChildSize: 0.3,
+            builder: (ctx, scrollCtrl) => Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text('Gastos Registrados',
+                          style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: colors.onSurface)),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: _expenseRows.isEmpty
+                      ? Center(child: Text('Sin gastos registrados', style: GoogleFonts.nunito(color: colors.onSurface.withValues(alpha: 0.5))))
+                      : ListView.separated(
+                          controller: scrollCtrl,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                          itemCount: _expenseRows.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 4),
+                          itemBuilder: (ctx, i) {
+                            final row = _expenseRows[i];
+                            final amount = (row['amount'] as num?)?.toDouble() ?? 0;
+                            final desc = row['description'] as String?;
+                            final month = row['month'] as int? ?? 0;
+                            final fmt = NumberFormat('#,##0', 'es_MX');
+                            return Dismissible(
+                              key: Key(row['id'] as String),
+                              direction: DismissDirection.endToStart,
+                              background: Container(
+                                alignment: Alignment.centerRight,
+                                padding: const EdgeInsets.only(right: 20),
+                                decoration: BoxDecoration(
+                                  color: colors.error,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(Icons.delete_outline, color: Colors.white),
+                              ),
+                              confirmDismiss: (_) async {
+                                return await showDialog<bool>(
+                                  context: ctx,
+                                  builder: (c) => AlertDialog(
+                                    title: Text('Eliminar gasto', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                                    content: Text('Eliminar \$${fmt.format(amount)}${desc != null ? ' ($desc)' : ''}?',
+                                      style: GoogleFonts.nunito()),
+                                    actions: [
+                                      TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancelar')),
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(c, true),
+                                        child: Text('Eliminar', style: TextStyle(color: colors.error)),
+                                      ),
+                                    ],
+                                  ),
+                                ) ?? false;
+                              },
+                              onDismissed: (_) async {
+                                final id = row['id'] as String;
+                                setSheetState(() => _expenseRows.removeAt(i));
+                                try {
+                                  await SupabaseClientService.client
+                                      .from(BCTables.businessExpenses)
+                                      .delete()
+                                      .eq('id', id);
+                                  ToastService.showSuccess('Gasto eliminado');
+                                  _loadData();
+                                } catch (e) {
+                                  ToastService.showErrorWithDetails('Error al eliminar', e, StackTrace.current);
+                                  _loadData();
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: colors.surfaceContainerHighest.withValues(alpha: 0.3),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text('\$${fmt.format(amount)}',
+                                            style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600, color: colors.secondary)),
+                                          if (desc != null && desc.isNotEmpty)
+                                            Text(desc, style: GoogleFonts.nunito(fontSize: 12, color: colors.onSurface.withValues(alpha: 0.6)),
+                                              maxLines: 1, overflow: TextOverflow.ellipsis),
+                                        ],
+                                      ),
+                                    ),
+                                    Text(month > 0 && month <= 12 ? monthNames[month] : '',
+                                      style: GoogleFonts.nunito(fontSize: 12, color: colors.onSurface.withValues(alpha: 0.4))),
+                                    const SizedBox(width: 4),
+                                    Icon(Icons.swipe_left_outlined, size: 14, color: colors.onSurface.withValues(alpha: 0.2)),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
 }
 
 class _MiniStat extends StatelessWidget {
@@ -1162,8 +1300,9 @@ class _TaxRow extends StatelessWidget {
   final String value;
   final Color color;
   final bool bold;
+  final Widget? trailing;
 
-  const _TaxRow({required this.label, required this.value, required this.color, this.bold = false});
+  const _TaxRow({required this.label, required this.value, required this.color, this.bold = false, this.trailing});
 
   @override
   Widget build(BuildContext context) {
@@ -1179,12 +1318,18 @@ class _TaxRow extends StatelessWidget {
             ),
           ),
         ),
-        Text(value,
-          style: GoogleFonts.poppins(
-            fontSize: bold ? 15 : 13,
-            fontWeight: bold ? FontWeight.w700 : FontWeight.w600,
-            color: color,
-          ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(value,
+              style: GoogleFonts.poppins(
+                fontSize: bold ? 15 : 13,
+                fontWeight: bold ? FontWeight.w700 : FontWeight.w600,
+                color: color,
+              ),
+            ),
+            if (trailing != null) trailing!,
+          ],
         ),
       ],
     );
