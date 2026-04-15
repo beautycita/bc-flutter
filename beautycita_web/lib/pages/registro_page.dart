@@ -767,7 +767,11 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
           ),
           const SizedBox(height: 32),
           ElevatedButton.icon(
-            onPressed: () => context.go(WebRoutes.negocio),
+            onPressed: () async {
+              // Force refresh auth state so router sees role='stylist'
+              await ref.read(authProvider.notifier).getUserRole(forceRefresh: true);
+              if (context.mounted) context.go(WebRoutes.negocio);
+            },
             icon: const Icon(Icons.dashboard_outlined),
             label: const Text('Ir al panel de negocio'),
             style: ElevatedButton.styleFrom(

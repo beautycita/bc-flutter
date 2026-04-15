@@ -175,15 +175,23 @@ serve(async (req) => {
 
     console.log(`[REGISTER-BIZ] Created staff ${staff.id}: ${staff.first_name}`);
 
-    // 3. Update user's profile role to 'stylist'
-    const { error: roleError } = await supabase
-      .from("profiles")
-      .update({ role: "stylist" })
-      .eq("id", user.id);
+    // 3. Update user's profile role to 'stylist' — REQUIRED for portal access
+    let roleUpdated = false;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const { error: roleError } = await supabase
+        .from("profiles")
+        .update({ role: "stylist" })
+        .eq("id", user.id);
 
-    if (roleError) {
-      console.error("[REGISTER-BIZ] Failed to update role:", roleError);
-      // Don't rollback - the business is created, role update is secondary
+      if (!roleError) {
+        roleUpdated = true;
+        break;
+      }
+      console.error(`[REGISTER-BIZ] Role update attempt ${attempt + 1} failed:`, roleError);
+      if (attempt < 2) await new Promise((r) => setTimeout(r, 500));
+    }
+    if (!roleUpdated) {
+      console.error("[REGISTER-BIZ] All role update attempts failed — portal access may be blocked");
     }
 
     // 4. Create default weekly schedule
@@ -236,7 +244,7 @@ serve(async (req) => {
         name: "Servicio General",
         duration_minutes: 30,
         price: 0,
-        active: true,
+        is_active: true,
       });
 
     if (serviceError) {
@@ -253,7 +261,7 @@ serve(async (req) => {
       console.error("[REGISTER-BIZ] Failed to set has_schedule/has_services:", flagsError);
     }
 
-    // 5. Link discovered salon if provided
+    // 5. Link discovered salon if provided (only if not already registered)
     if (discovered_salon_id) {
       const { error: linkError } = await supabase
         .from("discovered_salons")
@@ -262,7 +270,8 @@ serve(async (req) => {
           registered_business_id: business.id,
           registered_at: new Date().toISOString(),
         })
-        .eq("id", discovered_salon_id);
+        .eq("id", discovered_salon_id)
+        .neq("status", "registered");
 
       if (linkError) {
         console.warn("[REGISTER-BIZ] Failed to link discovered salon:", linkError);
