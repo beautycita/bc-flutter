@@ -777,6 +777,41 @@ class _DiscoveredTab extends ConsumerWidget {
             ),
           ),
           BCColumn<DiscoveredSalon>(
+            id: 'last_outreach_at',
+            label: 'Contacto',
+            sortable: true,
+            width: 90,
+            cellBuilder: (salon) {
+              if (salon.lastContactDate == null) {
+                return Text('Nunca',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colors.error.withValues(alpha: 0.7),
+                      fontSize: 11,
+                    ));
+              }
+              final days = DateTime.now()
+                  .difference(salon.lastContactDate!)
+                  .inDays;
+              final label = days == 0
+                  ? 'Hoy'
+                  : days == 1
+                      ? 'Ayer'
+                      : 'Hace ${days}d';
+              final needsFollowUp = days > 7;
+              return Text(
+                label,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: needsFollowUp
+                      ? Colors.orange
+                      : colors.onSurface.withValues(alpha: 0.7),
+                  fontWeight:
+                      needsFollowUp ? FontWeight.w600 : FontWeight.w400,
+                  fontSize: 11,
+                ),
+              );
+            },
+          ),
+          BCColumn<DiscoveredSalon>(
             id: 'interest_signals',
             label: 'Senales',
             sortable: true,
