@@ -9,6 +9,7 @@ import '../../widgets/bc_data_table.dart';
 import '../../widgets/bulk_action_bar.dart';
 import '../../widgets/filter_bar.dart';
 import '../../widgets/master_detail_layout.dart';
+import '../../widgets/admin_typeahead_search.dart';
 import '../../widgets/pagination_bar.dart';
 import 'salon_detail_panel.dart';
 
@@ -555,36 +556,19 @@ class _DiscoveredTab extends ConsumerWidget {
       detailBuilder: (salon) =>
           DiscoveredSalonDetailContent(salon: salon),
       filterBar: FilterBar(
-        searchField: TextField(
+        searchField: AdminTypeaheadSearch(
           controller: searchController,
-          decoration: InputDecoration(
-            hintText: 'Buscar salon...',
-            prefixIcon: const Icon(Icons.search, size: 20),
-            isDense: true,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: BCSpacing.sm,
-              vertical: BCSpacing.sm,
-            ),
-            border: OutlineInputBorder(
-              borderRadius:
-                  BorderRadius.circular(BCSpacing.radiusXs),
-            ),
-            suffixIcon: filter.searchText.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.clear, size: 18),
-                    onPressed: () {
-                      searchController.clear();
-                      ref
-                          .read(discoveredSalonsFilterProvider.notifier)
-                          .state = filter.copyWith(
-                        searchText: '',
-                        page: 0,
-                      );
-                    },
-                  )
-                : null,
-          ),
+          hintText: 'Buscar salon...',
+          tableName: 'discovered_salons',
+          searchColumn: 'business_name',
+          additionalColumns: const ['location_city', 'location_state'],
+          statusFilter: const {'status': 'discovered'},
           onChanged: (value) => setDiscoveredSearch(ref, value),
+          onSelected: (item) {
+            final name = item['business_name']?.toString() ?? '';
+            searchController.text = name;
+            setDiscoveredSearch(ref, name);
+          },
         ),
         filters: [
           _CountryFilterDropdown(
