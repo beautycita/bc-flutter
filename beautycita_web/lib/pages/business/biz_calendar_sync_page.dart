@@ -29,6 +29,7 @@ class _BizCalendarSyncPageState extends ConsumerState<BizCalendarSyncPage> {
   bool _isExporting = false;
   bool _isImporting = false;
   bool _isSyncing = false;
+  bool _isExportingGoogle = false;
   bool _isConnecting = false;
   bool _isDisconnecting = false;
   bool _googleConnected = false;
@@ -147,6 +148,8 @@ class _BizCalendarSyncPageState extends ConsumerState<BizCalendarSyncPage> {
           onImport: isDemo ? null : _importICS,
           onGetFeedUrl: isDemo ? null : _getFeedUrl,
           onSyncGoogle: isDemo ? null : _syncGoogle,
+          onExportGoogle: isDemo ? null : _exportToGoogle,
+          isExportingGoogle: _isExportingGoogle,
           onConnectGoogle: isDemo ? null : _connectGoogle,
           onDisconnectGoogle: isDemo ? null : _disconnectGoogle,
         );
@@ -303,6 +306,36 @@ class _BizCalendarSyncPageState extends ConsumerState<BizCalendarSyncPage> {
       if (mounted) setState(() => _isSyncing = false);
     }
   }
+
+  Future<void> _exportToGoogle() async {
+    setState(() => _isExportingGoogle = true);
+    try {
+      final response = await BCSupabase.client.functions.invoke(
+        'google-calendar-sync',
+        body: {'action': 'export', 'days': 30},
+      );
+      final data = response.data as Map<String, dynamic>;
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Exportado a Google: ${data['created']} nuevos, ${data['updated']} actualizados',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isExportingGoogle = false);
+    }
+  }
 }
 
 // ── Page content ────────────────────────────────────────────────────────────
@@ -326,6 +359,8 @@ class _Content extends StatelessWidget {
     required this.onImport,
     required this.onGetFeedUrl,
     required this.onSyncGoogle,
+    required this.onExportGoogle,
+    required this.isExportingGoogle,
     required this.onConnectGoogle,
     required this.onDisconnectGoogle,
   });
@@ -347,6 +382,8 @@ class _Content extends StatelessWidget {
   final VoidCallback? onImport;
   final VoidCallback? onGetFeedUrl;
   final VoidCallback? onSyncGoogle;
+  final VoidCallback? onExportGoogle;
+  final bool isExportingGoogle;
   final VoidCallback? onConnectGoogle;
   final VoidCallback? onDisconnectGoogle;
 
@@ -701,7 +738,7 @@ class _GoogleCalendarCard extends StatelessWidget {
             icon: Icons.g_mobiledata_outlined,
             iconColor: const Color(0xFF4285F4),
             label: connected
-                ? 'Conectado — importa eventos automaticamente'
+                ? 'Conectado — importa y exporta citas'
                 : 'Conecta tu calendario de Google',
             value: 'Google Calendar',
           ),
@@ -754,36 +791,36 @@ class _GoogleCalendarCard extends StatelessWidget {
                 ),
               ),
             ] else ...[
-              // Sync + Disconnect buttons
+              // Import + Export + Disconnect buttons
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: parent.isSyncing ? null : parent.onSyncGoogle,
                       icon: parent.isSyncing
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.sync_outlined, size: 18),
-                      label: Text(parent.isSyncing ? 'Sincronizando...' : 'Sincronizar'),
+                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                          : const Icon(Icons.cloud_download_outlined, size: 18),
+                      label: Text(parent.isSyncing ? 'Importando...' : 'Importar'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: parent.isExportingGoogle ? null : parent.onExportGoogle,
+                      icon: parent.isExportingGoogle
+                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                          : const Icon(Icons.cloud_upload_outlined, size: 18),
+                      label: Text(parent.isExportingGoogle ? 'Exportando...' : 'Exportar'),
                     ),
                   ),
                   const SizedBox(width: 8),
                   IconButton(
                     onPressed: parent.isDisconnecting ? null : parent.onDisconnectGoogle,
                     icon: parent.isDisconnecting
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
                         : const Icon(Icons.link_off_outlined, size: 18),
                     tooltip: 'Desconectar',
-                    style: IconButton.styleFrom(
-                      foregroundColor: const Color(0xFFEF4444),
-                    ),
+                    style: IconButton.styleFrom(foregroundColor: const Color(0xFFEF4444)),
                   ),
                 ],
               ),
@@ -887,7 +924,7 @@ class _HowItWorks extends StatelessWidget {
       (Icons.download_rounded, 'Exportar', 'Descarga tus citas como .ics e importalo en cualquier app de calendario.'),
       (Icons.upload_file_rounded, 'Importar', 'Sube un .ics de otro calendario. Los eventos bloquean disponibilidad automaticamente.'),
       (Icons.rss_feed_rounded, 'Suscribir', 'Copia la URL del feed ICS y pegala en Google/Apple/Outlook. Se actualiza solo.'),
-      (Icons.sync_rounded, 'Sync OAuth', 'Conecta Google Calendar con un clic. Sincronizacion automatica bidireccional.'),
+      (Icons.sync_rounded, 'Sync OAuth', 'Conecta Google Calendar con un clic. Importa y exporta citas en ambas direcciones.'),
     ];
 
     return WebCard(

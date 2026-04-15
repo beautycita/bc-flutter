@@ -89,7 +89,7 @@ Deno.serve(async (req: Request) => {
     // ---------------------------------------------------------------------------
     if (action === "oauth_url") {
       const redirectUri = body.redirect_uri ?? DEFAULT_REDIRECT_URI;
-      const scopes = "https://www.googleapis.com/auth/calendar.readonly";
+      const scopes = "https://www.googleapis.com/auth/calendar.events";
 
       // Include state parameter with user ID for security
       const state = btoa(JSON.stringify({ user_id: user.id, ts: Date.now() }));

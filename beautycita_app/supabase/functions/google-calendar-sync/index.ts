@@ -201,6 +201,11 @@ function parseEventToAppointment(
     return null;
   }
 
+  // Skip events created by BeautyCita export (avoid round-trip duplication)
+  if (event.summary?.startsWith("[BeautyCita]")) {
+    return null;
+  }
+
   // Parse start/end times
   let startsAt: string;
   let endsAt: string;
@@ -287,12 +292,13 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = await req.json();
+    const action = body.action ?? "import";
     const daysAhead = body.days ?? 30;
 
     // Get the staff record for this user
     const { data: staffRecord, error: staffError } = await supabase
       .from("staff")
-      .select("id")
+      .select("id, business_id, first_name")
       .eq("user_id", user.id)
       .single();
 
@@ -328,6 +334,117 @@ Deno.serve(async (req: Request) => {
         error: "Failed to get valid access token. Please reconnect Google Calendar.",
       }, 401);
     }
+
+    // =========================================================================
+    // ACTION: export — Push BeautyCita appointments → Google Calendar
+    // =========================================================================
+    if (action === "export") {
+      const now = new Date();
+      const timeMin = now.toISOString();
+      const timeMax = new Date(now.getTime() + daysAhead * 24 * 60 * 60 * 1000).toISOString();
+
+      // Fetch upcoming BeautyCita appointments for this staff
+      const { data: bcAppts, error: apptErr } = await supabase
+        .from("appointments")
+        .select("id, service_name, starts_at, ends_at, status, price, notes, google_event_id")
+        .eq("staff_id", staffRecord.id)
+        .eq("business_id", staffRecord.business_id)
+        .in("status", ["confirmed", "pending"])
+        .gte("starts_at", timeMin)
+        .lte("starts_at", timeMax)
+        .order("starts_at");
+
+      if (apptErr) {
+        return json({ error: `Failed to fetch appointments: ${apptErr.message}` }, 500);
+      }
+
+      let created = 0;
+      let updated = 0;
+      let skipped = 0;
+
+      for (const appt of (bcAppts ?? [])) {
+        const eventBody = {
+          summary: `[BeautyCita] ${appt.service_name}`,
+          description: `Reserva BeautyCita #${(appt.id as string).slice(0, 8)}\nPrecio: $${appt.price ?? 0} MXN\nEstado: ${appt.status}${appt.notes ? '\nNotas: ' + appt.notes : ''}`,
+          start: { dateTime: appt.starts_at, timeZone: "America/Mexico_City" },
+          end: { dateTime: appt.ends_at, timeZone: "America/Mexico_City" },
+          transparency: "opaque",
+          colorId: "6", // Tangerine — stands out as BeautyCita
+        };
+
+        try {
+          if (appt.google_event_id) {
+            // Update existing event
+            const updateResp = await fetch(
+              `${GOOGLE_CALENDAR_API}/calendars/primary/events/${appt.google_event_id}`,
+              {
+                method: "PUT",
+                headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+                body: JSON.stringify(eventBody),
+              }
+            );
+            if (updateResp.ok) { updated++; }
+            else if (updateResp.status === 404) {
+              // Event was deleted from Google — re-create
+              const createResp = await fetch(
+                `${GOOGLE_CALENDAR_API}/calendars/primary/events`,
+                {
+                  method: "POST",
+                  headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+                  body: JSON.stringify(eventBody),
+                }
+              );
+              if (createResp.ok) {
+                const newEvent = await createResp.json();
+                await supabase.from("appointments").update({ google_event_id: newEvent.id }).eq("id", appt.id);
+                created++;
+              } else { skipped++; }
+            } else { skipped++; }
+          } else {
+            // Create new event
+            const createResp = await fetch(
+              `${GOOGLE_CALENDAR_API}/calendars/primary/events`,
+              {
+                method: "POST",
+                headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+                body: JSON.stringify(eventBody),
+              }
+            );
+            if (createResp.ok) {
+              const newEvent = await createResp.json();
+              await supabase.from("appointments").update({ google_event_id: newEvent.id }).eq("id", appt.id);
+              created++;
+            } else {
+              const errText = await createResp.text();
+              console.error(`Failed to create Google event for ${appt.id}:`, errText);
+              skipped++;
+            }
+          }
+        } catch (e) {
+          console.error(`Error exporting appointment ${appt.id}:`, e);
+          skipped++;
+        }
+      }
+
+      // Update sync timestamp
+      await supabase.from("calendar_connections").update({
+        last_synced_at: new Date().toISOString(),
+        sync_error: null,
+        updated_at: new Date().toISOString(),
+      }).eq("staff_id", staffRecord.id).eq("provider", "google");
+
+      return json({
+        exported: true,
+        total: (bcAppts ?? []).length,
+        created,
+        updated,
+        skipped,
+      });
+    }
+
+    // =========================================================================
+    // ACTION: import (default) — Pull Google Calendar → BeautyCita
+    // =========================================================================
 
     // Calculate time range
     const now = new Date();
