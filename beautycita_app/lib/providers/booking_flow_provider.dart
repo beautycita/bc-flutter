@@ -400,7 +400,6 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
       serviceId: serviceId,
       price: price,
       paymentMethod: oxxoOnly ? 'oxxo' : 'card',
-      city: result.business.city,
     );
 
     try {

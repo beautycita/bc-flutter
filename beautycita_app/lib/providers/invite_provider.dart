@@ -293,7 +293,6 @@ class InviteNotifier extends StateNotifier<InviteState> {
         salonId: salon.id,
         salonName: salon.name,
         city: salon.city,
-        state: salon.state,
       );
     } catch (e) {
       if (kDebugMode) debugPrint('[INVITE] sendInvite error: $e');
