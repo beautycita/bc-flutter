@@ -1589,11 +1589,16 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
   }
 
   Future<String?> _uploadFile(File file, String path) async {
-    final bytes = await file.readAsBytes();
-    await SupabaseClientService.client.storage
-        .from('staff-media')
-        .uploadBinary(path, bytes, fileOptions: const FileOptions(upsert: true));
-    return SupabaseClientService.client.storage.from('staff-media').getPublicUrl(path);
+    try {
+      final bytes = await file.readAsBytes();
+      await SupabaseClientService.client.storage
+          .from('staff-media')
+          .uploadBinary(path, bytes, fileOptions: const FileOptions(upsert: true));
+      return SupabaseClientService.client.storage.from('staff-media').getPublicUrl(path);
+    } catch (e) {
+      debugPrint('Staff avatar upload error: $e');
+      return null;
+    }
   }
 
   void _showAvatarOptions() {
