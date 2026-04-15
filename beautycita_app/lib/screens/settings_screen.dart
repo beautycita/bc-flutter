@@ -223,18 +223,6 @@ class SettingsScreen extends ConsumerWidget {
 
           const SizedBox(height: AppConstants.paddingLG),
 
-          // ── Privacy ──
-          Padding(
-            padding: const EdgeInsets.only(left: 4, bottom: 8),
-            child: Text(
-              'PRIVACIDAD',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.2,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-          ),
           _AnalyticsOptOutTile(),
 
           const SizedBox(height: AppConstants.paddingLG),
@@ -671,18 +659,15 @@ class _AnalyticsOptOutTileState extends ConsumerState<_AnalyticsOptOutTile> {
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
       ),
       child: ListTile(
+        dense: true,
         leading: Icon(
-          Icons.analytics_outlined,
-          color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+          Icons.tune_outlined,
+          size: 20,
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
         ),
-        title: const Text('Analisis de actividad'),
-        subtitle: Text(
-          _optedOut
-              ? 'Desactivado — no recopilamos datos de comportamiento'
-              : 'Activado — mejora tu experiencia',
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-          ),
+        title: Text(
+          'Recomendaciones personalizadas',
+          style: theme.textTheme.bodyMedium,
         ),
         trailing: _loading
             ? const SizedBox(

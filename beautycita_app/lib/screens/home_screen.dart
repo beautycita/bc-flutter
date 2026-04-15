@@ -204,7 +204,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final categories = ref.watch(categoriesProvider);
     final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth = MediaQuery.of(context).size.width;
     final palette = Theme.of(context).colorScheme;
 
     final topSectionHeight = screenHeight * 0.34;
@@ -338,15 +337,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         children: [
           Column(
         children: [
-          // Header with gradient, decorative shapes, and curved bottom
-          SizedBox(
-            height: topSectionHeight + 28, // extra for the curve
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                // Gradient background with brand gradient overlay
-                _HeroGradientBackground(
-                  height: topSectionHeight,
+          // Header with gradient background
+          _HeroGradientBackground(
+            height: topSectionHeight,
                   child: SafeArea(
                     bottom: false,
                     child: Padding(
@@ -456,37 +449,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                   ),
                 ),
-
-                // Curved bottom edge
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: CustomPaint(
-                    size: Size(screenWidth, 28),
-                    painter: _CurvePainter(
-                      color: Theme.of(context).scaffoldBackgroundColor,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Gradient fade from scaffold bg to transparent
-          Container(
-            height: 20,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Theme.of(context).scaffoldBackgroundColor,
-                  Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0),
-                ],
-              ),
-            ),
-          ),
 
           // Push notification prompt (one-time)
           if (_showPushPrompt)
@@ -761,6 +723,26 @@ class _HeroGradientBackgroundState extends State<_HeroGradientBackground> {
             // Dark overlay for text readability
             Container(color: Colors.black.withValues(alpha: 0.4)),
 
+            // Bottom fade to scaffold background
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: 80,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Theme.of(context).scaffoldBackgroundColor,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
             // Content
             widget.child,
           ],
@@ -814,40 +796,6 @@ class _HeroGradientBackgroundState extends State<_HeroGradientBackground> {
   }
 }
 
-// Curved wave painter for the header bottom edge
-class _CurvePainter extends CustomPainter {
-  final Color color;
-  const _CurvePainter({required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final path = Path()
-      ..moveTo(0, size.height)
-      ..lineTo(size.width, size.height)
-      ..lineTo(size.width, size.height * 0.6)
-      ..quadraticBezierTo(
-        size.width * 0.5,
-        -size.height * 0.6,
-        0,
-        size.height * 0.6,
-      )
-      ..close();
-
-    // Gradient: opaque at bottom → transparent at top of curve
-    final paint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.bottomCenter,
-        end: Alignment.topCenter,
-        colors: [color, color.withValues(alpha: 0)],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
-      ..style = PaintingStyle.fill;
-
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
 
 // Frosted glass header buttons
 class _HeaderButton extends StatelessWidget {

@@ -191,7 +191,7 @@ class PrivacidadPage extends StatelessWidget {
                     '  - No utilizamos estos datos para publicidad de terceros\n\n'
                     'Su control:\n'
                     '  - Puede desactivar el analisis de comportamiento en cualquier momento desde '
-                    'Ajustes > Privacidad > "Analisis de actividad" en la aplicacion\n'
+                    'Ajustes > "Recomendaciones personalizadas" en la aplicacion\n'
                     '  - Al desactivar, detenemos la recopilacion y eliminamos sus puntuaciones dentro de 30 dias\n'
                     '  - Los registros transaccionales (reservas, pagos) se mantienen por obligacion legal independiente\n'
                     '  - Puede solicitar acceso a su perfil de comportamiento via soporte@beautycita.com (Art. 27 LFPDPPP)\n\n'
