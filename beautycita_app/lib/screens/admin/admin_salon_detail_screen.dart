@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 
@@ -33,7 +34,7 @@ class _AdminSalonDetailScreenState
     setState(() => _tierUpdating = true);
     try {
       await SupabaseClientService.client
-          .from('businesses')
+          .from(BCTables.businesses)
           .update({'tier': newTier}).eq('id', widget.businessId);
       ref.invalidate(adminSalonDetailProvider(widget.businessId));
     } catch (e, stack) {
@@ -51,7 +52,7 @@ class _AdminSalonDetailScreenState
     setState(() => _activeUpdating = true);
     try {
       await SupabaseClientService.client
-          .from('businesses')
+          .from(BCTables.businesses)
           .update({'is_active': value}).eq('id', widget.businessId);
       ref.invalidate(adminSalonDetailProvider(widget.businessId));
     } catch (e, stack) {
@@ -104,7 +105,7 @@ class _AdminSalonDetailScreenState
   Future<void> _setVerified(bool value) async {
     try {
       await SupabaseClientService.client
-          .from('businesses')
+          .from(BCTables.businesses)
           .update({'is_verified': value}).eq('id', widget.businessId);
       ref.invalidate(adminSalonDetailProvider(widget.businessId));
       ToastService.showSuccess(value ? 'Salon verificado' : 'Verificacion removida');
@@ -138,7 +139,7 @@ class _AdminSalonDetailScreenState
     );
     if (confirmed == true && mounted) {
       try {
-        await SupabaseClientService.client.from('businesses').update({
+        await SupabaseClientService.client.from(BCTables.businesses).update({
           'onboarding_complete': false,
           'onboarding_step': 'services',
           'has_services': false,
@@ -182,7 +183,7 @@ class _AdminSalonDetailScreenState
     if (result != null && mounted) {
       try {
         await SupabaseClientService.client
-            .from('businesses')
+            .from(BCTables.businesses)
             .update({fieldName: result.isEmpty ? null : result}).eq('id', widget.businessId);
         ref.invalidate(adminSalonDetailProvider(widget.businessId));
         ToastService.showSuccess('$label actualizado');
@@ -2130,7 +2131,7 @@ class _VerifiedToggleState extends ConsumerState<_VerifiedToggle> {
     setState(() => _updating = true);
     try {
       await SupabaseClientService.client
-          .from('businesses')
+          .from(BCTables.businesses)
           .update({'is_verified': newValue}).eq('id', widget.businessId);
       ref.invalidate(adminSalonDetailProvider(widget.businessId));
       ToastService.showSuccess(newValue ? 'Salon verificado' : 'Verificacion removida');

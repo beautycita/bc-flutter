@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../../services/supabase_client.dart';
 
 /// Analytics data fetched from Supabase.
@@ -43,12 +44,12 @@ final _analyticsProvider = FutureProvider<_AnalyticsData>((ref) async {
   final results = await Future.wait([
     // 0: All appointments (status + transport_mode)
     client
-        .from('appointments')
+        .from(BCTables.appointments)
         .select('id, status, transport_mode')
         .then((r) => List<Map<String, dynamic>>.from(r)),
     // 1: Reviews
     client
-        .from('reviews')
+        .from(BCTables.reviews)
         .select('id, rating, created_at')
         .then((r) => List<Map<String, dynamic>>.from(r)),
   ]);

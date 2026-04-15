@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import 'package:beautycita/providers/rp_provider.dart';
+import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita/services/supabase_client.dart';
 import 'package:beautycita/services/toast_service.dart';
 
@@ -541,7 +542,7 @@ class _RPChatScreenState extends ConsumerState<RPChatScreen> {
                         final currentStatus = widget.salon['rp_status'] as String?;
                         if (currentStatus == 'assigned') {
                           await SupabaseClientService.client
-                              .from('discovered_salons')
+                              .from(BCTables.discoveredSalons)
                               .update({'rp_status': 'visited'})
                               .eq('id', salonId);
                         }

@@ -10,6 +10,7 @@ import '../../config/constants.dart';
 import '../../config/theme_extension.dart';
 import '../../providers/banking_setup_provider.dart';
 import '../../providers/business_provider.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 
@@ -893,7 +894,7 @@ class _BankingSetupScreenState extends ConsumerState<BankingSetupScreen> {
           );
 
       // 3. Save CLABE + beneficiary + ID URLs to businesses table
-      await client.from('businesses').update({
+      await client.from(BCTables.businesses).update({
         'clabe': clabe,
         'beneficiary_name': beneficiary,
         'bank_name': _detectedBank ?? '',

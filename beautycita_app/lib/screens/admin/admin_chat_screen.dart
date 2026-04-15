@@ -6,6 +6,7 @@ import '../../config/constants.dart';
 import '../../models/chat_thread.dart';
 import '../../models/chat_message.dart';
 import '../../providers/chat_provider.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 
@@ -351,14 +352,14 @@ class _ConversationPaneState extends ConsumerState<_ConversationPane> {
     try {
       final client = SupabaseClientService.client;
       final userId = SupabaseClientService.currentUserId;
-      await client.from('chat_messages').insert({
+      await client.from(BCTables.chatMessages).insert({
         'thread_id': widget.threadId,
         'sender_type': 'support',
         'sender_id': userId,
         'content_type': 'text',
         'text_content': text,
       });
-      await client.from('chat_threads').update({
+      await client.from(BCTables.chatThreads).update({
         'last_message_text': text,
         'last_message_at': DateTime.now().toUtc().toIso8601String(),
       }).eq('id', widget.threadId);

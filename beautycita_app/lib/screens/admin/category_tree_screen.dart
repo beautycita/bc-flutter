@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 
@@ -316,7 +317,7 @@ class _CategoryTreeScreenState extends ConsumerState<CategoryTreeScreen> {
               }
               try {
                 await SupabaseClientService.client
-                    .from('service_categories_tree')
+                    .from(BCTables.serviceCategoriesTree)
                     .insert({
                       'parent_id': parentId,
                       'display_name_es': nameEsCtrl.text.trim(),
@@ -385,7 +386,7 @@ class _CategoryTreeScreenState extends ConsumerState<CategoryTreeScreen> {
             onPressed: () async {
               try {
                 await SupabaseClientService.client
-                    .from('service_categories_tree')
+                    .from(BCTables.serviceCategoriesTree)
                     .delete()
                     .eq('id', node.id);
                 ref.invalidate(categoryTreeProvider);
@@ -514,7 +515,7 @@ class _CategoryTreeScreenState extends ConsumerState<CategoryTreeScreen> {
             ElevatedButton(
               onPressed: () async {
                 await SupabaseClientService.client
-                    .from('service_categories_tree')
+                    .from(BCTables.serviceCategoriesTree)
                     .update({
                       'display_name_es': nameEsCtrl.text,
                       'display_name_en': nameEnCtrl.text,

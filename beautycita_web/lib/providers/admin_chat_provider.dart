@@ -12,7 +12,7 @@ final adminChatThreadsProvider =
   if (user == null) return [];
 
   final data = await BCSupabase.client
-      .from('chat_threads')
+      .from(BCTables.chatThreads)
       .select()
       .inFilter('contact_type', ['support', 'support_ai', 'salon'])
       .order('last_message_at', ascending: false, nullsFirst: false)
@@ -36,7 +36,7 @@ final adminChatMessagesProvider =
   if (user == null) return [];
 
   final data = await BCSupabase.client
-      .from('chat_messages')
+      .from(BCTables.chatMessages)
       .select()
       .eq('thread_id', threadId)
       .order('created_at', ascending: true)
@@ -66,7 +66,7 @@ class AdminChatSendNotifier extends StateNotifier<AdminChatSendState> {
     if (text.trim().isEmpty) return false;
     state = const AdminChatSendState(isSending: true);
     try {
-      await BCSupabase.client.from('chat_messages').insert({
+      await BCSupabase.client.from(BCTables.chatMessages).insert({
         'thread_id': threadId,
         'sender_type': 'support',
         'sender_id': BCSupabase.client.auth.currentUser?.id,

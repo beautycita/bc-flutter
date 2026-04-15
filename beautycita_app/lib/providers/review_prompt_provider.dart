@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita/services/supabase_client.dart';
 
 /// Checks for the most recent completed appointment that has no review yet.
@@ -15,7 +16,7 @@ final unreviewedAppointmentProvider =
         DateTime.now().subtract(const Duration(hours: 2)).toUtc().toIso8601String();
 
     final rows = await SupabaseClientService.client
-        .from('appointments')
+        .from(BCTables.appointments)
         .select('id, business_id, ends_at, businesses(name)')
         .eq('user_id', userId)
         .eq('status', 'completed')
@@ -29,7 +30,7 @@ final unreviewedAppointmentProvider =
     for (final appt in rows) {
       final appointmentId = appt['id'] as String;
       final existing = await SupabaseClientService.client
-          .from('reviews')
+          .from(BCTables.reviews)
           .select('id')
           .eq('appointment_id', appointmentId)
           .eq('user_id', userId)
@@ -56,7 +57,7 @@ Future<void> submitReview({
   final userId = SupabaseClientService.currentUserId;
   if (userId == null) throw Exception('User not authenticated');
 
-  await SupabaseClientService.client.from('reviews').insert({
+  await SupabaseClientService.client.from(BCTables.reviews).insert({
     'user_id': userId,
     'business_id': businessId,
     'appointment_id': appointmentId,

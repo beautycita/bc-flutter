@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/curate_result.dart';
 import '../services/curate_service.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../services/supabase_client.dart';
 import '../repositories/booking_repository.dart';
 
@@ -123,7 +124,7 @@ class CitaExpressNotifier extends StateNotifier<CitaExpressState> {
 
       // Validate business exists, is verified, and is active before rendering.
       final bizResponse = await client
-          .from('businesses')
+          .from(BCTables.businesses)
           .select('*, services(*)')
           .eq('id', businessId)
           .maybeSingle();
@@ -486,7 +487,7 @@ class CitaExpressNotifier extends StateNotifier<CitaExpressState> {
       // Only owner and stylist positions are bookable — receptionists,
       // managers, and assistants must never appear in client-facing booking flows.
       final staffRows = await client
-          .from('staff_services')
+          .from(BCTables.staffServices)
           .select(
             'staff_id, custom_price, custom_duration, '
             'staff!inner(id, first_name, last_name, avatar_url, '

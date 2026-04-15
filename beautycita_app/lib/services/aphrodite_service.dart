@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:uuid/uuid.dart';
+import 'package:beautycita_core/supabase.dart';
 import 'supabase_client.dart';
 import '../models/chat_thread.dart';
 import '../models/chat_message.dart';
@@ -138,7 +139,7 @@ class AphroditeService {
 
     // Insert a "trying on" system message
     final tryingMsgId = _uuid.v4();
-    await client.from('chat_messages').insert({
+    await client.from(BCTables.chatMessages).insert({
       'id': tryingMsgId,
       'thread_id': threadId,
       'sender_type': 'aphrodite',
@@ -176,7 +177,7 @@ class AphroditeService {
     final resultMsgId = _uuid.v4();
     final resultTime = DateTime.now().toUtc();
 
-    await client.from('chat_messages').insert({
+    await client.from(BCTables.chatMessages).insert({
       'id': resultMsgId,
       'thread_id': threadId,
       'sender_type': 'aphrodite',
@@ -188,7 +189,7 @@ class AphroditeService {
     });
 
     // Update thread
-    await client.from('chat_threads').update({
+    await client.from(BCTables.chatThreads).update({
       'last_message_text': '📸 Prueba virtual: $stylePrompt',
       'last_message_at': resultTime.toIso8601String(),
     }).eq('id', threadId);
@@ -218,7 +219,7 @@ class AphroditeService {
     final now = DateTime.now().toUtc();
     final msgId = _uuid.v4();
 
-    await client.from('chat_messages').insert({
+    await client.from(BCTables.chatMessages).insert({
       'id': msgId,
       'thread_id': threadId,
       'sender_type': senderType,
@@ -229,7 +230,7 @@ class AphroditeService {
     });
 
     if (textContent != null) {
-      await client.from('chat_threads').update({
+      await client.from(BCTables.chatThreads).update({
         'last_message_text': textContent,
         'last_message_at': now.toIso8601String(),
       }).eq('id', threadId);
@@ -251,7 +252,7 @@ class AphroditeService {
       String messageId, Map<String, dynamic> metadata) async {
     final client = SupabaseClientService.client;
     await client
-        .from('chat_messages')
+        .from(BCTables.chatMessages)
         .update({'metadata': metadata}).eq('id', messageId);
   }
 
@@ -295,7 +296,7 @@ class AphroditeService {
   /// Archives a thread (soft-delete). Messages stay in DB but thread is hidden.
   Future<void> deleteThread(String threadId) async {
     final client = SupabaseClientService.client;
-    await client.from('chat_threads').update({
+    await client.from(BCTables.chatThreads).update({
       'archived_at': DateTime.now().toUtc().toIso8601String(),
     }).eq('id', threadId);
   }
@@ -311,7 +312,7 @@ class AphroditeService {
 
     // Check if aphrodite thread already exists (non-archived)
     final existing = await client
-        .from('chat_threads')
+        .from(BCTables.chatThreads)
         .select()
         .eq('user_id', userId)
         .eq('contact_type', 'aphrodite')
@@ -347,7 +348,7 @@ class AphroditeService {
         'o mándame una selfie y te digo qué hacer con... bueno, con todo eso. 💅✨';
 
     // Create thread
-    await client.from('chat_threads').insert({
+    await client.from(BCTables.chatThreads).insert({
       'id': threadId,
       'user_id': userId,
       'contact_type': 'aphrodite',
@@ -358,7 +359,7 @@ class AphroditeService {
     }).timeout(const Duration(seconds: 8));
 
     // Insert welcome message
-    await client.from('chat_messages').insert({
+    await client.from(BCTables.chatMessages).insert({
       'id': _uuid.v4(),
       'thread_id': threadId,
       'sender_type': 'aphrodite',

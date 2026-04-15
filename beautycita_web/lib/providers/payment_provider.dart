@@ -45,7 +45,7 @@ Future<String> createAppointment({
   required String paymentIntentId,
 }) async {
   final response = await BCSupabase.client
-      .from('appointments')
+      .from(BCTables.appointments)
       .insert({
         'user_id': userId,
         'business_id': businessId,

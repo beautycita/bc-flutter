@@ -232,7 +232,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     if (!BCSupabase.isInitialized || state.user == null) return null;
     try {
       final data = await BCSupabase.client
-          .from('profiles')
+          .from(BCTables.profiles)
           .select('role')
           .eq('id', state.user!.id)
           .maybeSingle();

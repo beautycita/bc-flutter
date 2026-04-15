@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita/models/booking.dart';
 import 'package:beautycita/repositories/booking_repository.dart';
+import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita/services/supabase_client.dart';
 
 /// Repository provider for BookingRepository.
@@ -50,7 +51,7 @@ final availableSlotsProvider =
 
   // 1. Find staff who can perform this service at this business
   final staffRows = await client
-      .from('staff_services')
+      .from(BCTables.staffServices)
       .select('staff_id, staff:staff_id(id, first_name, last_name, business_id)')
       .eq('service_id', query.serviceId);
 

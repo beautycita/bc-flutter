@@ -37,7 +37,7 @@ class _EngineProfilesPageState extends ConsumerState<EngineProfilesPage> {
     setState(() => _saving = true);
     try {
       await BCSupabase.client
-          .from('service_profiles')
+          .from(BCTables.serviceProfiles)
           .update({
             'quality_weight': _editing!.qualityWeight,
             'distance_weight': _editing!.distanceWeight,

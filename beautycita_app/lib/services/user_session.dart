@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
+import 'package:beautycita_core/supabase.dart';
 import 'supabase_client.dart';
 
 /// Service for managing local user session with Supabase identity persistence
@@ -57,7 +58,7 @@ class UserSession {
         await _setSecureSupabaseUserId(supaId);
         try {
           await SupabaseClientService.client
-              .from('profiles')
+              .from(BCTables.profiles)
               .update({'username': username})
               .eq('id', supaId);
         } catch (e) {
@@ -172,7 +173,7 @@ class UserSession {
         // Tag registration source as APK (Android build)
         try {
           await SupabaseClientService.client
-              .from('profiles')
+              .from(BCTables.profiles)
               .update({'registration_source': 'apk'})
               .eq('id', userId);
         } catch (e) {

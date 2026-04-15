@@ -1,4 +1,5 @@
 import 'package:beautycita_core/models.dart';
+import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita/services/supabase_client.dart';
 
 class OrderService {
@@ -6,7 +7,7 @@ class OrderService {
   Future<List<Order>> fetchBusinessOrders(String businessId) async {
     if (!SupabaseClientService.isInitialized) return [];
     final data = await SupabaseClientService.client
-        .from('orders')
+        .from(BCTables.orders)
         .select()
         .eq('business_id', businessId)
         .order('created_at', ascending: false);
@@ -21,7 +22,7 @@ class OrderService {
     if (userId == null) return [];
 
     final data = await SupabaseClientService.client
-        .from('orders')
+        .from(BCTables.orders)
         .select()
         .eq('buyer_id', userId)
         .order('created_at', ascending: false);
@@ -33,7 +34,7 @@ class OrderService {
   Future<void> markShipped(String orderId, {required String businessId}) async {
     if (!SupabaseClientService.isInitialized) return;
     await SupabaseClientService.client
-        .from('orders')
+        .from(BCTables.orders)
         .update({
           'status': 'shipped',
           'shipped_at': DateTime.now().toUtc().toIso8601String(),
@@ -46,7 +47,7 @@ class OrderService {
   Future<void> updateTrackingNumber(String orderId, String trackingNumber, {required String businessId}) async {
     if (!SupabaseClientService.isInitialized) return;
     await SupabaseClientService.client
-        .from('orders')
+        .from(BCTables.orders)
         .update({'tracking_number': trackingNumber})
         .eq('id', orderId)
         .eq('business_id', businessId);
@@ -56,7 +57,7 @@ class OrderService {
   Future<void> markDelivered(String orderId, {required String businessId}) async {
     if (!SupabaseClientService.isInitialized) return;
     await SupabaseClientService.client
-        .from('orders')
+        .from(BCTables.orders)
         .update({
           'status': 'delivered',
           'delivered_at': DateTime.now().toUtc().toIso8601String(),

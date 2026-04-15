@@ -52,7 +52,7 @@ final adminNotificationTemplatesProvider =
   if (!BCSupabase.isInitialized) return [];
 
   final data = await BCSupabase.client
-      .from('notification_templates')
+      .from(BCTables.notificationTemplates)
       .select()
       .order('event_type', ascending: true);
 
@@ -85,7 +85,7 @@ class TemplateSaveNotifier extends StateNotifier<TemplateSaveState> {
   Future<void> save(String id, String? es, String? en) async {
     state = TemplateSaveState(savingId: id, savedIds: state.savedIds);
     try {
-      await BCSupabase.client.from('notification_templates').update({
+      await BCSupabase.client.from(BCTables.notificationTemplates).update({
         'template_es': es,
         'template_en': en,
         'updated_at': DateTime.now().toIso8601String(),

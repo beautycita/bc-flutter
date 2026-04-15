@@ -35,7 +35,7 @@ class _EngineCategoriesPageState
     if (!BCSupabase.isInitialized) return;
     try {
       await BCSupabase.client
-          .from('service_categories_tree')
+          .from(BCTables.serviceCategoriesTree)
           .update({'is_active': !node.isActive})
           .eq('id', node.id);
       ref.invalidate(categoryTreeProvider);
@@ -52,7 +52,7 @@ class _EngineCategoriesPageState
     if (!BCSupabase.isInitialized || newName.trim().isEmpty) return;
     try {
       await BCSupabase.client
-          .from('service_categories_tree')
+          .from(BCTables.serviceCategoriesTree)
           .update({'name': newName.trim()})
           .eq('id', id);
       ref.invalidate(categoryTreeProvider);
@@ -70,7 +70,7 @@ class _EngineCategoriesPageState
     if (!BCSupabase.isInitialized) return;
     try {
       await BCSupabase.client
-          .from('service_categories_tree')
+          .from(BCTables.serviceCategoriesTree)
           .update({'sort_order': newSortOrder})
           .eq('id', id);
       ref.invalidate(categoryTreeProvider);
@@ -112,7 +112,7 @@ class _EngineCategoriesPageState
 
     try {
       await BCSupabase.client
-          .from('service_categories_tree')
+          .from(BCTables.serviceCategoriesTree)
           .delete()
           .eq('id', id);
       ref.invalidate(categoryTreeProvider);
@@ -161,7 +161,7 @@ class _EngineCategoriesPageState
     if (name == null || name.trim().isEmpty) return;
 
     try {
-      await BCSupabase.client.from('service_categories_tree').insert({
+      await BCSupabase.client.from(BCTables.serviceCategoriesTree).insert({
         'name': name.trim(),
         'parent_id': parentId,
         'sort_order': 0,

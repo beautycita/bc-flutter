@@ -4,6 +4,7 @@ import '../models/curate_result.dart';
 import '../screens/invite_salon_screen.dart' show DiscoveredSalon;
 import '../services/invite_service.dart';
 import '../services/location_service.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../services/supabase_client.dart';
 
 // ---------------------------------------------------------------------------
@@ -354,7 +355,7 @@ class InviteNotifier extends StateNotifier<InviteState> {
       if (userId == null) return 'Una clienta';
 
       final profile = await client
-          .from('profiles')
+          .from(BCTables.profiles)
           .select('full_name, username')
           .eq('id', userId)
           .maybeSingle();

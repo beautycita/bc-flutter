@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 
@@ -290,7 +291,7 @@ class _TimeRulesScreenState extends ConsumerState<TimeRulesScreen> {
               onPressed: () async {
                 try {
                   await SupabaseClientService.client
-                      .from('time_inference_rules')
+                      .from(BCTables.timeInferenceRules)
                       .insert({
                         'hour_start': hourStart,
                         'hour_end': hourEnd,
@@ -353,7 +354,7 @@ class _TimeRulesScreenState extends ConsumerState<TimeRulesScreen> {
             onPressed: () async {
               try {
                 await SupabaseClientService.client
-                    .from('time_inference_rules')
+                    .from(BCTables.timeInferenceRules)
                     .delete()
                     .eq('id', rule.id);
                 ref.invalidate(timeInferenceRulesProvider);
@@ -595,7 +596,7 @@ class _RuleEditorState extends State<_RuleEditor> {
     setState(() => _saving = true);
     try {
       await SupabaseClientService.client
-          .from('time_inference_rules')
+          .from(BCTables.timeInferenceRules)
           .update({
             'hour_start': _hourStart,
             'hour_end': _hourEnd,

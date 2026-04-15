@@ -36,7 +36,7 @@ final adminRpTrackingProvider =
 
   // Fetch all RP profiles
   final profiles = await client
-      .from('profiles')
+      .from(BCTables.profiles)
       .select('id, full_name, avatar_url, created_at')
       .eq('role', 'rp');
 
@@ -46,7 +46,7 @@ final adminRpTrackingProvider =
 
   // Fetch assignment counts per RP
   final assignments = await client
-      .from('rp_assignments')
+      .from(BCTables.rpAssignments)
       .select('rp_user_id, status')
       .inFilter('rp_user_id', rpIds);
 

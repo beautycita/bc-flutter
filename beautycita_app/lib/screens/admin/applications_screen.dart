@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../config/constants.dart';
 import '../../config/theme_extension.dart';
 import '../../providers/admin_provider.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 
@@ -490,7 +491,7 @@ class _ApplicationCard extends ConsumerWidget {
 
       // Check if a salon-type thread already exists for this owner
       final existing = await client
-          .from('chat_threads')
+          .from(BCTables.chatThreads)
           .select()
           .eq('user_id', adminId)
           .eq('contact_type', 'salon')
@@ -505,7 +506,7 @@ class _ApplicationCard extends ConsumerWidget {
         // Create a new thread
         final now = DateTime.now().toUtc().toIso8601String();
         final result = await client
-            .from('chat_threads')
+            .from(BCTables.chatThreads)
             .insert({
               'user_id': adminId,
               'contact_type': 'salon',
@@ -519,7 +520,7 @@ class _ApplicationCard extends ConsumerWidget {
         threadId = result['id'] as String;
 
         // Insert a system message as opener
-        await client.from('chat_messages').insert({
+        await client.from(BCTables.chatMessages).insert({
           'thread_id': threadId,
           'sender_type': 'system',
           'sender_id': adminId,
@@ -541,12 +542,12 @@ class _ApplicationCard extends ConsumerWidget {
     final ownerId = app['owner_id'] as String?;
     try {
       await SupabaseClientService.client
-          .from('businesses')
+          .from(BCTables.businesses)
           .update({'is_verified': true}).eq('id', id);
 
       if (ownerId != null) {
         await SupabaseClientService.client
-            .from('profiles')
+            .from(BCTables.profiles)
             .update({'role': 'stylist'}).eq('id', ownerId);
       }
 
@@ -608,7 +609,7 @@ class _ApplicationCard extends ConsumerWidget {
     final id = app['id'] as String;
     try {
       await SupabaseClientService.client
-          .from('businesses')
+          .from(BCTables.businesses)
           .update({
             'is_active': false,
             'is_verified': true,

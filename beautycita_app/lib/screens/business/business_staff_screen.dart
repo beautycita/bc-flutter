@@ -12,6 +12,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
 import '../../config/constants.dart';
 import '../../providers/business_provider.dart';
 import '../../providers/feature_toggle_provider.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 import 'package:share_plus/share_plus.dart';
@@ -147,7 +148,7 @@ class BusinessStaffScreen extends ConsumerWidget {
 
       // Get owner's profile for name
       final profile = await SupabaseClientService.client
-          .from('profiles')
+          .from(BCTables.profiles)
           .select('full_name, username, avatar_url, phone')
           .eq('id', ownerId)
           .maybeSingle();
@@ -157,7 +158,7 @@ class BusinessStaffScreen extends ConsumerWidget {
       final firstName = parts.first;
       final lastName = parts.length > 1 ? parts.sublist(1).join(' ') : '';
 
-      await SupabaseClientService.client.from('staff').insert({
+      await SupabaseClientService.client.from(BCTables.staff).insert({
         'business_id': bizId,
         'user_id': ownerId,
         'first_name': firstName,
@@ -494,7 +495,7 @@ class _AddStaffSheetState extends ConsumerState<_AddStaffSheet> {
       // Search by phone first
       if (phone.length >= 8) {
         final result = await SupabaseClientService.client
-            .from('profiles')
+            .from(BCTables.profiles)
             .select('id, username, full_name, phone, avatar_url, role')
             .eq('phone', phone)
             .eq('role', 'stylist')
@@ -1090,7 +1091,7 @@ class _AddStaffSheetState extends ConsumerState<_AddStaffSheet> {
       }
 
       final inserted = await SupabaseClientService.client
-          .from('staff')
+          .from(BCTables.staff)
           .insert(staffData)
           .select('id')
           .single();
@@ -1701,7 +1702,7 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
         updates['avatar_url'] = avatarUrl.isEmpty ? null : avatarUrl;
       }
 
-      await SupabaseClientService.client.from('staff').update(updates).eq('id', staffId);
+      await SupabaseClientService.client.from(BCTables.staff).update(updates).eq('id', staffId);
       ref.invalidate(businessStaffProvider);
       ToastService.showSuccess('Perfil actualizado');
     } catch (e, stack) {
@@ -1800,7 +1801,7 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
                     onTap: () async {
                       final rng = Random.secure();
                       final newPin = (1000 + rng.nextInt(9000)).toString();
-                      await SupabaseClientService.client.from('staff').update({'upload_pin': newPin}).eq('id', staffId);
+                      await SupabaseClientService.client.from(BCTables.staff).update({'upload_pin': newPin}).eq('id', staffId);
                       ref.invalidate(businessStaffProvider);
                       ToastService.showSuccess('PIN actualizado: $newPin');
                     },
@@ -2149,7 +2150,7 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
       }).toList();
 
       await SupabaseClientService.client
-          .from('staff_schedules')
+          .from(BCTables.staffSchedules)
           .upsert(rows, onConflict: 'staff_id,day_of_week');
 
       // Keep _schedule as-is (it has correct values the user set)
@@ -2211,7 +2212,7 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
                   onPressed: () async {
                     try {
                       await SupabaseClientService.client
-                          .from('staff_services')
+                          .from(BCTables.staffServices)
                           .delete()
                           .eq('id', s['id'] as String);
                       ref.invalidate(staffServicesProvider(staffId));
@@ -2295,7 +2296,7 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
                       : () async {
                           for (final svcId in selected) {
                             await SupabaseClientService.client
-                                .from('staff_services')
+                                .from(BCTables.staffServices)
                                 .insert({
                               'staff_id': staffId,
                               'service_id': svcId,
@@ -2362,7 +2363,7 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
                   onPressed: () async {
                     try {
                       await SupabaseClientService.client
-                          .from('staff_schedule_blocks')
+                          .from(BCTables.staffScheduleBlocks)
                           .delete()
                           .eq('id', b['id'] as String);
                       ref.invalidate(staffBlocksProvider(staffId));
@@ -2597,7 +2598,7 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
                         }
 
                         await SupabaseClientService.client
-                            .from('staff_schedule_blocks')
+                            .from(BCTables.staffScheduleBlocks)
                             .insert({
                           'business_id': biz['id'],
                           'staff_id': staffId,
@@ -2825,7 +2826,7 @@ class _TodayStaffViewState extends State<_TodayStaffView> {
 
     try {
       final appts = await SupabaseClientService.client
-          .from('appointments')
+          .from(BCTables.appointments)
           .select('staff_id, status')
           .eq('business_id', widget.bizId)
           .gte('starts_at', todayStart.toUtc().toIso8601String())

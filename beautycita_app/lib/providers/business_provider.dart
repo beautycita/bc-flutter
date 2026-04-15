@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita/services/supabase_client.dart';
 
 // ---------------------------------------------------------------------------
@@ -11,7 +12,7 @@ final currentBusinessProvider =
   if (userId == null) return null;
 
   final response = await SupabaseClientService.client
-      .from('businesses')
+      .from(BCTables.businesses)
       .select()
       .eq('owner_id', userId)
       .maybeSingle();
@@ -50,7 +51,7 @@ final currentStaffPositionProvider =
   // Non-owner: look up their staff record. We need the business_id first —
   // find any active staff row tied to this user_id.
   final staffRow = await SupabaseClientService.client
-      .from('staff')
+      .from(BCTables.staff)
       .select('position')
       .eq('user_id', userId)
       .eq('is_active', true)
@@ -89,26 +90,26 @@ final businessStatsProvider =
       DateTime.utc(now.year, now.month, 1).toIso8601String();
 
   final todayAppts = client
-      .from('appointments').select('id')
+      .from(BCTables.appointments).select('id')
       .eq('business_id', bizId)
       .gte('starts_at', '${today}T00:00:00')
       .lte('starts_at', '${today}T23:59:59');
   final weekAppts = client
-      .from('appointments').select('id')
+      .from(BCTables.appointments).select('id')
       .eq('business_id', bizId)
       .gte('starts_at', weekAgo);
   final monthRevenue = client
-      .from('appointments').select('price')
+      .from(BCTables.appointments).select('price')
       .eq('business_id', bizId)
       .eq('status', 'completed')
       .eq('payment_status', 'paid')
       .gte('starts_at', firstOfMonth);
   final pendingQ = client
-      .from('appointments').select('id')
+      .from(BCTables.appointments).select('id')
       .eq('business_id', bizId)
       .eq('status', 'pending');
   final bizInfo = client
-      .from('businesses')
+      .from(BCTables.businesses)
       .select('average_rating, total_reviews')
       .eq('id', bizId)
       .single();
@@ -150,7 +151,7 @@ final businessMonthlyDailyProvider =
   final lastOfMonth = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
 
   final response = await SupabaseClientService.client
-      .from('appointments')
+      .from(BCTables.appointments)
       .select('starts_at, price, status')
       .eq('business_id', bizId)
       .gte('starts_at', firstOfMonth.toIso8601String())
@@ -195,7 +196,7 @@ final businessAppointmentsProvider = FutureProvider.family<
 
     final bizId = biz['id'] as String;
     final response = await SupabaseClientService.client
-        .from('appointments')
+        .from(BCTables.appointments)
         .select()
         .eq('business_id', bizId)
         .gte('starts_at', range.start)
@@ -218,7 +219,7 @@ final businessScheduleBlocksProvider = FutureProvider.family<
 
     final bizId = biz['id'] as String;
     final response = await SupabaseClientService.client
-        .from('staff_schedule_blocks')
+        .from(BCTables.staffScheduleBlocks)
         .select()
         .eq('business_id', bizId)
         .gte('starts_at', range.start)
@@ -234,7 +235,7 @@ final staffBlocksProvider = FutureProvider.family<
     List<Map<String, dynamic>>, String>(
   (ref, staffId) async {
     final response = await SupabaseClientService.client
-        .from('staff_schedule_blocks')
+        .from(BCTables.staffScheduleBlocks)
         .select()
         .eq('staff_id', staffId)
         .gte('ends_at', DateTime.now().toIso8601String())
@@ -255,7 +256,7 @@ final businessServicesProvider =
 
   final bizId = biz['id'] as String;
   final response = await SupabaseClientService.client
-      .from('services')
+      .from(BCTables.services)
       .select()
       .eq('business_id', bizId)
       .order('category')
@@ -275,7 +276,7 @@ final businessStaffProvider =
 
   final bizId = biz['id'] as String;
   final response = await SupabaseClientService.client
-      .from('staff')
+      .from(BCTables.staff)
       .select()
       .eq('business_id', bizId)
       .order('sort_order');
@@ -287,7 +288,7 @@ final staffScheduleProvider = FutureProvider.family<
     List<Map<String, dynamic>>, String>(
   (ref, staffId) async {
     final response = await SupabaseClientService.client
-        .from('staff_schedules')
+        .from(BCTables.staffSchedules)
         .select()
         .eq('staff_id', staffId)
         .order('day_of_week');
@@ -300,7 +301,7 @@ final staffServicesProvider = FutureProvider.family<
     List<Map<String, dynamic>>, String>(
   (ref, staffId) async {
     final response = await SupabaseClientService.client
-        .from('staff_services')
+        .from(BCTables.staffServices)
         .select('*, services(name, price, duration_minutes)')
         .eq('staff_id', staffId);
 
@@ -313,7 +314,7 @@ final serviceStaffProvider = FutureProvider.family<
     List<String>, String>(
   (ref, serviceId) async {
     final response = await SupabaseClientService.client
-        .from('staff_services')
+        .from(BCTables.staffServices)
         .select('staff_id')
         .eq('service_id', serviceId);
 
@@ -333,7 +334,7 @@ final allStaffServicesProvider =
   final bizId = biz['id'] as String;
 
   final staffList = await SupabaseClientService.client
-      .from('staff')
+      .from(BCTables.staff)
       .select('id')
       .eq('business_id', bizId);
 
@@ -344,7 +345,7 @@ final allStaffServicesProvider =
   if (staffIds.isEmpty) return {};
 
   final response = await SupabaseClientService.client
-      .from('staff_services')
+      .from(BCTables.staffServices)
       .select('staff_id, service_id')
       .inFilter('staff_id', staffIds);
 
@@ -371,7 +372,7 @@ final businessDisputesProvider =
 
   // Get appointment IDs for this business
   final appointments = await SupabaseClientService.client
-      .from('appointments')
+      .from(BCTables.appointments)
       .select('id')
       .eq('business_id', bizId);
 
@@ -382,7 +383,7 @@ final businessDisputesProvider =
   if (appointmentIds.isEmpty) return [];
 
   final response = await SupabaseClientService.client
-      .from('disputes')
+      .from(BCTables.disputes)
       .select()
       .inFilter('appointment_id', appointmentIds)
       .order('created_at', ascending: false);
@@ -402,7 +403,7 @@ final businessPaymentsProvider =
   final bizId = biz['id'] as String;
 
   final appointments = await SupabaseClientService.client
-      .from('appointments')
+      .from(BCTables.appointments)
       .select('id')
       .eq('business_id', bizId);
 
@@ -413,7 +414,7 @@ final businessPaymentsProvider =
   if (appointmentIds.isEmpty) return [];
 
   final response = await SupabaseClientService.client
-      .from('payments')
+      .from(BCTables.payments)
       .select()
       .inFilter('appointment_id', appointmentIds)
       .order('created_at', ascending: false)
@@ -434,7 +435,7 @@ final businessPayoutsProvider =
   final bizId = biz['id'] as String;
 
   final response = await SupabaseClientService.client
-      .from('payout_records')
+      .from(BCTables.payoutRecords)
       .select()
       .eq('business_id', bizId)
       .order('created_at', ascending: false);
@@ -456,7 +457,7 @@ final businessCommissionsYtdProvider =
   final year = DateTime.now().year;
 
   final rows = await SupabaseClientService.client
-      .from('commission_records')
+      .from(BCTables.commissionRecords)
       .select('amount, source')
       .eq('business_id', bizId)
       .gte('created_at', '$year-01-01');
@@ -487,7 +488,7 @@ final businessReviewsProvider =
 
   final bizId = biz['id'] as String;
   final response = await SupabaseClientService.client
-      .from('reviews')
+      .from(BCTables.reviews)
       .select()
       .eq('business_id', bizId)
       .order('created_at', ascending: false)
@@ -527,18 +528,18 @@ final staffProductivityProvider = FutureProvider.family<
 
     // Fetch staff, completed appointments, and reviews in parallel
     final staffFuture = client
-        .from('staff')
+        .from(BCTables.staff)
         .select()
         .eq('business_id', bizId)
         .order('sort_order');
     final apptsFuture = client
-        .from('appointments')
+        .from(BCTables.appointments)
         .select('staff_id, price, starts_at, ends_at, status')
         .eq('business_id', bizId)
         .gte('starts_at', startStr)
         .lte('starts_at', endStr);
     final reviewsFuture = client
-        .from('reviews')
+        .from(BCTables.reviews)
         .select('staff_id, rating')
         .eq('business_id', bizId)
         .gte('created_at', startStr)
@@ -754,7 +755,7 @@ final serviceRevenueProvider = FutureProvider.family<
     }
 
     final rows = await SupabaseClientService.client
-        .from('appointments')
+        .from(BCTables.appointments)
         .select('service_name, service_type, price')
         .eq('business_id', bizId)
         .inFilter('status', ['completed', 'confirmed'])
@@ -847,14 +848,14 @@ final staffCommissionsProvider =
 
   // Load all commissions for this month
   final rows = await SupabaseClientService.client
-      .from('staff_commissions')
+      .from(BCTables.staffCommissions)
       .select('staff_id, amount, status')
       .eq('business_id', bizId)
       .gte('created_at', firstOfMonth);
 
   // Load staff names
   final staffRows = await SupabaseClientService.client
-      .from('staff')
+      .from(BCTables.staff)
       .select('id, first_name')
       .eq('business_id', bizId);
 

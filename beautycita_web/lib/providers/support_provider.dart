@@ -54,7 +54,7 @@ final chatMessagesProvider =
   if (!BCSupabase.isInitialized) return [];
 
   final data = await BCSupabase.client
-      .from('chat_messages')
+      .from(BCTables.chatMessages)
       .select()
       .eq('thread_id', threadId)
       .order('created_at', ascending: true)

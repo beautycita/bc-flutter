@@ -29,13 +29,13 @@ class _SalonPageState extends State<SalonPage> {
     try {
       // Try to find by ID first, then by slug
       var biz = await BCSupabase.client
-          .from('businesses')
+          .from(BCTables.businesses)
           .select('id, name, photo_url, description, phone, city, is_active')
           .eq('id', widget.slug)
           .maybeSingle();
 
       biz ??= await BCSupabase.client
-          .from('businesses')
+          .from(BCTables.businesses)
           .select('id, name, photo_url, description, phone, city, is_active')
           .eq('slug', widget.slug)
           .maybeSingle();
@@ -49,7 +49,7 @@ class _SalonPageState extends State<SalonPage> {
       }
 
       final services = await BCSupabase.client
-          .from('services')
+          .from(BCTables.services)
           .select('id, name, price, duration_minutes, category')
           .eq('business_id', biz['id'] as String)
           .eq('is_active', true)

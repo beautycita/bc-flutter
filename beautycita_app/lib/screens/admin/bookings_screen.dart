@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../config/constants.dart';
 import '../../config/theme_extension.dart';
 import '../../providers/admin_provider.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../../services/supabase_client.dart';
 
 // ---------------------------------------------------------------------------
@@ -821,7 +822,7 @@ class _BookingTile extends StatelessWidget {
   Future<void> _cancelBooking(BuildContext context, String bookingId) async {
     try {
       await SupabaseClientService.client
-          .from('appointments')
+          .from(BCTables.appointments)
           .update({'status': 'cancelled_business'})
           .eq('id', bookingId);
       if (context.mounted) {
@@ -842,7 +843,7 @@ class _BookingTile extends StatelessWidget {
   Future<void> _refundBooking(BuildContext context, String bookingId) async {
     try {
       await SupabaseClientService.client
-          .from('appointments')
+          .from(BCTables.appointments)
           .update({
             'status': 'refunded',
             'payment_status': 'refunded',

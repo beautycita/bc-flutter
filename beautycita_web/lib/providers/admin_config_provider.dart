@@ -66,7 +66,7 @@ final appConfigProvider = FutureProvider<List<ConfigEntry>>((ref) async {
 
   try {
     final data = await BCSupabase.client
-        .from('app_config')
+        .from(BCTables.appConfig)
         .select()
         .order('key');
 
@@ -166,7 +166,7 @@ final featureTogglesProvider =
 
   try {
     final data = await BCSupabase.client
-        .from('app_config')
+        .from(BCTables.appConfig)
         .select('key, value, group_name')
         .eq('data_type', 'bool')
         .order('group_name')

@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:beautycita_core/supabase.dart';
 import 'supabase_client.dart';
 
 /// Background message handler - must be top-level function
@@ -97,7 +98,7 @@ class NotificationService {
     try {
       if (SupabaseClientService.isInitialized) {
         final row = await SupabaseClientService.client
-            .from('app_config')
+            .from(BCTables.appConfig)
             .select('value')
             .eq('key', 'enable_push_notifications')
             .maybeSingle();
@@ -277,7 +278,7 @@ class NotificationService {
 
       // Upsert FCM token to profiles table
       await SupabaseClientService.client
-          .from('profiles')
+          .from(BCTables.profiles)
           .update({
             'fcm_token': _fcmToken,
             'fcm_updated_at': DateTime.now().toUtc().toIso8601String(),

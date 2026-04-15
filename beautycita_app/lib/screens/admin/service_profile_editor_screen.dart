@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 
@@ -84,7 +85,7 @@ class _ServiceProfileEditorScreenState
 
     try {
       await SupabaseClientService.client
-          .from('service_profiles')
+          .from(BCTables.serviceProfiles)
           .update({
             'availability_level': _availabilityLevel,
             'typical_duration': _typicalDuration,

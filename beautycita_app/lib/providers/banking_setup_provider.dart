@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita/providers/business_provider.dart';
+import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita/services/supabase_client.dart';
 
 /// Whether the current business has completed banking setup.
@@ -30,7 +31,7 @@ Future<void> saveBankingDetails({
   required String beneficiaryName,
 }) async {
   await SupabaseClientService.client
-      .from('businesses')
+      .from(BCTables.businesses)
       .update({
         'clabe': clabe,
         'beneficiary_name': beneficiaryName,

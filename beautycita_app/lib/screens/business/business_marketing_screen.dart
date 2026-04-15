@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../config/constants.dart';
 import '../../config/theme_extension.dart';
 import '../../providers/business_provider.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 import '../../widgets/empty_state.dart';
@@ -16,7 +17,7 @@ import '../../widgets/empty_state.dart';
 final _automatedMessagesProvider =
     FutureProvider.family<List<Map<String, dynamic>>, String>((ref, bizId) async {
   final data = await SupabaseClientService.client
-      .from('automated_messages')
+      .from(BCTables.automatedMessages)
       .select()
       .eq('business_id', bizId)
       .order('trigger_type');
@@ -26,7 +27,7 @@ final _automatedMessagesProvider =
 final _messageLogProvider =
     FutureProvider.family<List<Map<String, dynamic>>, String>((ref, bizId) async {
   final data = await SupabaseClientService.client
-      .from('automated_message_log')
+      .from(BCTables.automatedMessageLog)
       .select()
       .eq('business_id', bizId)
       .order('created_at', ascending: false)
@@ -40,7 +41,7 @@ final _messageStatsProvider =
   final stats = <String, Map<String, int>>{};
   try {
     final data = await SupabaseClientService.client
-        .from('automated_message_log')
+        .from(BCTables.automatedMessageLog)
         .select('trigger_type, status')
         .eq('business_id', bizId);
     final rows = (data as List).cast<Map<String, dynamic>>();
@@ -308,7 +309,7 @@ class _MessageTypeCardState extends State<_MessageTypeCard> {
   Future<void> _save() async {
     setState(() => _saving = true);
     try {
-      await SupabaseClientService.client.from('automated_messages').upsert({
+      await SupabaseClientService.client.from(BCTables.automatedMessages).upsert({
         if (widget.saved != null) 'id': widget.saved!['id'],
         'business_id': widget.bizId,
         'trigger_type': widget.trigger.type,

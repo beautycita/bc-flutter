@@ -1918,7 +1918,7 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
           // BC still charges 3% — billed to salon (commission record)
           final biz = await ref.read(currentBusinessProvider.future);
           if (biz != null) {
-            BCSupabase.client.from('commission_records').insert({
+            BCSupabase.client.from(BCTables.commissionRecords).insert({
               'business_id': biz['id'],
               'appointment_id': id,
               'amount': double.parse(bcCommission.toStringAsFixed(2)),
@@ -1955,7 +1955,7 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
         if (price > 0) {
           final biz = await ref.read(currentBusinessProvider.future);
           if (biz != null) {
-            BCSupabase.client.from('commission_records').insert({
+            BCSupabase.client.from(BCTables.commissionRecords).insert({
               'business_id': biz['id'],
               'appointment_id': id,
               'amount': double.parse(bcCommission.toStringAsFixed(2)),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/chat_thread.dart';
 import '../models/chat_message.dart';
 import '../services/aphrodite_service.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../services/supabase_client.dart';
 
 /// Max chat message length (2000 chars). Messages longer than this are truncated.
@@ -28,7 +29,7 @@ final totalUnreadProvider = StreamProvider<int>((ref) {
   if (userId == null) return Stream.value(0);
 
   return SupabaseClientService.client
-      .from('chat_threads')
+      .from(BCTables.chatThreads)
       .stream(primaryKey: ['id'])
       .eq('user_id', userId)
       .map((rows) => rows
@@ -51,7 +52,7 @@ final chatThreadsProvider = StreamProvider<List<ChatThread>>((ref) {
 
   final client = SupabaseClientService.client;
   return client
-      .from('chat_threads')
+      .from(BCTables.chatThreads)
       .stream(primaryKey: ['id'])
       .eq('user_id', userId)
       .map((rows) {
@@ -80,7 +81,7 @@ final chatMessagesProvider =
 
   final client = SupabaseClientService.client;
   return client
-      .from('chat_messages')
+      .from(BCTables.chatMessages)
       .stream(primaryKey: ['id'])
       .eq('thread_id', threadId)
       .map((rows) {

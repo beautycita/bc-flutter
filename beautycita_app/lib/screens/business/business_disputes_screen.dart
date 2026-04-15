@@ -7,6 +7,7 @@ import '../../config/constants.dart';
 import '../../config/theme_extension.dart';
 import '../../providers/business_provider.dart';
 import '../../providers/feature_toggle_provider.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 // ignore: depend_on_referenced_packages
@@ -1085,7 +1086,7 @@ class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
         if (apptId != null) {
           try {
             final apptRow = await SupabaseClientService.client
-                .from('appointments')
+                .from(BCTables.appointments)
                 .select('price')
                 .eq('id', apptId)
                 .maybeSingle();
@@ -1115,7 +1116,7 @@ class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
       }
 
       await SupabaseClientService.client
-          .from('disputes')
+          .from(BCTables.disputes)
           .update(updateData)
           .eq('id', disputeId);
 
@@ -1134,7 +1135,7 @@ class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
       // Notify client (in-app notification) — non-blocking
       final clientId = widget.dispute['user_id'] as String?;
       if (clientId != null) {
-        SupabaseClientService.client.from('notifications').insert({
+        SupabaseClientService.client.from(BCTables.notifications).insert({
           'user_id': clientId,
           'title': 'Respuesta a tu disputa',
           'body': _selectedOffer == 'full_refund'

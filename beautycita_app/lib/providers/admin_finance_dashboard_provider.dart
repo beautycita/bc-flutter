@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita/services/supabase_client.dart';
 
 // ── Data classes ──────────────────────────────────────────────────────────────
@@ -602,7 +603,7 @@ final commissionBreakdownProvider =
     // Fetch commission rates from app_config and monthly revenue in parallel
     final results = await Future.wait([
       client
-          .from('app_config')
+          .from(BCTables.appConfig)
           .select('key, value')
           .inFilter('key', ['commission_rate_marketplace', 'commission_rate_product']),
       client
@@ -734,7 +735,7 @@ final commissionRecordsProvider =
 
   try {
     final data = await SupabaseClientService.client
-        .from('commission_records')
+        .from(BCTables.commissionRecords)
         .select('*, businesses(name)')
         .order('created_at', ascending: false)
         .limit(500);
@@ -755,7 +756,7 @@ final payoutRecordsProvider =
 
   try {
     final data = await SupabaseClientService.client
-        .from('payout_records')
+        .from(BCTables.payoutRecords)
         .select('*, businesses(name)')
         .order('created_at', ascending: false)
         .limit(500);
@@ -776,7 +777,7 @@ final cfdiRecordsProvider =
 
   try {
     final data = await SupabaseClientService.client
-        .from('cfdi_records')
+        .from(BCTables.cfdiRecords)
         .select('*, businesses(name)')
         .order('created_at', ascending: false)
         .limit(500);
@@ -797,7 +798,7 @@ final platformSatDeclarationsProvider =
 
   try {
     final data = await SupabaseClientService.client
-        .from('platform_sat_declarations')
+        .from(BCTables.platformSatDeclarations)
         .select()
         .order('period', ascending: false)
         .limit(24);
@@ -818,7 +819,7 @@ final satMonthlyReportsProvider =
 
   try {
     final data = await SupabaseClientService.client
-        .from('sat_monthly_reports')
+        .from(BCTables.satMonthlyReports)
         .select('*, businesses(name)')
         .order('period', ascending: false)
         .limit(500);
@@ -842,11 +843,11 @@ final salonDebtSummaryProvider =
 
     final results = await Future.wait([
       client
-          .from('salon_debts')
+          .from(BCTables.salonDebts)
           .select('*, businesses(name)')
           .order('remaining_amount', ascending: false),
       client
-          .from('debt_payments')
+          .from(BCTables.debtPayments)
           .select('*, salon_debts(business_id, businesses(name))')
           .order('created_at', ascending: false)
           .limit(50),

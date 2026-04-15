@@ -38,6 +38,7 @@ import '../providers/feature_toggle_provider.dart';
 import '../providers/review_prompt_provider.dart';
 import '../widgets/particle_rain.dart';
 import '../widgets/review_prompt_sheet.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../services/supabase_client.dart';
 
 /// Fetches the saldo from profiles.saldo for the current user.
@@ -47,7 +48,7 @@ final _saldoProvider = FutureProvider<double>((ref) async {
   if (userId == null) return 0;
   try {
     final data = await SupabaseClientService.client
-        .from('profiles')
+        .from(BCTables.profiles)
         .select('saldo')
         .eq('id', userId)
         .single();

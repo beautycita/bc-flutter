@@ -276,7 +276,7 @@ final salonOutreachLogProvider =
 
   try {
     final data = await BCSupabase.client
-        .from('salon_outreach_log')
+        .from(BCTables.salonOutreachLog)
         .select()
         .eq('discovered_salon_id', salonId)
         .order('sent_at', ascending: false);

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/providers/favorites_provider.dart';
+import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita/services/supabase_client.dart';
 import 'package:beautycita/models/provider.dart' as models;
 import '../widgets/empty_state.dart';
@@ -18,7 +19,7 @@ final _favoriteSalonsProvider =
   if (userId == null) return [];
 
   final response = await SupabaseClientService.client
-      .from('businesses')
+      .from(BCTables.businesses)
       .select()
       .inFilter('id', favoriteIds.toList());
 

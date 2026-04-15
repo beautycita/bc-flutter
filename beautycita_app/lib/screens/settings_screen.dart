@@ -13,6 +13,7 @@ import 'package:beautycita/screens/admin/admin_shell_screen.dart' show adminTabP
 import 'package:beautycita/providers/business_provider.dart';
 import 'package:beautycita/providers/security_provider.dart';
 import 'package:beautycita/providers/feature_toggle_provider.dart';
+import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita/services/supabase_client.dart';
 import 'package:beautycita/services/toast_service.dart';
 import 'package:beautycita/widgets/settings_widgets.dart';
@@ -621,7 +622,7 @@ class _AnalyticsOptOutTileState extends ConsumerState<_AnalyticsOptOutTile> {
     if (userId == null) return;
     try {
       final data = await SupabaseClientService.client
-          .from('profiles')
+          .from(BCTables.profiles)
           .select('opted_out_analytics')
           .eq('id', userId)
           .maybeSingle();
@@ -642,7 +643,7 @@ class _AnalyticsOptOutTileState extends ConsumerState<_AnalyticsOptOutTile> {
     setState(() => _optedOut = value);
     try {
       await SupabaseClientService.client
-          .from('profiles')
+          .from(BCTables.profiles)
           .update({'opted_out_analytics': value})
           .eq('id', userId);
       if (mounted) {

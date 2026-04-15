@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../providers/business_provider.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 import 'business_shell_screen.dart' show businessTabProvider;
@@ -21,7 +22,7 @@ class _StaffOption {
 final businessClosuresProvider =
     FutureProvider.family<List<Map<String, dynamic>>, String>((ref, bizId) async {
   final data = await SupabaseClientService.client
-      .from('business_closures')
+      .from(BCTables.businessClosures)
       .select('*, staff:staff_id(id, first_name, last_name)')
       .eq('business_id', bizId)
       .gte('closure_date', DateTime.now().subtract(const Duration(days: 30)).toIso8601String().substring(0, 10))
@@ -162,7 +163,7 @@ class _BusinessClosuresSectionState extends ConsumerState<BusinessClosuresSectio
   Future<int> _countConflicts(String bizId, String dateStr) async {
     try {
       var query = SupabaseClientService.client
-          .from('appointments')
+          .from(BCTables.appointments)
           .select('id')
           .eq('business_id', bizId)
           .gte('starts_at', '${dateStr}T00:00:00')
@@ -239,7 +240,7 @@ class _BusinessClosuresSectionState extends ConsumerState<BusinessClosuresSectio
       if (!await _confirmConflicts(conflicts)) return;
 
       try {
-        await SupabaseClientService.client.from('business_closures').insert({
+        await SupabaseClientService.client.from(BCTables.businessClosures).insert({
           'business_id': bizId,
           'closure_date': dateStr,
           'reason': holiday.name,
@@ -261,7 +262,7 @@ class _BusinessClosuresSectionState extends ConsumerState<BusinessClosuresSectio
       if (match.isNotEmpty) {
         try {
           await SupabaseClientService.client
-              .from('business_closures')
+              .from(BCTables.businessClosures)
               .delete()
               .eq('id', match.first['id'] as String);
           ref.invalidate(businessClosuresProvider(bizId));
@@ -354,7 +355,7 @@ class _BusinessClosuresSectionState extends ConsumerState<BusinessClosuresSectio
           if (_selectedStaff.id != null) 'staff_id': _selectedStaff.id,
         });
       }
-      await SupabaseClientService.client.from('business_closures').upsert(rows);
+      await SupabaseClientService.client.from(BCTables.businessClosures).upsert(rows);
       ref.invalidate(businessClosuresProvider(bizId));
       ToastService.showSuccess('$days dias de vacaciones agregados');
       setState(() {
@@ -412,7 +413,7 @@ class _BusinessClosuresSectionState extends ConsumerState<BusinessClosuresSectio
       if (!mounted) return;
       if (!await _confirmConflicts(conflicts)) return;
 
-      await SupabaseClientService.client.from('business_closures').insert({
+      await SupabaseClientService.client.from(BCTables.businessClosures).insert({
         'business_id': bizId,
         'closure_date': dateStr,
         'reason': reason.trim().isEmpty ? null : reason.trim(),
@@ -432,7 +433,7 @@ class _BusinessClosuresSectionState extends ConsumerState<BusinessClosuresSectio
 
   Future<void> _deleteClosure(String bizId, String closureId) async {
     try {
-      await SupabaseClientService.client.from('business_closures').delete().eq('id', closureId);
+      await SupabaseClientService.client.from(BCTables.businessClosures).delete().eq('id', closureId);
       ref.invalidate(businessClosuresProvider(bizId));
       ToastService.showSuccess('Cierre eliminado');
     } catch (e) {

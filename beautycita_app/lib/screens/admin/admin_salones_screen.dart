@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
 import '../../services/export_service.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 import 'admin_pipeline_screen.dart';
@@ -884,7 +885,7 @@ class _IntelligenceTabState extends State<_IntelligenceTab> {
 
     try {
       var q = SupabaseClientService.client
-          .from('discovered_salons')
+          .from(BCTables.discoveredSalons)
           .select('id, business_name, phone, email, whatsapp, location_address, location_city, location_state, latitude, longitude, source, rating_average, rating_count, employee_range, razon_social, scian_class, status, notes, feature_image_url, created_at');
 
       // Apply filters
@@ -959,7 +960,7 @@ class _IntelligenceTabState extends State<_IntelligenceTab> {
   Future<void> _updateStats() async {
     try {
       var q = SupabaseClientService.client
-          .from('discovered_salons')
+          .from(BCTables.discoveredSalons)
           .select('phone, email, rating_average')
           .eq('country', 'MX');
 
@@ -1503,7 +1504,7 @@ class _IntelligenceTabState extends State<_IntelligenceTab> {
                   onPressed: () async {
                     try {
                       await SupabaseClientService.client
-                          .from('discovered_salons')
+                          .from(BCTables.discoveredSalons)
                           .update({'notes': notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim()})
                           .eq('id', salonId);
                       ToastService.showSuccess('Notas guardadas');

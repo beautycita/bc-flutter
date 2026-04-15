@@ -10,7 +10,7 @@ import '../../providers/business_portal_provider.dart';
 final _automatedMessagesProvider = FutureProvider.autoDispose
     .family<List<Map<String, dynamic>>, String>((ref, bizId) async {
   final rows = await BCSupabase.client
-      .from('automated_messages')
+      .from(BCTables.automatedMessages)
       .select()
       .eq('business_id', bizId)
       .order('trigger_type');
@@ -20,7 +20,7 @@ final _automatedMessagesProvider = FutureProvider.autoDispose
 final _messageLogProvider = FutureProvider.autoDispose
     .family<List<Map<String, dynamic>>, String>((ref, bizId) async {
   final rows = await BCSupabase.client
-      .from('automated_message_log')
+      .from(BCTables.automatedMessageLog)
       .select()
       .eq('business_id', bizId)
       .order('sent_at', ascending: false)
@@ -239,12 +239,12 @@ class _TriggerCardState extends ConsumerState<_TriggerCard> {
 
       if (widget.existing != null) {
         await BCSupabase.client
-            .from('automated_messages')
+            .from(BCTables.automatedMessages)
             .update(payload)
             .eq('id', widget.existing!['id'].toString());
       } else {
         await BCSupabase.client
-            .from('automated_messages')
+            .from(BCTables.automatedMessages)
             .insert(payload);
       }
 

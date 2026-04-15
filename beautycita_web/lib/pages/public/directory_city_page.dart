@@ -63,7 +63,7 @@ class _DirectoryCityPageState extends State<DirectoryCityPage> {
     final stateName = _slugToName(widget.stateSlug);
     try {
       final data = await BCSupabase.client
-          .from('businesses')
+          .from(BCTables.businesses)
           .select('id, name, slug, photo_url, address, city, average_rating, total_reviews, service_categories, phone')
           .eq('is_active', true)
           .ilike('city', cityName);

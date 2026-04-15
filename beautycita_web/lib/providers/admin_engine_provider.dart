@@ -191,7 +191,7 @@ final engineHealthProvider = FutureProvider<EngineHealth>((ref) async {
 
     // Get engine settings for avg response time and cache hit rate
     final settingsRows = await client
-        .from('engine_settings')
+        .from(BCTables.engineSettings)
         .select('key, value')
         .inFilter('key', ['avg_response_ms', 'cache_hit_rate']);
 
@@ -206,7 +206,7 @@ final engineHealthProvider = FutureProvider<EngineHealth>((ref) async {
 
     // Count curations today (appointments created via engine)
     final curResult = await client
-        .from('appointments')
+        .from(BCTables.appointments)
         .select('id')
         .gte('created_at', startOfDay)
         .count();
@@ -229,7 +229,7 @@ final serviceProfilesProvider =
 
   try {
     final data = await BCSupabase.client
-        .from('service_profiles')
+        .from(BCTables.serviceProfiles)
         .select()
         .order('name');
 
@@ -247,7 +247,7 @@ final categoryTreeProvider =
 
   try {
     final data = await BCSupabase.client
-        .from('service_categories_tree')
+        .from(BCTables.serviceCategoriesTree)
         .select()
         .order('sort_order');
 
@@ -295,7 +295,7 @@ final timeInferenceRulesProvider =
 
   try {
     final data = await BCSupabase.client
-        .from('time_inference_rules')
+        .from(BCTables.timeInferenceRules)
         .select()
         .order('service_type')
         .order('day_of_week');

@@ -27,6 +27,11 @@ abstract final class BCTables {
   static const String bookings = 'bookings';
   static const String payments = 'payments';
   static const String disputes = 'disputes';
+  static const String orders = 'orders';
+  static const String giftCards = 'gift_cards';
+  static const String loyaltyTransactions = 'loyalty_transactions';
+  static const String stripeCustomerMapping = 'stripe_customer_mapping';
+  static const String posAgreements = 'pos_agreements';
 
   // ── Intelligence Engine ──────────────────────────────────────────────
   static const String engineSettings = 'engine_settings';
@@ -49,6 +54,40 @@ abstract final class BCTables {
   // ── Outreach / Discovery ─────────────────────────────────────────────
   static const String discoveredSalons = 'discovered_salons';
   static const String salonOutreachLog = 'salon_outreach_log';
+  static const String outreachTemplates = 'outreach_templates';
+
+  // ── Business CRM ────────────────────────────────────────────────
+  static const String businessClients = 'business_clients';
+  static const String businessClosures = 'business_closures';
+  static const String automatedMessages = 'automated_messages';
+  static const String automatedMessageLog = 'automated_message_log';
+  static const String staffCommissions = 'staff_commissions';
+
+  // ── RP & Assignments ────────────────────────────────────────────
+  static const String rpAssignments = 'rp_assignments';
+  static const String rpChecklist = 'rp_checklist';
+  static const String rpMeetings = 'rp_meetings';
+  static const String rpVisits = 'rp_visits';
+
+  // ── Transport ───────────────────────────────────────────────────
+  static const String uberRides = 'uber_rides';
+
+  // ── User Reports ────────────────────────────────────────────────
+  static const String userErrorReports = 'user_error_reports';
+  static const String contactSubmissions = 'contact_submissions';
+
+  // ── Feed / Engagement ───────────────────────────────────────────
+  static const String feedEngagement = 'feed_engagement';
+  static const String feedSaves = 'feed_saves';
+
+  // ── Behavioral Intelligence ─────────────────────────────────────
+  static const String userBehaviorEvents = 'user_behavior_events';
+  static const String userTraitScores = 'user_trait_scores';
+  static const String userBehaviorSummaries = 'user_behavior_summaries';
+  static const String behaviorTriggers = 'behavior_triggers';
+
+  // ── Auth / WebAuthn ─────────────────────────────────────────────
+  static const String webauthnCredentials = 'webauthn_credentials';
 
   // ── Notifications ────────────────────────────────────────────────────
   static const String notifications = 'notifications';
@@ -61,10 +100,6 @@ abstract final class BCTables {
   // ── POS / Marketplace ────────────────────────────────────────────
   static const String products = 'products';
   static const String productShowcases = 'product_showcases';
-
-  // ── Bitcoin / Payments ───────────────────────────────────────────────
-  static const String btcAddresses = 'btc_addresses';
-  static const String btcDeposits = 'btc_deposits';
 
   // ── Tax & CFDI ────────────────────────────────────────────────────────
   static const String taxWithholdings = 'tax_withholdings';

@@ -7,6 +7,7 @@ import '../../config/constants.dart';
 import '../../data/categories.dart';
 import '../../providers/business_provider.dart';
 import '../../providers/feature_toggle_provider.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 import '../../widgets/aphrodite_copy_field.dart';
@@ -252,7 +253,7 @@ class _BusinessServicesScreenState
     final current = service['is_active'] as bool? ?? true;
     try {
       await SupabaseClientService.client
-          .from('services')
+          .from(BCTables.services)
           .update({'is_active': !current}).eq('id', id);
       ref.invalidate(businessServicesProvider);
     } catch (e, stack) {
@@ -290,7 +291,7 @@ class _BusinessServicesScreenState
 
     try {
       await SupabaseClientService.client
-          .from('services')
+          .from(BCTables.services)
           .delete()
           .eq('id', id);
       ref.invalidate(businessServicesProvider);
@@ -1060,7 +1061,7 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
   Future<void> _saveStaffAssignments(String serviceId) async {
     // Get current assignments from DB
     final currentRows = await SupabaseClientService.client
-        .from('staff_services')
+        .from(BCTables.staffServices)
         .select('staff_id')
         .eq('service_id', serviceId);
 
@@ -1074,7 +1075,7 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
     // Delete removed assignments
     for (final staffId in toRemove) {
       await SupabaseClientService.client
-          .from('staff_services')
+          .from(BCTables.staffServices)
           .delete()
           .eq('service_id', serviceId)
           .eq('staff_id', staffId);
@@ -1088,7 +1089,7 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
                 'service_id': serviceId,
               })
           .toList();
-      await SupabaseClientService.client.from('staff_services').insert(rows);
+      await SupabaseClientService.client.from(BCTables.staffServices).insert(rows);
     }
   }
 
@@ -1178,7 +1179,7 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
           'is_active': true,
         };
         await SupabaseClientService.client
-            .from('services')
+            .from(BCTables.services)
             .update(data)
             .eq('id', serviceId);
         await _saveStaffAssignments(serviceId);
@@ -1204,7 +1205,7 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
           };
         }).toList();
         final inserted = await SupabaseClientService.client
-            .from('services')
+            .from(BCTables.services)
             .insert(rows)
             .select('id');
         // Assign selected staff to each newly created service
@@ -1234,7 +1235,7 @@ class _ServiceFormSheetState extends ConsumerState<_ServiceFormSheet> {
           'is_active': true,
         };
         final inserted = await SupabaseClientService.client
-            .from('services')
+            .from(BCTables.services)
             .insert(data)
             .select('id')
             .single();

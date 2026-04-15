@@ -13,7 +13,7 @@ import '../../providers/business_portal_provider.dart';
 final _giftCardsProvider = FutureProvider.autoDispose
     .family<List<Map<String, dynamic>>, String>((ref, bizId) async {
   final rows = await BCSupabase.client
-      .from('gift_cards')
+      .from(BCTables.giftCards)
       .select()
       .eq('business_id', bizId)
       .order('created_at', ascending: false);
@@ -469,7 +469,7 @@ class _CreateGiftCardDialogState extends ConsumerState<_CreateGiftCardDialog> {
     setState(() => _saving = true);
     try {
       final amount = double.parse(_amountCtrl.text.trim());
-      await BCSupabase.client.from('gift_cards').insert({
+      await BCSupabase.client.from(BCTables.giftCards).insert({
         'business_id': widget.bizId,
         'code': _generatedCode,
         'amount': amount,

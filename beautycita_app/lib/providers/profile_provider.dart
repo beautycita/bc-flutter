@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita/services/supabase_client.dart';
 import 'package:beautycita/services/toast_service.dart';
 import 'package:beautycita/services/places_service.dart';
@@ -104,7 +105,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
     try {
       final client = SupabaseClientService.client;
       final data = await client
-          .from('profiles')
+          .from(BCTables.profiles)
           .select()
           .eq('id', userId)
           .maybeSingle();
@@ -146,7 +147,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final rows = await SupabaseClientService.client
-          .from('profiles')
+          .from(BCTables.profiles)
           .update({'full_name': name})
           .eq('id', userId)
           .select('id');
@@ -170,7 +171,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final rows = await SupabaseClientService.client
-          .from('profiles')
+          .from(BCTables.profiles)
           .update({'avatar_url': url})
           .eq('id', userId)
           .select('id');
@@ -204,11 +205,11 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
       final contentType = fileName.endsWith('.png') ? 'image/png' : 'image/jpeg';
       if (kDebugMode) debugPrint('ProfileNotifier.uploadAvatar: uploading to avatars/$path');
       await SupabaseClientService.client.storage
-          .from('avatars')
+          .from(BCTables.avatars)
           .uploadBinary(path, bytes, fileOptions: FileOptions(upsert: true, contentType: contentType));
       if (kDebugMode) debugPrint('ProfileNotifier.uploadAvatar: upload success');
       final baseUrl = SupabaseClientService.client.storage
-          .from('avatars')
+          .from(BCTables.avatars)
           .getPublicUrl(path);
       // Add cache-busting query param to ensure new image loads
       final url = '$baseUrl?t=${DateTime.now().millisecondsSinceEpoch}';
@@ -236,7 +237,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
 
     state = state.copyWith(isLoading: true, error: null);
     try {
-      final rows = await SupabaseClientService.client.from('profiles').update({
+      final rows = await SupabaseClientService.client.from(BCTables.profiles).update({
         'home_address': address,
         'home_lat': lat,
         'home_lng': lng,
@@ -266,7 +267,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
 
     state = state.copyWith(isLoading: true, error: null);
     try {
-      final rows = await SupabaseClientService.client.from('profiles').update({
+      final rows = await SupabaseClientService.client.from(BCTables.profiles).update({
         'phone': phone,
         'phone_verified_at': null,
       }).eq('id', userId).select('id');
@@ -359,7 +360,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
       final last10 = digits.substring(digits.length - 10);
 
       final match = await SupabaseClientService.client
-          .from('discovered_salons')
+          .from(BCTables.discoveredSalons)
           .select()
           .or('phone.ilike.%$last10,whatsapp.ilike.%$last10')
           .neq('status', 'registered')
@@ -388,7 +389,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
 
     state = state.copyWith(isLoading: true, error: null);
     try {
-      final rows = await SupabaseClientService.client.from('profiles').update({
+      final rows = await SupabaseClientService.client.from(BCTables.profiles).update({
         'birthday': birthday?.toIso8601String().split('T').first,
       }).eq('id', userId).select('id');
       if ((rows as List).isEmpty) {
@@ -414,7 +415,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
 
     state = state.copyWith(isLoading: true, error: null);
     try {
-      final rows = await SupabaseClientService.client.from('profiles').update({
+      final rows = await SupabaseClientService.client.from(BCTables.profiles).update({
         'gender': gender,
       }).eq('id', userId).select('id');
       if ((rows as List).isEmpty) {
@@ -449,7 +450,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final rows = await SupabaseClientService.client
-          .from('profiles')
+          .from(BCTables.profiles)
           .update({'username': username})
           .eq('id', userId)
           .select('id');

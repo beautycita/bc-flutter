@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita/services/supabase_client.dart';
 
 /// Default values for feature toggles (used while loading or if fetch fails).
@@ -56,7 +57,7 @@ final featureTogglesProvider =
 
   try {
     final data = await SupabaseClientService.client
-        .from('app_config')
+        .from(BCTables.appConfig)
         .select('key, value')
         .eq('data_type', 'bool');
 

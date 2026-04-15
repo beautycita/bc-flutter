@@ -1,3 +1,4 @@
+import 'package:beautycita_core/supabase.dart';
 import 'supabase_client.dart';
 import '../models/follow_up_question.dart';
 
@@ -12,7 +13,7 @@ class FollowUpService {
     final client = SupabaseClientService.client;
 
     final data = await client
-        .from('service_follow_up_questions')
+        .from(BCTables.serviceFollowUpQuestions)
         .select()
         .eq('service_type', serviceType)
         .order('question_order');

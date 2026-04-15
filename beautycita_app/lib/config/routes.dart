@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita/services/supabase_client.dart';
 import 'package:beautycita/services/toast_service.dart';
 import 'package:beautycita/screens/splash_screen.dart';
@@ -280,7 +281,7 @@ class AppRoutes {
           final userId = SupabaseClientService.currentUserId;
           if (userId == null) return home;
           final biz = await SupabaseClientService.client
-              .from('businesses')
+              .from(BCTables.businesses)
               .select('id')
               .eq('owner_id', userId)
               .maybeSingle();

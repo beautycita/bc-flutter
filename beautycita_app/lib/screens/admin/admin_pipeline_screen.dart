@@ -14,6 +14,7 @@ import '../../providers/admin_provider.dart';
 import '../../providers/feature_toggle_provider.dart';
 import '../../providers/rp_provider.dart';
 import '../../services/export_service.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 import 'pipeline_lead_detail_sheet.dart';
@@ -260,7 +261,7 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
   Future<void> _loadCountries() async {
     try {
       final data = await SupabaseClientService.client
-          .from('discovered_salons')
+          .from(BCTables.discoveredSalons)
           .select('country')
           .not('country', 'is', null)
           .order('country');
@@ -280,7 +281,7 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
     });
     try {
       final data = await SupabaseClientService.client
-          .from('discovered_salons')
+          .from(BCTables.discoveredSalons)
           .select('location_state')
           .eq('country', country)
           .not('location_state', 'is', null)
@@ -298,7 +299,7 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
     setState(() => _cities = []);
     try {
       var q = SupabaseClientService.client
-          .from('discovered_salons')
+          .from(BCTables.discoveredSalons)
           .select('location_city')
           .eq('location_state', state)
           .not('location_city', 'is', null);
@@ -565,7 +566,7 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
     final count = ids.length;
     try {
       await SupabaseClientService.client
-          .from('discovered_salons')
+          .from(BCTables.discoveredSalons)
           .update({'status': newStatus})
           .inFilter('id', ids);
     } catch (e) {

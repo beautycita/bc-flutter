@@ -45,7 +45,7 @@ class _EngineTimePageState extends ConsumerState<EngineTimePage> {
       for (final entry in _edits.entries) {
         final rule = entry.value;
         await BCSupabase.client
-            .from('time_inference_rules')
+            .from(BCTables.timeInferenceRules)
             .update({
               'start_hour': rule.startHour,
               'end_hour': rule.endHour,

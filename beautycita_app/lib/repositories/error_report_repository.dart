@@ -1,5 +1,6 @@
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
+import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita/services/supabase_client.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/models/error_report.dart';
@@ -26,7 +27,7 @@ class ErrorReportRepository {
 
     try {
       await SupabaseClientService.client
-          .from('user_error_reports')
+          .from(BCTables.userErrorReports)
           .insert(report.toInsertMap());
     } catch (e) {
       if (kDebugMode) debugPrint('[ErrorReportRepository] Submit failed: $e');

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show AuthState, CountOption;
+import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita/services/supabase_client.dart';
 import 'package:beautycita/services/user_session.dart';
 import 'package:beautycita/services/location_service.dart';
@@ -24,7 +25,7 @@ final userRoleProvider = FutureProvider<String?>((ref) async {
 
   try {
     final response = await SupabaseClientService.client
-        .from('profiles')
+        .from(BCTables.profiles)
         .select('role')
         .eq('id', userId)
         .single();
@@ -92,7 +93,7 @@ final appOpenCountProvider = FutureProvider<int>((ref) async {
 final engineSettingsProvider =
     FutureProvider<List<EngineSetting>>((ref) async {
   final response = await SupabaseClientService.client
-      .from('engine_settings')
+      .from(BCTables.engineSettings)
       .select()
       .order('group_name')
       .order('sort_order');
@@ -106,7 +107,7 @@ final engineSettingsProvider =
 final serviceProfilesProvider =
     FutureProvider<List<ServiceProfileAdmin>>((ref) async {
   final response = await SupabaseClientService.client
-      .from('service_profiles')
+      .from(BCTables.serviceProfiles)
       .select()
       .order('category')
       .order('service_type');
@@ -120,7 +121,7 @@ final serviceProfilesProvider =
 final categoryTreeProvider =
     FutureProvider<List<CategoryNode>>((ref) async {
   final response = await SupabaseClientService.client
-      .from('service_categories_tree')
+      .from(BCTables.serviceCategoriesTree)
       .select()
       .order('sort_order');
 
@@ -133,7 +134,7 @@ final categoryTreeProvider =
 final timeInferenceRulesProvider =
     FutureProvider<List<TimeInferenceRule>>((ref) async {
   final response = await SupabaseClientService.client
-      .from('time_inference_rules')
+      .from(BCTables.timeInferenceRules)
       .select()
       .order('hour_start')
       .order('day_of_week_start');
@@ -147,7 +148,7 @@ final timeInferenceRulesProvider =
 final adminBusinessesProvider =
     FutureProvider<List<AdminBusiness>>((ref) async {
   final response = await SupabaseClientService.client
-      .from('businesses')
+      .from(BCTables.businesses)
       .select('id, name, tier, is_active, average_rating, total_reviews')
       .order('name');
 
@@ -160,7 +161,7 @@ final adminBusinessesProvider =
 final notificationTemplatesProvider =
     FutureProvider<List<NotificationTemplate>>((ref) async {
   final response = await SupabaseClientService.client
-      .from('notification_templates')
+      .from(BCTables.notificationTemplates)
       .select()
       .order('event_type')
       .order('channel');
@@ -182,20 +183,20 @@ final adminDashStatsProvider = FutureProvider<AdminStats>((ref) async {
       DateTime(DateTime.now().year, DateTime.now().month, 1).toIso8601String();
 
   final results = await Future.wait([
-    client.from('profiles').select('id'),
-    client.from('profiles').select('id').eq('role', 'stylist'),
-    client.from('appointments').select('id').gte('created_at', today),
+    client.from(BCTables.profiles).select('id'),
+    client.from(BCTables.profiles).select('id').eq('role', 'stylist'),
+    client.from(BCTables.appointments).select('id').gte('created_at', today),
     client
-        .from('appointments')
+        .from(BCTables.appointments)
         .select('price')
         .gte('created_at', firstOfMonth)
         .eq('status', 'completed'),
     client
-        .from('businesses')
+        .from(BCTables.businesses)
         .select('id')
         .eq('is_verified', false),
-    client.from('disputes').select('id').eq('status', 'open'),
-    client.from('disputes').select('id').eq('status', 'escalated'),
+    client.from(BCTables.disputes).select('id').eq('status', 'open'),
+    client.from(BCTables.disputes).select('id').eq('status', 'escalated'),
   ]);
 
   List safeAt(int i) => i < results.length ? (results[i] as List) : [];
@@ -223,17 +224,17 @@ final adminRecentActivityProvider =
 
   final results = await Future.wait([
     client
-        .from('appointments')
+        .from(BCTables.appointments)
         .select('id, created_at, status')
         .order('created_at', ascending: false)
         .limit(5),
     client
-        .from('disputes')
+        .from(BCTables.disputes)
         .select('id, created_at, status')
         .order('created_at', ascending: false)
         .limit(3),
     client
-        .from('profiles')
+        .from(BCTables.profiles)
         .select('id, full_name, created_at')
         .order('created_at', ascending: false)
         .limit(5),
@@ -278,17 +279,17 @@ final adminFullActivityProvider =
 
   final results = await Future.wait([
     client
-        .from('appointments')
+        .from(BCTables.appointments)
         .select('id, created_at, status, starts_at, price, business_id, businesses(name)')
         .order('created_at', ascending: false)
         .limit(25),
     client
-        .from('disputes')
+        .from(BCTables.disputes)
         .select('id, created_at, status, reason, resolution')
         .order('created_at', ascending: false)
         .limit(15),
     client
-        .from('profiles')
+        .from(BCTables.profiles)
         .select('id, full_name, username, phone, role, created_at')
         .order('created_at', ascending: false)
         .limit(15),
@@ -336,7 +337,7 @@ final adminFullActivityProvider =
 /// All users from profiles table.
 final adminUsersProvider = FutureProvider<List<AdminUser>>((ref) async {
   final response = await SupabaseClientService.client
-      .from('profiles')
+      .from(BCTables.profiles)
       .select('id, username, full_name, phone, role, status, created_at, last_seen, avatar_url, birthday, gender, home_address, updated_at, registration_source, phone_verified, saldo')
       .order('created_at', ascending: false);
 
@@ -349,7 +350,7 @@ final adminUsersProvider = FutureProvider<List<AdminUser>>((ref) async {
 final adminDisputesProvider =
     FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final response = await SupabaseClientService.client
-      .from('disputes')
+      .from(BCTables.disputes)
       .select('*, appointments(id, service_name, price, starts_at, status, user_id, businesses(name, owner_id, stripe_account_id))')
       .order('created_at', ascending: false);
   return (response as List).cast<Map<String, dynamic>>();
@@ -359,7 +360,7 @@ final adminDisputesProvider =
 final adminApplicationsProvider =
     FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final response = await SupabaseClientService.client
-      .from('businesses')
+      .from(BCTables.businesses)
       .select()
       .eq('is_verified', false)
       .order('created_at', ascending: false);
@@ -370,7 +371,7 @@ final adminApplicationsProvider =
 final adminBookingsProvider =
     FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final response = await SupabaseClientService.client
-      .from('appointments')
+      .from(BCTables.appointments)
       .select('*, businesses(name)')
       .order('created_at', ascending: false);
   return (response as List).cast<Map<String, dynamic>>();
@@ -380,7 +381,7 @@ final adminBookingsProvider =
 final adminReviewsProvider =
     FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final response = await SupabaseClientService.client
-      .from('reviews')
+      .from(BCTables.reviews)
       .select('*, businesses(name)')
       .order('created_at', ascending: false)
       .limit(100);
@@ -391,7 +392,7 @@ final adminReviewsProvider =
 final adminDiscoveredSalonsProvider =
     FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final response = await SupabaseClientService.client
-      .from('discovered_salons')
+      .from(BCTables.discoveredSalons)
       .select('id, business_name, phone, whatsapp, location_city, location_state, latitude, longitude, feature_image_url, rating_average, rating_count, interest_count, categories, status, outreach_count, last_outreach_at, outreach_channel, created_at')
       .order('interest_count', ascending: false)
       .limit(200);
@@ -402,7 +403,7 @@ final adminDiscoveredSalonsProvider =
 final salonOutreachLogProvider =
     FutureProvider.family<List<Map<String, dynamic>>, String>((ref, salonId) async {
   final response = await SupabaseClientService.client
-      .from('salon_outreach_log')
+      .from(BCTables.salonOutreachLog)
       .select()
       .eq('discovered_salon_id', salonId)
       .order('sent_at', ascending: false)
@@ -414,7 +415,7 @@ final salonOutreachLogProvider =
 final adminFeatureTogglesProvider =
     FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final response = await SupabaseClientService.client
-      .from('app_config')
+      .from(BCTables.appConfig)
       .select()
       .eq('data_type', 'bool')
       .order('group_name')
@@ -432,7 +433,7 @@ Future<void> adminLogAction({
   final userId = SupabaseClientService.currentUserId;
   if (userId == null) return;
 
-  await SupabaseClientService.client.from('audit_log').insert({
+  await SupabaseClientService.client.from(BCTables.auditLog).insert({
     'admin_id': userId,
     'action': action,
     'target_type': targetType,
@@ -540,7 +541,7 @@ final adminSupportThreadProvider =
 
   // Check for existing support thread for this user
   final existing = await client
-      .from('chat_threads')
+      .from(BCTables.chatThreads)
       .select('id')
       .eq('user_id', targetUserId)
       .eq('contact_type', 'support')
@@ -550,7 +551,7 @@ final adminSupportThreadProvider =
 
   // Create new support thread
   final inserted = await client
-      .from('chat_threads')
+      .from(BCTables.chatThreads)
       .insert({
         'user_id': targetUserId,
         'contact_type': 'support',
@@ -920,7 +921,7 @@ final adminAllSalonsProvider = FutureProvider.family<List<Map<String, dynamic>>,
   final tierFilter = parts.length > 3 ? parts[3] : '';     // '1', '2', '3', or ''
 
   var q = SupabaseClientService.client
-      .from('businesses')
+      .from(BCTables.businesses)
       .select('id, name, phone, whatsapp, address, city, state, tier, is_active, is_verified, average_rating, total_reviews, owner_id, photo_url, created_at');
 
   if (query.length >= 2) {
@@ -949,7 +950,7 @@ final adminAllSalonsProvider = FutureProvider.family<List<Map<String, dynamic>>,
 final adminSalonDetailProvider = FutureProvider.family<Map<String, dynamic>?, String>((ref, businessId) async {
   final client = SupabaseClientService.client;
   final biz = await client
-      .from('businesses')
+      .from(BCTables.businesses)
       .select()
       .eq('id', businessId)
       .maybeSingle();
@@ -958,7 +959,7 @@ final adminSalonDetailProvider = FutureProvider.family<Map<String, dynamic>?, St
   final ownerId = biz['owner_id'] as String?;
   if (ownerId != null) {
     final profile = await client
-        .from('profiles')
+        .from(BCTables.profiles)
         .select('id, full_name, phone')
         .eq('id', ownerId)
         .maybeSingle();
@@ -975,7 +976,7 @@ final adminSalonDetailProvider = FutureProvider.family<Map<String, dynamic>?, St
 /// Recent appointments for a salon (last 10).
 final adminSalonAppointmentsProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, businessId) async {
   final response = await SupabaseClientService.client
-      .from('appointments')
+      .from(BCTables.appointments)
       .select('id, user_id, service_id, date, time, status, payment_status, price, profiles!appointments_user_id_fkey(display_name), services(name)')
       .eq('business_id', businessId)
       .order('date', ascending: false)
@@ -986,7 +987,7 @@ final adminSalonAppointmentsProvider = FutureProvider.family<List<Map<String, dy
 /// Open disputes for a salon.
 final adminSalonDisputesProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, businessId) async {
   final response = await SupabaseClientService.client
-      .from('disputes')
+      .from(BCTables.disputes)
       .select('id, status, reason, created_at, resolution, refund_amount')
       .eq('business_id', businessId)
       .inFilter('status', ['open', 'salon_responded', 'escalated'])
@@ -997,7 +998,7 @@ final adminSalonDisputesProvider = FutureProvider.family<List<Map<String, dynami
 /// Recent reviews for a salon (last 10).
 final adminSalonReviewsProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, businessId) async {
   final response = await SupabaseClientService.client
-      .from('reviews')
+      .from(BCTables.reviews)
       .select('id, rating, comment, created_at, profiles!reviews_user_id_fkey(display_name)')
       .eq('business_id', businessId)
       .order('created_at', ascending: false)
@@ -1067,7 +1068,7 @@ final rpTrackingProvider = FutureProvider<List<Map<String, dynamic>>>((ref) asyn
 
   // Get all RP users
   final rpUsers = await client
-      .from('profiles')
+      .from(BCTables.profiles)
       .select('id, username, full_name, avatar_url')
       .eq('role', 'rp');
 
@@ -1078,14 +1079,14 @@ final rpTrackingProvider = FutureProvider<List<Map<String, dynamic>>>((ref) asyn
 
     // Count assignments — use count(CountOption.exact)
     final assigned = await client
-        .from('discovered_salons')
+        .from(BCTables.discoveredSalons)
         .select()
         .eq('assigned_rp_id', rpId)
         .count(CountOption.exact);
 
     // Count registered/converted
     final converted = await client
-        .from('discovered_salons')
+        .from(BCTables.discoveredSalons)
         .select()
         .eq('assigned_rp_id', rpId)
         .inFilter('status', ['registered', 'converted'])
@@ -1095,7 +1096,7 @@ final rpTrackingProvider = FutureProvider<List<Map<String, dynamic>>>((ref) asyn
     int positiveCount = 0;
     try {
       final positiveVisits = await client
-          .from('rp_visits')
+          .from(BCTables.rpVisits)
           .select()
           .eq('rp_user_id', rpId)
           .gte('interest_level', 4)
@@ -1107,7 +1108,7 @@ final rpTrackingProvider = FutureProvider<List<Map<String, dynamic>>>((ref) asyn
 
     // First assignment date
     final firstAssignment = await client
-        .from('rp_assignments')
+        .from(BCTables.rpAssignments)
         .select('assigned_at')
         .eq('rp_user_id', rpId)
         .order('assigned_at')
@@ -1143,7 +1144,7 @@ final pipelineFunnelStatsProvider = FutureProvider<Map<String, int>>((ref) async
   final results = await Future.wait([
     for (final status in statuses)
       client
-          .from('discovered_salons')
+          .from(BCTables.discoveredSalons)
           .select('id')
           .eq('status', status)
           .count(),
@@ -1159,7 +1160,7 @@ final pipelineFunnelStatsProvider = FutureProvider<Map<String, int>>((ref) async
 /// Fetches outreach history for a specific discovered salon (expanded with notes/outcome).
 final pipelineOutreachLogProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, salonId) async {
   final response = await SupabaseClientService.client
-      .from('salon_outreach_log')
+      .from(BCTables.salonOutreachLog)
       .select('*')
       .eq('discovered_salon_id', salonId)
       .order('sent_at', ascending: false)

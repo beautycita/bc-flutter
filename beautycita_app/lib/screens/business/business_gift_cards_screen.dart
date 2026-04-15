@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../config/constants.dart';
 import '../../providers/business_provider.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 import '../../widgets/admin/admin_widgets.dart';
@@ -20,7 +21,7 @@ import '../../widgets/empty_state.dart';
 final giftCardsProvider =
     FutureProvider.family<List<Map<String, dynamic>>, String>((ref, bizId) async {
   final data = await SupabaseClientService.client
-      .from('gift_cards')
+      .from(BCTables.giftCards)
       .select()
       .eq('business_id', bizId)
       .order('created_at', ascending: false);
@@ -737,7 +738,7 @@ class _CreateGiftCardSheetState extends ConsumerState<_CreateGiftCardSheet> {
         // Salon-issued: cash already collected, create card directly
         // BC 3% charged to salon via commission record
         final code = _generateCode();
-        await SupabaseClientService.client.from('gift_cards').insert({
+        await SupabaseClientService.client.from(BCTables.giftCards).insert({
           'business_id': widget.bizId,
           'code': code,
           'amount': amount,
@@ -751,7 +752,7 @@ class _CreateGiftCardSheetState extends ConsumerState<_CreateGiftCardSheet> {
 
         // Record 3% commission charged to salon
         final bcCommission = amount * 0.03;
-        await SupabaseClientService.client.from('commission_records').insert({
+        await SupabaseClientService.client.from(BCTables.commissionRecords).insert({
           'business_id': widget.bizId,
           'amount': double.parse(bcCommission.toStringAsFixed(2)),
           'rate': 0.03,

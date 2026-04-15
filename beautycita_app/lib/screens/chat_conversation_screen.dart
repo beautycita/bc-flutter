@@ -9,6 +9,7 @@ import '../config/theme_extension.dart';
 import '../models/chat_message.dart';
 import '../providers/chat_provider.dart';
 import '../providers/feature_toggle_provider.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../services/supabase_client.dart';
 import 'package:beautycita/services/toast_service.dart';
 import 'package:beautycita/widgets/media_viewer.dart';
@@ -43,7 +44,7 @@ class _ChatConversationScreenState
   /// Reset unread count to 0 when user opens the conversation.
   void _resetUnread() {
     SupabaseClientService.client
-        .from('chat_threads')
+        .from(BCTables.chatThreads)
         .update({'unread_count': 0})
         .eq('id', widget.threadId)
         .then((_) {}, onError: (_) {});
@@ -133,7 +134,7 @@ class _ChatConversationScreenState
     try {
       final client = SupabaseClientService.client;
       final userId = SupabaseClientService.currentUserId;
-      await client.from('chat_messages').insert({
+      await client.from(BCTables.chatMessages).insert({
         'thread_id': widget.threadId,
         'sender_type': 'user',
         'sender_id': userId,
@@ -141,7 +142,7 @@ class _ChatConversationScreenState
         'text_content': text,
       });
       // Update thread's last message
-      await client.from('chat_threads').update({
+      await client.from(BCTables.chatThreads).update({
         'last_message_text': text,
         'last_message_at': DateTime.now().toUtc().toIso8601String(),
       }).eq('id', widget.threadId);

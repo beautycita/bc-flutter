@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../config/constants.dart';
 import '../../config/theme_extension.dart';
 import '../../providers/business_provider.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 // ignore: depend_on_referenced_packages
@@ -561,7 +562,7 @@ class _CommissionStaffRowState
       if (bizId == null) return;
 
       await SupabaseClientService.client
-          .from('staff_commissions')
+          .from(BCTables.staffCommissions)
           .update({'status': 'paid', 'paid_at': DateTime.now().toIso8601String()})
           .eq('staff_id', widget.entry.staffId)
           .eq('business_id', bizId)

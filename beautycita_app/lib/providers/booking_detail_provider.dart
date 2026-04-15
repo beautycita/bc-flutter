@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita/models/booking.dart';
-import 'package:beautycita/providers/booking_flow_provider.dart';
+import 'package:beautycita/providers/booking_provider.dart';
 
 /// Single booking by ID, with joined business name.
 final bookingDetailProvider =

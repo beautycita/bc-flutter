@@ -122,7 +122,7 @@ class WebInviteNotifier extends StateNotifier<WebInviteState> {
       final userId = BCSupabase.client.auth.currentUser?.id;
       if (userId == null) return; // Not logged in — skip silently
 
-      await BCSupabase.client.from('user_behavior_events').insert({
+      await BCSupabase.client.from(BCTables.userBehaviorEvents).insert({
         'user_id': userId,
         'event_type': eventType,
         'target_type': targetType,
@@ -143,7 +143,7 @@ class WebInviteNotifier extends StateNotifier<WebInviteState> {
 
       final today = DateTime.now().toUtc().toIso8601String().substring(0, 10);
       final result = await BCSupabase.client
-          .from('user_behavior_events')
+          .from(BCTables.userBehaviorEvents)
           .select('id')
           .eq('user_id', userId)
           .eq('event_type', 'invite_sent')

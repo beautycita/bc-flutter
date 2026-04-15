@@ -10,6 +10,7 @@ import '../models/curate_result.dart';
 import '../providers/booking_flow_provider.dart';
 import '../providers/payment_methods_provider.dart';
 import '../providers/profile_provider.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../services/supabase_client.dart';
 import '../widgets/cinematic_question_text.dart';
 import '../widgets/phone_verify_gate_sheet.dart';
@@ -509,7 +510,7 @@ class _PriceBreakdown extends StatelessWidget {
 final _bizStripeBlockedProvider = FutureProvider.family<bool, String>((ref, businessId) async {
   if (businessId.isEmpty) return false;
   final data = await SupabaseClientService.client
-      .from('businesses')
+      .from(BCTables.businesses)
       .select('deposit_required, stripe_charges_enabled')
       .eq('id', businessId)
       .maybeSingle();
@@ -524,7 +525,7 @@ final _userSaldoProvider = FutureProvider<double>((ref) async {
   final userId = SupabaseClientService.currentUserId;
   if (userId == null) return 0;
   final data = await SupabaseClientService.client
-      .from('profiles')
+      .from(BCTables.profiles)
       .select('saldo')
       .eq('id', userId)
       .maybeSingle();

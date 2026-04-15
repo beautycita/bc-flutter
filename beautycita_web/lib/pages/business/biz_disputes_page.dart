@@ -402,7 +402,7 @@ class _DisputeDetailPanelState extends ConsumerState<_DisputeDetailPanel> {
       final customerId = widget.dispute['customer_id'] as String?;
       if (customerId != null) {
         try {
-          await BCSupabase.client.from('notifications').insert({
+          await BCSupabase.client.from(BCTables.notifications).insert({
             'user_id': customerId,
             'type': 'dispute_response',
             'title': 'Respuesta a tu disputa',

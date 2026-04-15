@@ -484,7 +484,7 @@ class _RoleChangeRowState extends State<_RoleChangeRow> {
     setState(() => _saving = true);
     try {
       await BCSupabase.client
-          .from('profiles')
+          .from(BCTables.profiles)
           .update({'role': newRole})
           .eq('id', widget.userId);
       if (!mounted) return;
@@ -595,7 +595,7 @@ class _StatusToggleButtonState extends State<_StatusToggleButton> {
     setState(() => _saving = true);
     try {
       await BCSupabase.client
-          .from('profiles')
+          .from(BCTables.profiles)
           .update({'status': newStatus})
           .eq('id', widget.userId);
       if (!mounted) return;

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita/services/supabase_client.dart';
 
 class UserPreferences {
@@ -28,7 +29,7 @@ class UserPreferences {
 
     try {
       final data = await SupabaseClientService.client
-          .from('profiles')
+          .from(BCTables.profiles)
           .select('preferences')
           .eq('id', userId)
           .maybeSingle();
@@ -86,7 +87,7 @@ class UserPreferences {
       };
 
       await SupabaseClientService.client
-          .from('profiles')
+          .from(BCTables.profiles)
           .update({'preferences': map})
           .eq('id', userId);
     } catch (e) {

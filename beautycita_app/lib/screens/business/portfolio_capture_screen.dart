@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../config/constants.dart';
 import '../../providers/business_provider.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 import '../../widgets/bc_image_editor.dart';
@@ -67,13 +68,13 @@ class _PortfolioCaptureScreenState
 
     try {
       final servicesRes = await SupabaseClientService.client
-          .from('services')
+          .from(BCTables.services)
           .select('id, name, category')
           .eq('business_id', businessId)
           .eq('is_active', true)
           .order('name');
       final staffRes = await SupabaseClientService.client
-          .from('staff')
+          .from(BCTables.staff)
           .select('id, first_name, last_name, user_id')
           .eq('business_id', businessId)
           .eq('is_active', true)
@@ -181,7 +182,7 @@ class _PortfolioCaptureScreenState
             .getPublicUrl(path);
       }
 
-      await SupabaseClientService.client.from('portfolio_photos').insert({
+      await SupabaseClientService.client.from(BCTables.portfolioPhotos).insert({
         'business_id': businessId,
         'staff_id': _selectedStaffId,
         'before_url': beforeUrl,

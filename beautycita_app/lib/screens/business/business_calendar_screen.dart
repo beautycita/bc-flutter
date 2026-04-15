@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/business_provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 
@@ -350,13 +351,13 @@ class _BusinessCalendarScreenState
       // If business is cancelling a paid appointment, refund to saldo
       if (action == 'cancelled_business') {
         final apptData = await SupabaseClientService.client
-            .from('appointments')
+            .from(BCTables.appointments)
             .select('user_id, price, payment_status')
             .eq('id', id)
             .maybeSingle();
 
         await SupabaseClientService.client
-            .from('appointments')
+            .from(BCTables.appointments)
             .update({
               'status': action,
               'payment_status': apptData?['payment_status'] == 'paid' ? 'refunded_to_saldo' : apptData?['payment_status'],
@@ -380,7 +381,7 @@ class _BusinessCalendarScreenState
           // BC still charges 3% — billed to salon (commission record)
           final biz = await ref.read(currentBusinessProvider.future);
           if (biz != null) {
-            SupabaseClientService.client.from('commission_records').insert({
+            SupabaseClientService.client.from(BCTables.commissionRecords).insert({
               'business_id': biz['id'],
               'appointment_id': id,
               'amount': double.parse(bcCommission.toStringAsFixed(2)),
@@ -394,7 +395,7 @@ class _BusinessCalendarScreenState
         }
       } else {
         await SupabaseClientService.client
-            .from('appointments')
+            .from(BCTables.appointments)
             .update({'status': action}).eq('id', id);
       }
 
@@ -1138,7 +1139,7 @@ class _HorizontalTimelineState extends State<_HorizontalTimeline> {
 
     try {
       await SupabaseClientService.client
-          .from('appointments')
+          .from(BCTables.appointments)
           .update(updateData)
           .eq('id', id);
 
@@ -1747,7 +1748,7 @@ class _StaffLane extends StatelessWidget {
               TextButton.icon(
                 onPressed: () async {
                   await SupabaseClientService.client
-                      .from('staff_schedule_blocks')
+                      .from(BCTables.staffScheduleBlocks)
                       .delete()
                       .eq('id', blockId);
                   onRefresh();
@@ -2825,7 +2826,7 @@ class _BlockTimeSheetState extends ConsumerState<_BlockTimeSheet> {
       }
 
       await SupabaseClientService.client
-          .from('staff_schedule_blocks')
+          .from(BCTables.staffScheduleBlocks)
           .insert(rows);
 
       widget.onSaved();
@@ -2931,7 +2932,7 @@ class _WalkinSheetState extends ConsumerState<_WalkinSheet> {
       final biz = await ref.read(currentBusinessProvider.future);
       if (biz == null) return;
       final rows = await SupabaseClientService.client
-          .from('appointments')
+          .from(BCTables.appointments)
           .select('service_name')
           .eq('business_id', biz['id'])
           .isFilter('service_id', null)
@@ -3308,7 +3309,7 @@ class _WalkinSheetState extends ConsumerState<_WalkinSheet> {
       // Check for overlapping appointments on the same staff member
       if (_staffId != null) {
         final conflicts = await SupabaseClientService.client
-            .from('appointments')
+            .from(BCTables.appointments)
             .select('id')
             .eq('staff_id', _staffId!)
             .not('status', 'in', '(cancelled_customer,cancelled_business)')
@@ -3343,7 +3344,7 @@ class _WalkinSheetState extends ConsumerState<_WalkinSheet> {
       final notes = _notesCtrl.text.trim();
       if (notes.isNotEmpty) data['notes'] = notes;
 
-      await SupabaseClientService.client.from('appointments').insert(data);
+      await SupabaseClientService.client.from(BCTables.appointments).insert(data);
 
       widget.onSaved();
       if (mounted) Navigator.pop(context);
@@ -3515,7 +3516,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
       final newEnd = newStart.add(Duration(minutes: durationMins));
 
       await SupabaseClientService.client
-          .from('appointments')
+          .from(BCTables.appointments)
           .update({
         'starts_at': newStart.toUtc().toIso8601String(),
         'ends_at': newEnd.toUtc().toIso8601String(),
@@ -3659,7 +3660,7 @@ class _EditApptSheetState extends ConsumerState<_EditApptSheet> {
       }
       if (updates.isNotEmpty) {
         await SupabaseClientService.client
-            .from('appointments')
+            .from(BCTables.appointments)
             .update(updates)
             .eq('id', id);
       }
@@ -3769,7 +3770,7 @@ class _NotesSheetState extends State<_NotesSheet> {
       final id = widget.appointment['id'] as String;
       final notes = _ctrl.text.trim();
       await SupabaseClientService.client
-          .from('appointments')
+          .from(BCTables.appointments)
           .update({'notes': notes.isEmpty ? null : notes}).eq('id', id);
       widget.onSaved();
       if (mounted) Navigator.pop(context);

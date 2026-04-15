@@ -4,6 +4,7 @@ import 'package:beautycita/config/app_transitions.dart';
 import 'package:beautycita/providers/user_preferences_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:beautycita_core/supabase.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -12,6 +13,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:beautycita/services/supabase_client.dart';
 import 'package:beautycita/services/notification_service.dart';
 import 'package:beautycita/config/routes.dart';
@@ -77,7 +79,7 @@ Future<void> main() async {
     // Cancel any orphaned pending bookings older than 30 minutes
     if (SupabaseClientService.currentUserId != null) {
       SupabaseClientService.client
-          .from('appointments')
+          .from(BCTables.appointments)
           .update({'status': 'cancelled_customer'})
           .eq('user_id', SupabaseClientService.currentUserId!)
           .eq('status', 'pending')
@@ -101,13 +103,16 @@ Future<void> main() async {
     supabaseReady.complete(); // Complete even on error so splash doesn't hang
   });
 
+  // Get package info for Sentry release tracking
+  final packageInfo = await PackageInfo.fromPlatform();
+
   // Sentry error reporting — captures crashes, unhandled exceptions, ANRs
   await SentryFlutter.init(
     (options) {
       options.dsn = dotenv.env['SENTRY_DSN'] ?? '';
       options.tracesSampleRate = kDebugMode ? 1.0 : 0.2;
       options.environment = kDebugMode ? 'debug' : 'production';
-      options.release = 'beautycita@1.1.0';
+      options.release = 'beautycita@${packageInfo.version}+${packageInfo.buildNumber}';
       options.attachStacktrace = true;
       options.enableAutoNativeBreadcrumbs = true;
       options.anrEnabled = true;

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:beautycita_core/supabase.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/constants.dart';
 import '../config/theme_extension.dart';
@@ -58,7 +59,7 @@ class _ReportProblemScreenState extends ConsumerState<ReportProblemScreen> {
       final involved = _involvedController.text.trim();
       final date = _dateController.text.trim();
 
-      await client.from('contact_submissions').insert({
+      await client.from(BCTables.contactSubmissions).insert({
         'user_id': client.auth.currentUser?.id,
         'category': _selectedCategory,
         'description': description,

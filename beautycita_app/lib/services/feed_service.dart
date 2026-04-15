@@ -5,6 +5,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:beautycita_core/models.dart';
+import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita/services/supabase_client.dart';
 
 class FeedService {
@@ -80,7 +81,7 @@ class FeedService {
     final client = SupabaseClientService.client;
 
     final existing = await client
-        .from('feed_saves')
+        .from(BCTables.feedSaves)
         .select('id')
         .eq('user_id', userId)
         .eq('content_type', contentType)
@@ -89,14 +90,14 @@ class FeedService {
 
     if (existing != null) {
       await client
-          .from('feed_saves')
+          .from(BCTables.feedSaves)
           .delete()
           .eq('user_id', userId)
           .eq('content_type', contentType)
           .eq('content_id', contentId);
       return false;
     } else {
-      await client.from('feed_saves').insert({
+      await client.from(BCTables.feedSaves).insert({
         'user_id': userId,
         'content_type': contentType,
         'content_id': contentId,
@@ -113,7 +114,7 @@ class FeedService {
   }) async {
     if (!SupabaseClientService.isInitialized) return;
     try {
-      await SupabaseClientService.client.from('feed_engagement').insert({
+      await SupabaseClientService.client.from(BCTables.feedEngagement).insert({
         'user_id': SupabaseClientService.currentUserId,
         'content_type': contentType,
         'content_id': contentId,
@@ -131,7 +132,7 @@ class FeedService {
 
     try {
       final data = await SupabaseClientService.client
-          .from('feed_saves')
+          .from(BCTables.feedSaves)
           .select()
           .eq('user_id', userId)
           .order('saved_at', ascending: false);

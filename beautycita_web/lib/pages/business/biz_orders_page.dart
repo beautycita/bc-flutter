@@ -15,7 +15,7 @@ final _selectedOrderProvider =
 final _ordersProvider = FutureProvider.autoDispose
     .family<List<Map<String, dynamic>>, String>((ref, bizId) async {
   final rows = await BCSupabase.client
-      .from('orders')
+      .from(BCTables.orders)
       .select()
       .eq('business_id', bizId)
       .order('created_at', ascending: false);
@@ -568,7 +568,7 @@ class _OrderDetailPanelState extends ConsumerState<_OrderDetailPanel> {
         updates['tracking_number'] = _trackingCtrl.text.trim();
       }
       await BCSupabase.client
-          .from('orders')
+          .from(BCTables.orders)
           .update(updates)
           .eq('id', widget.order['id'].toString());
 

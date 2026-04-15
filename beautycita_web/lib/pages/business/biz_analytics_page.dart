@@ -47,7 +47,7 @@ final _staffAnalyticsProvider = FutureProvider.autoDispose
 
   // Appointments grouped by staff with revenue sum
   final apptRows = await client
-      .from('appointments')
+      .from(BCTables.appointments)
       .select('staff_id, staff_name, price')
       .eq('business_id', bizId)
       .eq('status', 'completed');
@@ -74,7 +74,7 @@ final _staffAnalyticsProvider = FutureProvider.autoDispose
 
   // Commissions
   final commRows = await client
-      .from('staff_commissions')
+      .from(BCTables.staffCommissions)
       .select()
       .eq('business_id', bizId);
   final Map<String, Map<String, dynamic>> commByStaff = {
@@ -105,7 +105,7 @@ final _staffAnalyticsProvider = FutureProvider.autoDispose
 final _serviceAnalyticsProvider = FutureProvider.autoDispose
     .family<List<_ServiceStat>, String>((ref, bizId) async {
   final rows = await BCSupabase.client
-      .from('appointments')
+      .from(BCTables.appointments)
       .select('service_name, price')
       .eq('business_id', bizId)
       .eq('status', 'completed');

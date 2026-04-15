@@ -1,4 +1,5 @@
 import 'package:beautycita_core/models.dart';
+import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita/services/supabase_client.dart';
 
 class ProductService {
@@ -8,7 +9,7 @@ class ProductService {
     final client = SupabaseClientService.client;
 
     final data = await client
-        .from('products')
+        .from(BCTables.products)
         .select()
         .eq('business_id', businessId)
         .order('category')
@@ -22,7 +23,7 @@ class ProductService {
     final client = SupabaseClientService.client;
 
     final result = await client
-        .from('products')
+        .from(BCTables.products)
         .insert(product.toJson())
         .select()
         .single();
@@ -35,7 +36,7 @@ class ProductService {
     final client = SupabaseClientService.client;
 
     final result = await client
-        .from('products')
+        .from(BCTables.products)
         .update(product.toJson())
         .eq('id', product.id)
         .select()
@@ -49,7 +50,7 @@ class ProductService {
     if (!SupabaseClientService.isInitialized) return;
     final client = SupabaseClientService.client;
 
-    await client.from('products').delete().eq('id', productId);
+    await client.from(BCTables.products).delete().eq('id', productId);
   }
 
   /// Toggle the in_stock flag for a product.
@@ -58,7 +59,7 @@ class ProductService {
     final client = SupabaseClientService.client;
 
     await client
-        .from('products')
+        .from(BCTables.products)
         .update({'in_stock': inStock})
         .eq('id', productId);
   }
@@ -69,7 +70,7 @@ class ProductService {
     final client = SupabaseClientService.client;
 
     final result = await client
-        .from('businesses')
+        .from(BCTables.businesses)
         .select('pos_enabled')
         .eq('id', businessId)
         .single();
@@ -83,7 +84,7 @@ class ProductService {
     final client = SupabaseClientService.client;
 
     await client
-        .from('businesses')
+        .from(BCTables.businesses)
         .update({'pos_enabled': true})
         .eq('id', businessId);
   }
@@ -94,7 +95,7 @@ class ProductService {
     final client = SupabaseClientService.client;
 
     await client
-        .from('businesses')
+        .from(BCTables.businesses)
         .update({'pos_enabled': false})
         .eq('id', businessId);
   }
@@ -104,7 +105,7 @@ class ProductService {
     if (!SupabaseClientService.isInitialized) return;
     final client = SupabaseClientService.client;
 
-    await client.from('pos_agreements').insert({
+    await client.from(BCTables.posAgreements).insert({
       'business_id': businessId,
       'agreement_type': 'seller',
       'agreement_version': version,
@@ -117,7 +118,7 @@ class ProductService {
     final client = SupabaseClientService.client;
 
     final result = await client
-        .from('pos_agreements')
+        .from(BCTables.posAgreements)
         .select('id')
         .eq('business_id', businessId)
         .eq('agreement_type', 'seller')
@@ -136,7 +137,7 @@ class ProductService {
     final client = SupabaseClientService.client;
 
     final result = await client
-        .from('product_showcases')
+        .from(BCTables.productShowcases)
         .insert({
           'business_id': businessId,
           'product_id': productId,
@@ -154,7 +155,7 @@ class ProductService {
     final client = SupabaseClientService.client;
 
     final data = await client
-        .from('product_showcases')
+        .from(BCTables.productShowcases)
         .select()
         .eq('business_id', businessId)
         .order('created_at', ascending: false);
@@ -167,6 +168,6 @@ class ProductService {
     if (!SupabaseClientService.isInitialized) return;
     final client = SupabaseClientService.client;
 
-    await client.from('product_showcases').delete().eq('id', showcaseId);
+    await client.from(BCTables.productShowcases).delete().eq('id', showcaseId);
   }
 }

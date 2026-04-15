@@ -32,7 +32,7 @@ class _ConfigPageState extends ConsumerState<ConfigPage> {
     final newValue = _editController.text;
     try {
       await BCSupabase.client
-          .from('app_config')
+          .from(BCTables.appConfig)
           .update({
             'value': newValue,
             'updated_at': DateTime.now().toIso8601String(),

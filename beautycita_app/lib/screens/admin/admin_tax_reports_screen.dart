@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 
@@ -34,7 +35,7 @@ class _AdminTaxReportsScreenState
   Future<void> _loadSavedReports() async {
     try {
       final data = await SupabaseClientService.client
-          .from('sat_monthly_reports')
+          .from(BCTables.satMonthlyReports)
           .select()
           .order('period_year', ascending: false)
           .order('period_month', ascending: false)
@@ -83,7 +84,7 @@ class _AdminTaxReportsScreenState
 
     try {
       final data = await SupabaseClientService.client
-          .from('sat_monthly_reports')
+          .from(BCTables.satMonthlyReports)
           .select()
           .eq('period_year', year)
           .eq('period_month', month)

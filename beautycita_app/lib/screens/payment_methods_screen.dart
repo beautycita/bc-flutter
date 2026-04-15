@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/config/theme_extension.dart';
 import 'package:beautycita/providers/payment_methods_provider.dart';
+import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita/services/supabase_client.dart';
 import 'package:beautycita/services/toast_service.dart';
 import 'package:beautycita/widgets/settings_widgets.dart';
@@ -13,7 +14,7 @@ final _saldoProvider = FutureProvider<double>((ref) async {
   final userId = SupabaseClientService.currentUserId;
   if (userId == null) return 0;
   final data = await SupabaseClientService.client
-      .from('profiles')
+      .from(BCTables.profiles)
       .select('saldo')
       .eq('id', userId)
       .maybeSingle();
@@ -681,7 +682,7 @@ class _GiftCardRedemptionTileState
       }
 
       final data = await SupabaseClientService.client
-          .from('gift_cards')
+          .from(BCTables.giftCards)
           .select()
           .eq('code', code)
           .maybeSingle();
@@ -713,7 +714,7 @@ class _GiftCardRedemptionTileState
       // Atomic update: WHERE clause checks is_active=true AND redeemed_at IS NULL
       // to prevent double-redemption on concurrent requests.
       final updateResult = await SupabaseClientService.client
-          .from('gift_cards')
+          .from(BCTables.giftCards)
           .update({
             'redeemed_by': userId,
             'redeemed_at': DateTime.now().toUtc().toIso8601String(),

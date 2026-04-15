@@ -17,6 +17,7 @@ import '../providers/booking_flow_provider.dart' show placesServiceProvider;
 import '../providers/security_provider.dart';
 import '../services/location_service.dart';
 import '../services/places_service.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../services/supabase_client.dart';
 import '../services/toast_service.dart';
 
@@ -110,7 +111,7 @@ class _SalonOnboardingScreenState
 
     try {
       final results = await SupabaseClientService.client
-          .from('discovered_salons')
+          .from(BCTables.discoveredSalons)
           .select()
           .or('phone.ilike.%$last10,whatsapp.ilike.%$last10')
           .neq('status', 'registered')
@@ -184,7 +185,7 @@ class _SalonOnboardingScreenState
 
     try {
       final response = await SupabaseClientService.client
-          .from('discovered_salons')
+          .from(BCTables.discoveredSalons)
           .select()
           .eq('id', widget.refCode!)
           .maybeSingle();
@@ -383,7 +384,7 @@ class _SalonOnboardingScreenState
             : digits;
 
         final results = await SupabaseClientService.client
-            .from('discovered_salons')
+            .from(BCTables.discoveredSalons)
             .select()
             .or('phone.ilike.%$last10,whatsapp.ilike.%$last10')
             .limit(1);
@@ -530,7 +531,7 @@ class _SalonOnboardingScreenState
           ? phoneDigits.substring(phoneDigits.length - 10)
           : phoneDigits;
       final existingBiz = await SupabaseClientService.client
-          .from('businesses')
+          .from(BCTables.businesses)
           .select('id')
           .or('phone.ilike.%$last10,whatsapp.ilike.%$last10')
           .limit(1)
@@ -628,7 +629,7 @@ class _SalonOnboardingScreenState
                 ),
               );
           await SupabaseClientService.client
-              .from('businesses')
+              .from(BCTables.businesses)
               .update({'municipal_license_url': licensePath})
               .eq('id', businessId);
         } catch (e) {

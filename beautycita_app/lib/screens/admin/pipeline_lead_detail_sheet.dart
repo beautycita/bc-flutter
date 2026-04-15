@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../providers/admin_provider.dart';
 import '../../providers/rp_provider.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 
@@ -231,7 +232,7 @@ class _LeadDetailSheetState extends State<_LeadDetailSheet> {
     setState(() => _savingName = true);
     try {
       await SupabaseClientService.client
-          .from('discovered_salons')
+          .from(BCTables.discoveredSalons)
           .update({'business_name': newName})
           .eq('id', _lead['id'] as String);
       setState(() {
@@ -255,7 +256,7 @@ class _LeadDetailSheetState extends State<_LeadDetailSheet> {
     });
     try {
       await SupabaseClientService.client
-          .from('discovered_salons')
+          .from(BCTables.discoveredSalons)
           .update({'status': newStatus})
           .eq('id', _lead['id'] as String);
       setState(() => _lead['status'] = newStatus);
@@ -1231,7 +1232,7 @@ class _LeadDetailSheetState extends State<_LeadDetailSheet> {
                         try {
                           final salonId = _lead['id'] as String;
                           await SupabaseClientService.client
-                              .from('salon_outreach_log')
+                              .from(BCTables.salonOutreachLog)
                               .insert({
                             'discovered_salon_id': salonId,
                             'channel': selectedChannel,
@@ -1245,7 +1246,7 @@ class _LeadDetailSheetState extends State<_LeadDetailSheet> {
                           final currentCount =
                               (_lead['outreach_count'] as num?)?.toInt() ?? 0;
                           await SupabaseClientService.client
-                              .from('discovered_salons')
+                              .from(BCTables.discoveredSalons)
                               .update({
                             'outreach_count': currentCount + 1,
                             'last_outreach_at':

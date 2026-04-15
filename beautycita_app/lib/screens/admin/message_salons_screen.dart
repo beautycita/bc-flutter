@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../config/constants.dart';
 import '../../config/theme_extension.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 import '../../widgets/empty_state.dart';
@@ -14,7 +15,7 @@ import '../../widgets/outreach_contact_sheet.dart';
 final _messageSalonsProvider = FutureProvider.family<List<Map<String, dynamic>>, _SalonFilter>(
   (ref, filter) async {
     var query = SupabaseClientService.client
-        .from('discovered_salons')
+        .from(BCTables.discoveredSalons)
         .select('id, business_name, phone, whatsapp, location_city, location_address, latitude, longitude, rating_average, rating_count, interest_count, status, whatsapp_verified, outreach_count, last_outreach_at, feature_image_url, booking_system, email');
 
     if (filter.city != null && filter.city!.isNotEmpty) {
@@ -36,7 +37,7 @@ final _messageSalonsProvider = FutureProvider.family<List<Map<String, dynamic>>,
 final _outreachLogProvider = FutureProvider.family<List<Map<String, dynamic>>, String>(
   (ref, salonId) async {
     final data = await SupabaseClientService.client
-        .from('salon_outreach_log')
+        .from(BCTables.salonOutreachLog)
         .select('*')
         .eq('discovered_salon_id', salonId)
         .order('sent_at', ascending: false)
@@ -48,7 +49,7 @@ final _outreachLogProvider = FutureProvider.family<List<Map<String, dynamic>>, S
 /// Provider for distinct cities grouped by country in discovered_salons.
 final _citiesByCountryProvider = FutureProvider<Map<String, List<String>>>((ref) async {
   final data = await SupabaseClientService.client
-      .from('discovered_salons')
+      .from(BCTables.discoveredSalons)
       .select('location_city, country')
       .not('location_city', 'is', null)
       .limit(1000);
@@ -565,7 +566,7 @@ class _MessageSalonsScreenState extends ConsumerState<MessageSalonsScreen> {
                       setDialogState(() => saving = true);
                       try {
                         await SupabaseClientService.client
-                            .from('discovered_salons')
+                            .from(BCTables.discoveredSalons)
                             .update({
                               'business_name': nameCtrl.text.trim(),
                               'phone': phoneCtrl.text.trim(),

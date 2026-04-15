@@ -17,7 +17,7 @@ final demoPhoneVerifiedProvider = FutureProvider<bool>((ref) async {
   final user = BCSupabase.client.auth.currentUser;
   if (user == null) return false;
   final res = await BCSupabase.client
-      .from('profiles')
+      .from(BCTables.profiles)
       .select('phone')
       .eq('id', user.id)
       .maybeSingle();

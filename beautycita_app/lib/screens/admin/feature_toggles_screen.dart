@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
 import '../../providers/feature_toggle_provider.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 
@@ -32,7 +33,7 @@ class _FeatureTogglesScreenState
     final prev = !value;
     setState(() => _localValues[key] = value);
     try {
-      await SupabaseClientService.client.from('app_config').update({
+      await SupabaseClientService.client.from(BCTables.appConfig).update({
         'value': value.toString(),
         'updated_by': SupabaseClientService.currentUserId,
         'updated_at': DateTime.now().toIso8601String(),

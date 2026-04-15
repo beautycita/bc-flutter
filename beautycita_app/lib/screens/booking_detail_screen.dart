@@ -15,15 +15,14 @@ import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/models/booking.dart';
 import 'package:beautycita/models/curate_result.dart' show LatLng;
 import 'package:beautycita/providers/booking_detail_provider.dart';
-import 'package:beautycita/providers/booking_flow_provider.dart'
-    show bookingRepositoryProvider;
 import 'package:beautycita/providers/booking_provider.dart'
-    show userBookingsProvider, upcomingBookingsProvider;
+    show bookingRepositoryProvider, userBookingsProvider, upcomingBookingsProvider;
 import 'package:beautycita/providers/profile_provider.dart';
 import 'package:beautycita/providers/route_provider.dart';
 import 'package:beautycita/providers/feature_toggle_provider.dart';
 import 'package:beautycita/providers/uber_provider.dart';
 import 'package:beautycita/services/location_service.dart';
+import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita/services/supabase_client.dart';
 import 'package:beautycita/services/toast_service.dart';
 import 'package:beautycita/widgets/route_map_widget.dart';
@@ -34,7 +33,7 @@ import 'package:beautycita/widgets/location_picker_sheet.dart';
 final _businessLocationProvider =
     FutureProvider.family<LatLng?, String>((ref, businessId) async {
   final biz = await SupabaseClientService.client
-      .from('businesses')
+      .from(BCTables.businesses)
       .select('latitude, longitude')
       .eq('id', businessId)
       .maybeSingle();
@@ -163,7 +162,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
     setState(() => _isUpdatingTransport = true);
     try {
       await SupabaseClientService.client
-          .from('bookings')
+          .from(BCTables.bookings)
           .update({'transport_mode': mode})
           .eq('id', booking.id);
       ref.invalidate(bookingDetailProvider(widget.bookingId));
@@ -195,7 +194,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
   Future<void> _openUberToSalon(Booking booking) async {
     try {
       final biz = await SupabaseClientService.client
-          .from('businesses')
+          .from(BCTables.businesses)
           .select('name, address, latitude, longitude')
           .eq('id', booking.businessId)
           .maybeSingle();
@@ -220,7 +219,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
   Future<void> _openUberFromSalon(Booking booking) async {
     try {
       final biz = await SupabaseClientService.client
-          .from('businesses')
+          .from(BCTables.businesses)
           .select('name, latitude, longitude')
           .eq('id', booking.businessId)
           .maybeSingle();

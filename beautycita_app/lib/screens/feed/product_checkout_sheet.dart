@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:uuid/uuid.dart';
 import 'package:beautycita/config/app_transitions.dart';
 import 'package:beautycita/config/constants.dart';
+import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita/services/supabase_client.dart';
 import 'package:beautycita/services/toast_service.dart';
 
@@ -89,7 +90,7 @@ class _ProductCheckoutSheetState extends State<ProductCheckoutSheet> {
     final userId = SupabaseClientService.currentUserId;
     if (userId == null) return;
     final data = await SupabaseClientService.client
-        .from('profiles')
+        .from(BCTables.profiles)
         .select('saldo')
         .eq('id', userId)
         .maybeSingle();
@@ -124,7 +125,7 @@ class _ProductCheckoutSheetState extends State<ProductCheckoutSheet> {
     // Fresh stock check before proceeding to payment
     try {
       final freshProduct = await SupabaseClientService.client
-          .from('products')
+          .from(BCTables.products)
           .select('in_stock')
           .eq('id', widget.productId)
           .maybeSingle();
@@ -252,7 +253,7 @@ class _ProductCheckoutSheetState extends State<ProductCheckoutSheet> {
       if (userId == null) throw Exception('Not authenticated');
 
       final orderResult =
-          await SupabaseClientService.client.from('orders').insert({
+          await SupabaseClientService.client.from(BCTables.orders).insert({
         'buyer_id': userId,
         'business_id': widget.businessId,
         'product_id': widget.productId,

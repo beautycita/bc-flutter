@@ -20,7 +20,7 @@ final _selectedClientProvider =
 final _bizClientsProvider = FutureProvider.autoDispose
     .family<List<Map<String, dynamic>>, String>((ref, bizId) async {
   final rows = await BCSupabase.client
-      .from('business_clients')
+      .from(BCTables.businessClients)
       .select()
       .eq('business_id', bizId)
       .order('last_visit', ascending: false, nullsFirst: false);
@@ -627,7 +627,7 @@ class _ClientDetailPanelState extends ConsumerState<_ClientDetailPanel> {
           .where((t) => t.isNotEmpty)
           .toList();
       await BCSupabase.client
-          .from('business_clients')
+          .from(BCTables.businessClients)
           .update({'notes': _notesCtrl.text, 'tags': tags}).eq(
               'id', widget.client['id'].toString());
       if (mounted) {

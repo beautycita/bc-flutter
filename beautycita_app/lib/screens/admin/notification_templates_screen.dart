@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 
@@ -119,7 +120,7 @@ class _NotificationTemplatesScreenState
     setState(() => _saving = true);
     try {
       await SupabaseClientService.client
-          .from('notification_templates')
+          .from(BCTables.notificationTemplates)
           .update({
             'template_es': _templateEsCtrl.text,
             'template_en': _templateEnCtrl.text.isEmpty

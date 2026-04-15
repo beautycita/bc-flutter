@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/contact_match_service.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../services/supabase_client.dart';
 
 // ---------------------------------------------------------------------------
@@ -196,7 +197,7 @@ class ContactMatchNotifier extends StateNotifier<ContactMatchState> {
     final dMap = <String, Map<String, dynamic>>{};
     if (dIds.isNotEmpty) {
       final res = await client
-          .from('discovered_salons')
+          .from(BCTables.discoveredSalons)
           .select(
             'id, business_name, phone, location_city, feature_image_url, '
             'rating_average, rating_count, matched_categories, generated_bio',
@@ -211,7 +212,7 @@ class ContactMatchNotifier extends StateNotifier<ContactMatchState> {
     final rMap = <String, Map<String, dynamic>>{};
     if (rIds.isNotEmpty) {
       final res = await client
-          .from('businesses')
+          .from(BCTables.businesses)
           .select(
             'id, name, phone, city, photo_url, average_rating, '
             'total_reviews, service_categories',

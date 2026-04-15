@@ -7,10 +7,10 @@ import 'package:intl/intl.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/config/theme_extension.dart';
 import 'package:beautycita/models/booking.dart';
-import 'package:beautycita/providers/booking_provider.dart'
-    hide bookingRepositoryProvider;
+import 'package:beautycita/providers/booking_provider.dart';
 import 'package:beautycita/providers/booking_flow_provider.dart'
-    show bookingFlowProvider, bookingRepositoryProvider;
+    show bookingFlowProvider;
+import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita/services/supabase_client.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/empty_state.dart';
@@ -22,7 +22,7 @@ final userDisputesProvider =
   final userId = SupabaseClientService.currentUserId;
   if (userId == null) return {};
   final response = await SupabaseClientService.client
-      .from('disputes')
+      .from(BCTables.disputes)
       .select()
       .eq('user_id', userId)
       .order('created_at', ascending: false);
@@ -492,7 +492,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
                 ? ': ${reasonCtrl.text.trim()}'
                 : '');
 
-        await SupabaseClientService.client.from('disputes').insert({
+        await SupabaseClientService.client.from(BCTables.disputes).insert({
           'appointment_id': booking.id,
           'user_id': userId,
           'business_id': booking.businessId,
@@ -1067,7 +1067,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
     }
 
     await SupabaseClientService.client
-        .from('disputes')
+        .from(BCTables.disputes)
         .update(updateData)
         .eq('id', disputeId);
 
@@ -1091,7 +1091,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
 
   Future<void> _rejectOffer(String disputeId) async {
     final now = DateTime.now().toIso8601String();
-    await SupabaseClientService.client.from('disputes').update({
+    await SupabaseClientService.client.from(BCTables.disputes).update({
       'client_accepted': false,
       'client_responded_at': now,
       'status': 'escalated',
@@ -1100,11 +1100,11 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
 
     // Notify admins
     final admins = await SupabaseClientService.client
-        .from('profiles')
+        .from(BCTables.profiles)
         .select('id')
         .inFilter('role', ['admin', 'superadmin']);
     for (final admin in (admins as List)) {
-      await SupabaseClientService.client.from('notifications').insert({
+      await SupabaseClientService.client.from(BCTables.notifications).insert({
         'user_id': admin['id'] as String,
         'title': 'Disputa escalada',
         'body': 'Cliente rechazo oferta del salon. Requiere tu atencion.',

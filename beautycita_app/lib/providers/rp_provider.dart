@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita/services/supabase_client.dart';
 
 // ---------------------------------------------------------------------------
@@ -13,7 +14,7 @@ final rpAssignedSalonsProvider =
   if (userId == null) return [];
 
   final response = await SupabaseClientService.client
-      .from('discovered_salons')
+      .from(BCTables.discoveredSalons)
       .select(
         'id, business_name, phone, whatsapp, location_address, location_city, '
         'location_state, latitude, longitude, feature_image_url, rating_average, '
@@ -35,7 +36,7 @@ final rpAssignedSalonsProvider =
 final rpUsersProvider =
     FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final response = await SupabaseClientService.client
-      .from('profiles')
+      .from(BCTables.profiles)
       .select('id, full_name, username, phone, avatar_url')
       .eq('role', 'rp')
       .order('full_name');
@@ -56,19 +57,19 @@ Future<void> adminAssignSalonsToRp({
 
   for (final salonId in salonIds) {
     // Delete any existing active assignment (hard delete — cleaner than soft delete)
-    await client.from('rp_assignments')
+    await client.from(BCTables.rpAssignments)
         .delete()
         .eq('discovered_salon_id', salonId)
         .isFilter('unassigned_at', null);
 
     // Create new assignment
-    await client.from('rp_assignments').insert({
+    await client.from(BCTables.rpAssignments).insert({
       'discovered_salon_id': salonId,
       'rp_user_id': rpUserId,
       'assigned_by': adminId,
     });
 
-    await client.from('discovered_salons').update({
+    await client.from(BCTables.discoveredSalons).update({
       'assigned_rp_id': rpUserId,
       'rp_status': 'assigned',
     }).eq('id', salonId);
@@ -84,12 +85,12 @@ Future<void> adminUnassignSalons({
 
   for (final salonId in salonIds) {
     await client
-        .from('rp_assignments')
+        .from(BCTables.rpAssignments)
         .update({'unassigned_at': DateTime.now().toUtc().toIso8601String()})
         .eq('discovered_salon_id', salonId)
         .isFilter('unassigned_at', null);
 
-    await client.from('discovered_salons').update({
+    await client.from(BCTables.discoveredSalons).update({
       'assigned_rp_id': null,
       'rp_status': 'unassigned',
     }).eq('id', salonId);
@@ -99,7 +100,7 @@ Future<void> adminUnassignSalons({
 /// Returns the active assignment ID for a salon, or null if none.
 Future<String?> getActiveAssignmentId(String salonId) async {
   final response = await SupabaseClientService.client
-      .from('rp_assignments')
+      .from(BCTables.rpAssignments)
       .select('id')
       .eq('discovered_salon_id', salonId)
       .isFilter('unassigned_at', null)
@@ -152,7 +153,7 @@ final rpChecklistProvider = FutureProvider.family<List<Map<String, dynamic>>, St
   (ref, salonId) async {
     final sb = SupabaseClientService.client;
     final res = await sb
-        .from('rp_checklist')
+        .from(BCTables.rpChecklist)
         .select()
         .eq('discovered_salon_id', salonId)
         .order('created_at');
@@ -171,7 +172,7 @@ Future<void> rpToggleChecklistItem({
   if (userId == null) throw Exception('Not authenticated');
 
   if (checked) {
-    await sb.from('rp_checklist').upsert({
+    await sb.from(BCTables.rpChecklist).upsert({
       'discovered_salon_id': salonId,
       'rp_user_id': userId,
       'item_key': itemKey,
@@ -180,7 +181,7 @@ Future<void> rpToggleChecklistItem({
     }, onConflict: 'discovered_salon_id,item_key');
   } else {
     await sb
-        .from('rp_checklist')
+        .from(BCTables.rpChecklist)
         .delete()
         .eq('discovered_salon_id', salonId)
         .eq('item_key', itemKey);
@@ -193,7 +194,7 @@ final rpNextMeetingProvider = FutureProvider.family<Map<String, dynamic>?, Strin
   (ref, salonId) async {
     final sb = SupabaseClientService.client;
     final res = await sb
-        .from('rp_meetings')
+        .from(BCTables.rpMeetings)
         .select()
         .eq('discovered_salon_id', salonId)
         .inFilter('status', ['pending', 'confirmed', 'rescheduled'])
@@ -213,7 +214,7 @@ Future<String> rpCreateMeeting({
   final sb = SupabaseClientService.client;
   final userId = SupabaseClientService.currentUserId;
   if (userId == null) throw Exception('Not authenticated');
-  final res = await sb.from('rp_meetings').insert({
+  final res = await sb.from(BCTables.rpMeetings).insert({
     'discovered_salon_id': salonId,
     'rp_user_id': userId,
     'proposed_at': proposedAt.toIso8601String(),
@@ -228,7 +229,7 @@ Future<void> rpUpdateMeetingStatus({
   DateTime? salonProposedAt,
 }) async {
   final sb = SupabaseClientService.client;
-  await sb.from('rp_meetings').update({
+  await sb.from(BCTables.rpMeetings).update({
     'status': status,
     'updated_at': DateTime.now().toIso8601String(),
     if (status == 'confirmed') 'confirmed_at': DateTime.now().toIso8601String(),
@@ -279,7 +280,7 @@ Future<bool> rpSendMessage({
   final sb = SupabaseClientService.client;
   final currentUser = sb.auth.currentUser;
   if (currentUser == null) throw Exception('Not authenticated');
-  final profile = await sb.from('profiles').select('full_name, phone').eq('id', currentUser.id).single();
+  final profile = await sb.from(BCTables.profiles).select('full_name, phone').eq('id', currentUser.id).single();
 
   final action = channel == 'email' ? 'send_email' : 'send_wa';
   final res = await sb.functions.invoke('outreach-contact', body: {
@@ -305,7 +306,7 @@ Future<void> rpCloseProcess({
   final sb = SupabaseClientService.client;
 
   // Update assignment
-  await sb.from('rp_assignments').update({
+  await sb.from(BCTables.rpAssignments).update({
     'closed_at': DateTime.now().toIso8601String(),
     'close_outcome': outcome,
     if (reason != null) 'close_reason': reason,
@@ -315,13 +316,13 @@ Future<void> rpCloseProcess({
 
   if (outcome == 'not_converted') {
     // Unassign: clear RP, reset status
-    await sb.from('discovered_salons').update({
+    await sb.from(BCTables.discoveredSalons).update({
       'assigned_rp_id': null,
       'rp_status': 'unassigned',
     }).eq('id', salonId);
   } else {
     // Mark converted
-    await sb.from('discovered_salons').update({
+    await sb.from(BCTables.discoveredSalons).update({
       'rp_status': 'converted',
     }).eq('id', salonId);
   }

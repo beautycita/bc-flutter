@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/constants.dart';
 import '../config/theme_extension.dart';
 import '../providers/admin_provider.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../services/supabase_client.dart';
 
 // ─────────────────────────────────────────────────────────────
@@ -874,14 +875,14 @@ class _SmokeTestSectionState extends ConsumerState<_SmokeTestSection> {
     await _section('INFRAESTRUCTURA');
 
     await _test('Base de datos (lectura)', () async {
-      final res = await client.from('app_config').select('key').limit(1);
+      final res = await client.from(BCTables.appConfig).select('key').limit(1);
       if ((res as List).isEmpty) throw Exception('Sin datos');
     });
 
     await _test('Base de datos (escritura)', () async {
       final userId = client.auth.currentUser?.id;
       if (userId == null) throw Exception('Sin usuario');
-      await client.from('profiles').update({
+      await client.from(BCTables.profiles).update({
         'updated_at': DateTime.now().toUtc().toIso8601String(),
       }).eq('id', userId);
     });
@@ -897,7 +898,7 @@ class _SmokeTestSectionState extends ConsumerState<_SmokeTestSection> {
     await _test('Perfil de usuario', () async {
       final userId = client.auth.currentUser?.id;
       if (userId == null) throw Exception('Sin usuario');
-      final res = await client.from('profiles').select('id, role').eq('id', userId).single();
+      final res = await client.from(BCTables.profiles).select('id, role').eq('id', userId).single();
       if (res['role'] == null) throw Exception('Sin rol');
     });
 

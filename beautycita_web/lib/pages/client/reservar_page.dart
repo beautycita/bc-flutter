@@ -2543,7 +2543,7 @@ class _DetailPanelOverlayState extends ConsumerState<_DetailPanelOverlay>
       if (_selectedTransport != null) {
         try {
           await BCSupabase.client
-              .from('appointments')
+              .from(BCTables.appointments)
               .update({'transport_mode': _selectedTransport})
               .eq('id', appointmentId);
         } catch (_) {}
@@ -3745,7 +3745,7 @@ class _DiscoveredSalonsListState extends ConsumerState<_DiscoveredSalonsList> {
       const delta = 0.45;
 
       var query = BCSupabase.client
-          .from('discovered_salons')
+          .from(BCTables.discoveredSalons)
           .select(
               'id, business_name, location_address, phone, whatsapp_verified, categories, feature_image_url, rating_average, rating_count, latitude, longitude')
           .not('phone', 'is', null)

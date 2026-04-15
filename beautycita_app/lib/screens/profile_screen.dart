@@ -24,6 +24,7 @@ import 'package:beautycita/widgets/settings_widgets.dart';
 import 'package:beautycita/providers/admin_provider.dart';
 import 'package:beautycita/providers/business_provider.dart';
 import 'package:beautycita/providers/feature_toggle_provider.dart';
+import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita/services/supabase_client.dart';
 import 'package:beautycita/services/toast_service.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -34,7 +35,7 @@ final _profileSaldoProvider = FutureProvider<double>((ref) async {
   final userId = SupabaseClientService.currentUserId;
   if (userId == null) return 0;
   final data = await SupabaseClientService.client
-      .from('profiles')
+      .from(BCTables.profiles)
       .select('saldo')
       .eq('id', userId)
       .maybeSingle();
@@ -45,7 +46,7 @@ final _profileBookingCountProvider = FutureProvider<int>((ref) async {
   final userId = SupabaseClientService.currentUserId;
   if (userId == null) return 0;
   final data = await SupabaseClientService.client
-      .from('appointments')
+      .from(BCTables.appointments)
       .select('id')
       .eq('user_id', userId)
       .inFilter('status', ['completed', 'confirmed']);

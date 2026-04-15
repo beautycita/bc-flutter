@@ -34,7 +34,7 @@ class _TogglesPageState extends ConsumerState<TogglesPage> {
 
     try {
       // Upsert the config entry
-      await BCSupabase.client.from('app_config').upsert(
+      await BCSupabase.client.from(BCTables.appConfig).upsert(
         {
           'key': toggle.key,
           'value': newValue.toString(),

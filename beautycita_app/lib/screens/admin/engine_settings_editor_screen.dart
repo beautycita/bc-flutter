@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 
@@ -29,7 +30,7 @@ class _EngineSettingsEditorScreenState
     try {
       for (final entry in _edits.entries) {
         await SupabaseClientService.client
-            .from('engine_settings')
+            .from(BCTables.engineSettings)
             .update({'value': entry.value}).eq('key', entry.key);
       }
       ref.invalidate(engineSettingsProvider);

@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../config/theme_extension.dart';
 import '../../providers/admin_provider.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 
@@ -1251,7 +1252,7 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
       final adminId = SupabaseClientService.currentUserId;
 
       // Update dispute
-      await SupabaseClientService.client.from('disputes').update({
+      await SupabaseClientService.client.from(BCTables.disputes).update({
         'status': 'resolved',
         'resolution': _selectedOutcome,
         'resolution_notes': _notesCtrl.text.trim().isEmpty
@@ -1285,7 +1286,7 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
             widget.dispute['appointment_id'] as String?;
         if (appointmentId != null) {
           await SupabaseClientService.client
-              .from('appointments')
+              .from(BCTables.appointments)
               .update({'payment_status': 'refund_pending'})
               .eq('id', appointmentId);
         }
@@ -1347,7 +1348,7 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
 
     try {
       await SupabaseClientService.client
-          .from('profiles')
+          .from(BCTables.profiles)
           .update({'status': 'suspended'})
           .eq('id', userId);
 
@@ -1399,7 +1400,7 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
 
     try {
       await SupabaseClientService.client
-          .from('businesses')
+          .from(BCTables.businesses)
           .update({'stripe_payouts_enabled': false})
           .eq('id', businessId);
 

@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/business_provider.dart';
 import '../../providers/feature_toggle_provider.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 import '../../widgets/empty_state.dart';
@@ -791,7 +792,7 @@ class _BusinessSettingsScreenState
     setState(() => _saving = true);
 
     try {
-      await SupabaseClientService.client.from('businesses').update({
+      await SupabaseClientService.client.from(BCTables.businesses).update({
         'name': _nameCtrl.text.trim(),
         'phone': _phoneCtrl.text.trim().replaceAll(RegExp(r'[^0-9+]'), ''),
         'email':
@@ -981,7 +982,7 @@ class _AiDescriptionButtonState extends ConsumerState<_AiDescriptionButton> {
       final bizId = biz?['id'] as String? ?? '';
       final svcs = bizId.isNotEmpty
           ? await SupabaseClientService.client
-              .from('services')
+              .from(BCTables.services)
               .select('name')
               .eq('business_id', bizId)
               .eq('is_active', true)

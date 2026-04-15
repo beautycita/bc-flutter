@@ -1,4 +1,5 @@
 import 'package:beautycita/models/booking.dart';
+import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita/services/supabase_client.dart';
 
 class BookingRepository {
@@ -30,7 +31,7 @@ class BookingRepository {
 
     // Verify salon is still active and verified
     final biz = await SupabaseClientService.client
-        .from('businesses')
+        .from(BCTables.businesses)
         .select('is_active, is_verified, stripe_charges_enabled')
         .eq('id', providerId)
         .maybeSingle();
@@ -69,7 +70,7 @@ class BookingRepository {
     };
 
     final response = await SupabaseClientService.client
-        .from('appointments')
+        .from(BCTables.appointments)
         .insert(data)
         .select()
         .single();
@@ -86,7 +87,7 @@ class BookingRepository {
     }
 
     var query = SupabaseClientService.client
-        .from('appointments')
+        .from(BCTables.appointments)
         .select('*, businesses(name)')
         .eq('user_id', userId);
 
@@ -111,7 +112,7 @@ class BookingRepository {
     final now = DateTime.now().toUtc().toIso8601String();
 
     final response = await SupabaseClientService.client
-        .from('appointments')
+        .from(BCTables.appointments)
         .select('*, businesses(name)')
         .eq('user_id', userId)
         .not('status', 'in', '(cancelled_customer,cancelled_business)')
@@ -148,7 +149,7 @@ class BookingRepository {
   /// Update the status of a booking.
   Future<void> updateBookingStatus(String bookingId, String status) async {
     await SupabaseClientService.client
-        .from('appointments')
+        .from(BCTables.appointments)
         .update({'status': status})
         .eq('id', bookingId);
   }
@@ -156,7 +157,7 @@ class BookingRepository {
   /// Get a single booking by ID with joined business name.
   Future<Booking?> getBookingById(String id) async {
     final response = await SupabaseClientService.client
-        .from('appointments')
+        .from(BCTables.appointments)
         .select('*, businesses(name, phone, lat, lng, address)')
         .eq('id', id)
         .maybeSingle();
@@ -168,7 +169,7 @@ class BookingRepository {
   /// Update the notes field on a booking.
   Future<void> updateNotes(String id, String notes) async {
     await SupabaseClientService.client
-        .from('appointments')
+        .from(BCTables.appointments)
         .update({'notes': notes})
         .eq('id', id);
   }
@@ -176,7 +177,7 @@ class BookingRepository {
   /// Update the transport_mode field on an appointment.
   Future<void> updateTransportMode(String id, String mode) async {
     await SupabaseClientService.client
-        .from('appointments')
+        .from(BCTables.appointments)
         .update({'transport_mode': mode})
         .eq('id', id);
   }

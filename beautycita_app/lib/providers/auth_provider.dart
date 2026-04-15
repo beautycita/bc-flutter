@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show AuthException, OAuthProvider, UserAttributes;
+import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita/services/supabase_client.dart';
 import 'package:beautycita/services/toast_service.dart';
 import '../services/biometric_service.dart';
@@ -136,7 +137,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       bool unique = false;
       for (int attempt = 0; attempt < 5; attempt++) {
         final existing = await SupabaseClientService.client
-            .from('profiles')
+            .from(BCTables.profiles)
             .select('id')
             .eq('username', username)
             .maybeSingle();
@@ -402,7 +403,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       if (supaId != null) {
         try {
           await SupabaseClientService.client
-              .from('profiles')
+              .from(BCTables.profiles)
               .update({'username': username})
               .eq('id', supaId);
         } catch (e) {

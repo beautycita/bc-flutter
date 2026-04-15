@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../config/constants.dart';
 import '../../config/theme_extension.dart';
 import '../../providers/business_provider.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 import 'package:beautycita/widgets/admin/admin_widgets.dart';
@@ -583,7 +584,7 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
 
       // Revenue + actual tax withholdings YTD from paid appointments
       final revenueRows = await SupabaseClientService.client
-          .from('appointments')
+          .from(BCTables.appointments)
           .select('price, starts_at, isr_withheld, iva_withheld')
           .eq('business_id', bizId)
           .inFilter('status', ['completed', 'confirmed'])
@@ -601,7 +602,7 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
 
       // Expenses YTD
       final expRows = await SupabaseClientService.client
-          .from('business_expenses')
+          .from(BCTables.businessExpenses)
           .select('amount, month')
           .eq('business_id', bizId)
           .eq('year', year);
@@ -613,7 +614,7 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
 
       // Commission records YTD
       final commRows = await SupabaseClientService.client
-          .from('commission_records')
+          .from(BCTables.commissionRecords)
           .select('amount, source')
           .eq('business_id', bizId)
           .gte('created_at', '$year-01-01T00:00:00Z');
@@ -1101,7 +1102,7 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
                       final biz = await ref.read(currentBusinessProvider.future);
                       if (biz == null) throw Exception('No business');
                       final now = DateTime.now();
-                      await SupabaseClientService.client.from('business_expenses').insert({
+                      await SupabaseClientService.client.from(BCTables.businessExpenses).insert({
                         'business_id': biz['id'],
                         'amount': amount,
                         'description': descCtrl.text.trim().isEmpty ? null : descCtrl.text.trim(),
@@ -1221,7 +1222,7 @@ class _CfdiSectionState extends ConsumerState<_CfdiSection> {
       final threeMonthsAgo = DateTime(now.year, now.month - 2, 1);
 
       final data = await SupabaseClientService.client
-          .from('tax_withholdings')
+          .from(BCTables.taxWithholdings)
           .select('period_year, period_month, gross_amount, isr_withheld, iva_withheld')
           .eq('business_id', bizId)
           .gte('created_at', threeMonthsAgo.toIso8601String())

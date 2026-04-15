@@ -140,7 +140,7 @@ final rpChecklistProvider =
   if (!BCSupabase.isInitialized) return [];
 
   final res = await BCSupabase.client
-      .from('rp_checklist')
+      .from(BCTables.rpChecklist)
       .select()
       .eq('discovered_salon_id', salonId)
       .order('created_at');
@@ -172,7 +172,7 @@ final rpNextMeetingProvider =
   if (!BCSupabase.isInitialized) return null;
 
   final res = await BCSupabase.client
-      .from('rp_meetings')
+      .from(BCTables.rpMeetings)
       .select()
       .eq('discovered_salon_id', salonId)
       .inFilter('status', ['pending', 'confirmed', 'rescheduled'])
@@ -191,7 +191,7 @@ final rpMeetingsProvider =
   if (!BCSupabase.isInitialized) return [];
 
   final res = await BCSupabase.client
-      .from('rp_meetings')
+      .from(BCTables.rpMeetings)
       .select()
       .eq('discovered_salon_id', salonId)
       .order('proposed_at', ascending: false);
@@ -215,7 +215,7 @@ Future<void> rpToggleChecklistItem({
   if (userId == null) throw Exception('Not authenticated');
 
   if (checked) {
-    await BCSupabase.client.from('rp_checklist').upsert(
+    await BCSupabase.client.from(BCTables.rpChecklist).upsert(
       {
         'discovered_salon_id': salonId,
         'rp_user_id': userId,
@@ -227,7 +227,7 @@ Future<void> rpToggleChecklistItem({
     );
   } else {
     await BCSupabase.client
-        .from('rp_checklist')
+        .from(BCTables.rpChecklist)
         .delete()
         .eq('discovered_salon_id', salonId)
         .eq('item_key', itemKey);
@@ -243,7 +243,7 @@ Future<String> rpCreateMeeting({
   final userId = BCSupabase.client.auth.currentUser?.id;
   if (userId == null) throw Exception('Not authenticated');
 
-  final res = await BCSupabase.client.from('rp_meetings').insert({
+  final res = await BCSupabase.client.from(BCTables.rpMeetings).insert({
     'discovered_salon_id': salonId,
     'rp_user_id': userId,
     'proposed_at': proposedAt.toUtc().toIso8601String(),
@@ -259,7 +259,7 @@ Future<void> rpUpdateMeetingStatus({
   required String status,
   DateTime? salonProposedAt,
 }) async {
-  await BCSupabase.client.from('rp_meetings').update({
+  await BCSupabase.client.from(BCTables.rpMeetings).update({
     'status': status,
     'updated_at': DateTime.now().toUtc().toIso8601String(),
     if (status == 'confirmed')
@@ -272,7 +272,7 @@ Future<void> rpUpdateMeetingStatus({
 /// Returns the active assignment ID for a salon, or null if none.
 Future<String?> getActiveAssignmentId(String salonId) async {
   final res = await BCSupabase.client
-      .from('rp_assignments')
+      .from(BCTables.rpAssignments)
       .select('id')
       .eq('discovered_salon_id', salonId)
       .isFilter('unassigned_at', null)
@@ -287,7 +287,7 @@ final rpAssignmentInfoProvider =
   if (rpUserId == null || !BCSupabase.isInitialized) return null;
 
   final res = await BCSupabase.client
-      .from('profiles')
+      .from(BCTables.profiles)
       .select('full_name, username')
       .eq('id', rpUserId)
       .maybeSingle();
@@ -308,7 +308,7 @@ Future<void> rpCloseProcess({
   final client = BCSupabase.client;
 
   // Close the assignment
-  await client.from('rp_assignments').update({
+  await client.from(BCTables.rpAssignments).update({
     'closed_at': DateTime.now().toUtc().toIso8601String(),
     'close_outcome': outcome,
     if (reason != null) 'close_reason': reason,
@@ -316,13 +316,13 @@ Future<void> rpCloseProcess({
 
   if (outcome == 'not_converted') {
     // Unassign: clear RP, reset status
-    await client.from('discovered_salons').update({
+    await client.from(BCTables.discoveredSalons).update({
       'assigned_rp_id': null,
       'rp_status': 'unassigned',
     }).eq('id', salonId);
   } else {
     // Mark converted
-    await client.from('discovered_salons').update({
+    await client.from(BCTables.discoveredSalons).update({
       'rp_status': 'converted',
     }).eq('id', salonId);
   }

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+import 'package:beautycita_core/supabase.dart';
 import 'supabase_client.dart';
 
 /// Lightweight heartbeat that updates `profiles.last_seen` every 5 minutes
@@ -45,7 +46,7 @@ class PresenceService with WidgetsBindingObserver {
     if (userId == null) return;
     try {
       await SupabaseClientService.client
-          .from('profiles')
+          .from(BCTables.profiles)
           .update({'last_seen': DateTime.now().toUtc().toIso8601String()})
           .eq('id', userId);
     } catch (e) {

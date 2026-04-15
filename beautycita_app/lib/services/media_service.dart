@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:io';
+import 'package:beautycita_core/supabase.dart';
 import 'supabase_client.dart';
 import 'toast_service.dart';
 
@@ -159,7 +160,7 @@ class MediaService {
     };
 
     final result = await client
-        .from('user_media')
+        .from(BCTables.userMedia)
         .insert(row)
         .select()
         .single();
@@ -233,7 +234,7 @@ class MediaService {
   Future<void> deleteMedia(String mediaId) async {
     if (!SupabaseClientService.isInitialized) return;
     final client = SupabaseClientService.client;
-    await client.from('user_media').delete().eq('id', mediaId);
+    await client.from(BCTables.userMedia).delete().eq('id', mediaId);
   }
 
   /// Upload media to user-media bucket and create user_media record.
@@ -297,7 +298,7 @@ class MediaService {
       if (kDebugMode) debugPrint('MediaService.uploadMedia: inserting into user_media...');
 
       final result = await client
-          .from('user_media')
+          .from(BCTables.userMedia)
           .insert(row)
           .select()
           .single();
@@ -319,7 +320,7 @@ class MediaService {
 
     final client = SupabaseClientService.client;
     final data = await client
-        .from('user_media')
+        .from(BCTables.userMedia)
         .select()
         .eq('user_id', userId)
         .eq('section', section)
@@ -337,7 +338,7 @@ class MediaService {
 
     final client = SupabaseClientService.client;
     final data = await client
-        .from('user_media')
+        .from(BCTables.userMedia)
         .select()
         .eq('user_id', userId)
         .order('created_at', ascending: false)
@@ -356,7 +357,7 @@ class MediaService {
 
     // Get user's thread IDs
     final threads = await client
-        .from('chat_threads')
+        .from(BCTables.chatThreads)
         .select('id, contact_type')
         .eq('user_id', userId);
 
@@ -371,7 +372,7 @@ class MediaService {
 
     // Get all media messages from those threads
     final messages = await client
-        .from('chat_messages')
+        .from(BCTables.chatMessages)
         .select()
         .inFilter('thread_id', threadMap.keys.toList())
         .inFilter('content_type', ['image', 'tryon_result'])

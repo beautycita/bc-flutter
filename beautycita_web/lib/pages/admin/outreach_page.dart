@@ -1025,7 +1025,7 @@ class _SalonDetail extends ConsumerWidget {
                           // Fetch full salon data for ContactPanel
                           try {
                             final data = await BCSupabase.client
-                                .from('discovered_salons')
+                                .from(BCTables.discoveredSalons)
                                 .select()
                                 .eq('id', salon.id)
                                 .single();

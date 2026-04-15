@@ -6,12 +6,14 @@ import 'package:flutter/material.dart' show Brightness, Color, ThemeMode;
 import 'package:flutter/scheduler.dart' show SchedulerBinding;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:beautycita_core/supabase.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:beautycita/services/toast_service.dart';
 import '../models/curate_result.dart';
 import '../models/follow_up_question.dart';
 import '../models/booking.dart';
 import '../repositories/booking_repository.dart';
+import 'booking_provider.dart' show bookingRepositoryProvider;
 import '../services/curate_service.dart';
 import '../services/follow_up_service.dart';
 import '../services/location_service.dart';
@@ -27,7 +29,7 @@ import 'theme_provider.dart';
 
 final curateServiceProvider = Provider((ref) => CurateService());
 final followUpServiceProvider = Provider((ref) => FollowUpService());
-final bookingRepositoryProvider = Provider((ref) => BookingRepository());
+// bookingRepositoryProvider is defined in booking_provider.dart — single source
 final placesServiceProvider = Provider<PlacesService>((ref) {
   final apiKey = dotenv.env['GOOGLE_ANDROID_API_KEY'] ?? '';
   return PlacesService(apiKey: apiKey);
@@ -433,7 +435,7 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
 
         // Link the PaymentIntent to the booking so we can track it
         await SupabaseClientService.client
-            .from('appointments')
+            .from(BCTables.appointments)
             .update({'payment_intent_id': paymentIntentId})
             .eq('id', booking.id);
 
@@ -532,7 +534,7 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
           // Card payment succeeded — update only if webhook hasn't already.
           // Conditional update prevents race with Stripe webhook.
           await SupabaseClientService.client
-              .from('appointments')
+              .from(BCTables.appointments)
               .update({
                 'status': 'confirmed',
                 'payment_status': 'paid',
@@ -642,7 +644,7 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
     } catch (e) {
       debugPrint('[CFDI] Stamping failed for $bookingId: $e');
       try {
-        await SupabaseClientService.client.from('user_error_reports').insert({
+        await SupabaseClientService.client.from(BCTables.userErrorReports).insert({
           'user_id': SupabaseClientService.currentUserId,
           'error_message': 'CFDI stamping failed',
           'error_details': 'booking_id=$bookingId error=$e',

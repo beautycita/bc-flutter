@@ -1,4 +1,5 @@
 import 'package:beautycita/models/provider.dart';
+import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita/services/supabase_client.dart';
 
 class ProviderRepository {
@@ -33,7 +34,7 @@ class ProviderRepository {
 
     // No geo — alphabetical fallback
     final response = await SupabaseClientService.client
-        .from('businesses')
+        .from(BCTables.businesses)
         .select()
         .contains('service_categories', [category])
         .eq('is_active', true)
@@ -59,7 +60,7 @@ class ProviderRepository {
   /// Get a single provider by ID.
   Future<Provider?> getProvider(String id) async {
     final response = await SupabaseClientService.client
-        .from('businesses')
+        .from(BCTables.businesses)
         .select()
         .eq('id', id)
         .maybeSingle();
@@ -74,7 +75,7 @@ class ProviderRepository {
     String? category,
   }) async {
     var query = SupabaseClientService.client
-        .from('services')
+        .from(BCTables.services)
         .select()
         .eq('business_id', providerId)
         .eq('is_active', true);

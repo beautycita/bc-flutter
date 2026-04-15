@@ -121,14 +121,14 @@ final dashboardKpisProvider = FutureProvider<DashboardKpis>((ref) async {
     final countResults = await Future.wait([
       // Bookings today
       client
-          .from('appointments')
+          .from(BCTables.appointments)
           .select('id')
           .gte('created_at', startOfDay)
           .count(),
       // Active users (profiles count)
-      client.from('profiles').select('id').count(),
+      client.from(BCTables.profiles).select('id').count(),
       // Registered salons
-      client.from('businesses').select('id').count(),
+      client.from(BCTables.businesses).select('id').count(),
     ]);
 
     final bookingsToday = countResults[0].count;
@@ -137,7 +137,7 @@ final dashboardKpisProvider = FutureProvider<DashboardKpis>((ref) async {
 
     // Revenue this month (sum of payments)
     final paymentRows = await client
-        .from('payments')
+        .from(BCTables.payments)
         .select('amount')
         .gte('created_at', startOfMonth)
         .eq('status', 'succeeded');
@@ -151,7 +151,7 @@ final dashboardKpisProvider = FutureProvider<DashboardKpis>((ref) async {
     final prevMonthStart =
         DateTime(now.year, now.month - 1, 1).toIso8601String();
     final prevPayments = await client
-        .from('payments')
+        .from(BCTables.payments)
         .select('amount')
         .gte('created_at', prevMonthStart)
         .lt('created_at', startOfMonth)
@@ -190,7 +190,7 @@ final activityFeedProvider = StreamProvider<List<ActivityItem>>((ref) {
 
   // Subscribe to new appointments
   final appointmentsSub = BCSupabase.client
-      .from('appointments')
+      .from(BCTables.appointments)
       .stream(primaryKey: ['id'])
       .order('created_at', ascending: false)
       .limit(10)
@@ -220,7 +220,7 @@ final activityFeedProvider = StreamProvider<List<ActivityItem>>((ref) {
 
   // Subscribe to new profiles
   final profilesSub = BCSupabase.client
-      .from('profiles')
+      .from(BCTables.profiles)
       .stream(primaryKey: ['id'])
       .order('created_at', ascending: false)
       .limit(10)
@@ -264,19 +264,19 @@ final dashboardAlertsProvider = FutureProvider<DashboardAlerts>((ref) async {
     final results = await Future.wait([
       // Pending disputes
       client
-          .from('disputes')
+          .from(BCTables.disputes)
           .select('id')
           .eq('status', 'pending')
           .count(),
       // Unverified businesses
       client
-          .from('businesses')
+          .from(BCTables.businesses)
           .select('id')
           .eq('is_verified', false)
           .count(),
       // Failed payments
       client
-          .from('payments')
+          .from(BCTables.payments)
           .select('id')
           .eq('status', 'failed')
           .count(),
@@ -307,7 +307,7 @@ final weeklyBookingsProvider = FutureProvider<WeeklyBookings>((ref) async {
         .toIso8601String();
 
     final data = await BCSupabase.client
-        .from('appointments')
+        .from(BCTables.appointments)
         .select('created_at')
         .gte('created_at', startOfWeek)
         .lt('created_at', endOfWeek);
@@ -342,7 +342,7 @@ final revenueTrendProvider = FutureProvider<RevenueTrend>((ref) async {
         .toIso8601String();
 
     final data = await BCSupabase.client
-        .from('payments')
+        .from(BCTables.payments)
         .select('amount, created_at')
         .gte('created_at', start)
         .eq('status', 'succeeded');

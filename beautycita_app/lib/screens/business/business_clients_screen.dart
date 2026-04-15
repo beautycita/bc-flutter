@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../providers/business_provider.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 import '../../widgets/admin/admin_widgets.dart';
@@ -16,7 +17,7 @@ import '../../widgets/empty_state.dart';
 final businessClientsProvider =
     FutureProvider.family<List<Map<String, dynamic>>, String>((ref, bizId) async {
   final data = await SupabaseClientService.client
-      .from('business_clients')
+      .from(BCTables.businessClients)
       .select('*, profiles(username, avatar_url)')
       .eq('business_id', bizId)
       .order('last_visit_at', ascending: false);
@@ -434,7 +435,7 @@ class _ClientDetailSheetState extends State<_ClientDetailSheet> {
           .toList();
 
       await SupabaseClientService.client
-          .from('business_clients')
+          .from(BCTables.businessClients)
           .update({
             'notes': _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
             'tags': tags.isEmpty ? null : tags,
@@ -493,7 +494,7 @@ class _ClientDetailSheetState extends State<_ClientDetailSheet> {
     try {
       // Deduct 100 points from business_clients
       await SupabaseClientService.client
-          .from('business_clients')
+          .from(BCTables.businessClients)
           .update({
             'loyalty_points': points - 100,
             'updated_at': DateTime.now().toUtc().toIso8601String(),
@@ -501,7 +502,7 @@ class _ClientDetailSheetState extends State<_ClientDetailSheet> {
           .eq('id', widget.client['id']);
 
       // Record loyalty transaction
-      await SupabaseClientService.client.from('loyalty_transactions').insert({
+      await SupabaseClientService.client.from(BCTables.loyaltyTransactions).insert({
         'business_id': widget.bizId,
         'user_id': userId,
         'points': -100,
@@ -776,7 +777,7 @@ class _VisitHistorySectionState extends State<_VisitHistorySection> {
     setState(() => _loading = true);
     try {
       var filter = SupabaseClientService.client
-          .from('appointments')
+          .from(BCTables.appointments)
           .select('id, service_name, starts_at, price, status, staff:staff_id(first_name, last_name)')
           .eq('business_id', widget.bizId);
 

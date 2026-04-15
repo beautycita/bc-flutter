@@ -9,6 +9,7 @@ import '../../config/theme_extension.dart';
 import '../../models/chat_message.dart';
 import '../../providers/admin_provider.dart';
 import '../../providers/chat_provider.dart';
+import 'package:beautycita_core/supabase.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 
@@ -1176,7 +1177,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
 
     try {
       await SupabaseClientService.client
-          .from('profiles')
+          .from(BCTables.profiles)
           .update({'saldo': newValue})
           .eq('id', user.id);
 
@@ -1261,7 +1262,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
 
       if (updates.isNotEmpty) {
         await SupabaseClientService.client
-            .from('profiles')
+            .from(BCTables.profiles)
             .update(updates)
             .eq('id', user.id);
 
@@ -1450,7 +1451,7 @@ class _LiveSupportSheetState extends ConsumerState<_LiveSupportSheet> {
       final client = SupabaseClientService.client;
 
       // Insert message as support (sender_id null = anonymous admin)
-      await client.from('chat_messages').insert({
+      await client.from(BCTables.chatMessages).insert({
         'thread_id': _threadId,
         'sender_type': 'support',
         'sender_id': null,
@@ -1460,7 +1461,7 @@ class _LiveSupportSheetState extends ConsumerState<_LiveSupportSheet> {
 
       // Update thread last message + increment unread
       await Future.wait([
-        client.from('chat_threads').update({
+        client.from(BCTables.chatThreads).update({
           'last_message_text': text,
           'last_message_at': DateTime.now().toUtc().toIso8601String(),
         }).eq('id', _threadId!),

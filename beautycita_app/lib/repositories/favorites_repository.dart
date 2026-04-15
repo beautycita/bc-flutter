@@ -1,3 +1,4 @@
+import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita/services/supabase_client.dart';
 
 class FavoritesRepository {
@@ -7,7 +8,7 @@ class FavoritesRepository {
     if (userId == null) return {};
 
     final response = await SupabaseClientService.client
-        .from('favorites')
+        .from(BCTables.favorites)
         .select('business_id')
         .eq('user_id', userId);
 
@@ -21,7 +22,7 @@ class FavoritesRepository {
     final userId = SupabaseClientService.currentUserId;
     if (userId == null) throw Exception('User not authenticated');
 
-    await SupabaseClientService.client.from('favorites').insert({
+    await SupabaseClientService.client.from(BCTables.favorites).insert({
       'user_id': userId,
       'business_id': businessId,
     });
@@ -33,7 +34,7 @@ class FavoritesRepository {
     if (userId == null) throw Exception('User not authenticated');
 
     await SupabaseClientService.client
-        .from('favorites')
+        .from(BCTables.favorites)
         .delete()
         .eq('user_id', userId)
         .eq('business_id', businessId);
