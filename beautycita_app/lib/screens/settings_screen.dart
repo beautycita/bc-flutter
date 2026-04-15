@@ -13,8 +13,6 @@ import 'package:beautycita/screens/admin/admin_shell_screen.dart' show adminTabP
 import 'package:beautycita/providers/business_provider.dart';
 import 'package:beautycita/providers/security_provider.dart';
 import 'package:beautycita/providers/feature_toggle_provider.dart';
-import 'package:beautycita_core/supabase.dart';
-import 'package:beautycita/services/supabase_client.dart';
 import 'package:beautycita/services/toast_service.dart';
 import 'package:beautycita/widgets/settings_widgets.dart';
 
@@ -220,10 +218,6 @@ class SettingsScreen extends ConsumerWidget {
 
           // ── Salon / Business section ──
           _buildProfessionalsSection(context, ref),
-
-          const SizedBox(height: AppConstants.paddingLG),
-
-          _AnalyticsOptOutTile(),
 
           const SizedBox(height: AppConstants.paddingLG),
 
@@ -589,97 +583,3 @@ class _BrandShimmerTextState extends State<_BrandShimmerText>
   }
 }
 
-/// Toggle for opting out of behavioral analytics (LFPDPPP compliance).
-class _AnalyticsOptOutTile extends ConsumerStatefulWidget {
-  @override
-  ConsumerState<_AnalyticsOptOutTile> createState() => _AnalyticsOptOutTileState();
-}
-
-class _AnalyticsOptOutTileState extends ConsumerState<_AnalyticsOptOutTile> {
-  bool _optedOut = false;
-  bool _loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    final userId = SupabaseClientService.currentUserId;
-    if (userId == null) return;
-    try {
-      final data = await SupabaseClientService.client
-          .from(BCTables.profiles)
-          .select('opted_out_analytics')
-          .eq('id', userId)
-          .maybeSingle();
-      if (mounted) {
-        setState(() {
-          _optedOut = data?['opted_out_analytics'] == true;
-          _loading = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  Future<void> _toggle(bool value) async {
-    final userId = SupabaseClientService.currentUserId;
-    if (userId == null) return;
-    setState(() => _optedOut = value);
-    try {
-      await SupabaseClientService.client
-          .from(BCTables.profiles)
-          .update({'opted_out_analytics': value})
-          .eq('id', userId);
-      if (mounted) {
-        ToastService.showSuccess(
-          value
-              ? 'Analisis de actividad desactivado'
-              : 'Analisis de actividad activado',
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _optedOut = !value);
-        ToastService.showError('Error al actualizar preferencia');
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 2),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-      ),
-      child: ListTile(
-        dense: true,
-        leading: Icon(
-          Icons.tune_outlined,
-          size: 20,
-          color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-        ),
-        title: Text(
-          'Recomendaciones personalizadas',
-          style: theme.textTheme.bodyMedium,
-        ),
-        trailing: _loading
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : Switch.adaptive(
-                value: !_optedOut,
-                onChanged: (on) => _toggle(!on),
-              ),
-      ),
-    );
-  }
-}

@@ -15,7 +15,9 @@ import 'package:beautycita/providers/user_preferences_provider.dart';
 import 'package:beautycita/services/location_service.dart';
 import 'package:beautycita/services/places_service.dart';
 import 'package:beautycita/services/toast_service.dart';
+import 'package:beautycita/services/supabase_client.dart';
 import 'package:beautycita/widgets/location_picker_sheet.dart';
+import 'package:beautycita_core/supabase.dart';
 
 // ── Notification state model ───────────────────────────────────────────────
 
@@ -65,6 +67,10 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
   // For radius animation on the map
   late AnimationController _radiusPulse;
 
+  // Analytics opt-out (LFPDPPP)
+  bool _analyticsOn = true;
+  bool _analyticsLoading = true;
+
   @override
   void initState() {
     super.initState();
@@ -72,6 +78,36 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
+    _loadAnalyticsPref();
+  }
+
+  Future<void> _loadAnalyticsPref() async {
+    final userId = SupabaseClientService.currentUserId;
+    if (userId == null) return;
+    try {
+      final data = await SupabaseClientService.client
+          .from(BCTables.profiles)
+          .select('opted_out_analytics')
+          .eq('id', userId)
+          .maybeSingle();
+      if (mounted) setState(() { _analyticsOn = data?['opted_out_analytics'] != true; _analyticsLoading = false; });
+    } catch (_) {
+      if (mounted) setState(() => _analyticsLoading = false);
+    }
+  }
+
+  Future<void> _toggleAnalytics(bool on) async {
+    final userId = SupabaseClientService.currentUserId;
+    if (userId == null) return;
+    setState(() => _analyticsOn = on);
+    try {
+      await SupabaseClientService.client
+          .from(BCTables.profiles)
+          .update({'opted_out_analytics': !on})
+          .eq('id', userId);
+    } catch (_) {
+      if (mounted) setState(() => _analyticsOn = !on);
+    }
   }
 
   @override
@@ -168,12 +204,27 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
                 ),
           ),
           const SizedBox(height: AppConstants.paddingXS),
-          Text(
-            'Personaliza tu experiencia',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onPrimary,
-                  fontWeight: FontWeight.w800,
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Personaliza tu experiencia',
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onPrimary,
+                        fontWeight: FontWeight.w800,
+                      ),
                 ),
+              ),
+              if (!_analyticsLoading)
+                Switch.adaptive(
+                  value: _analyticsOn,
+                  onChanged: _toggleAnalytics,
+                  activeThumbColor: Colors.white,
+                  activeTrackColor: Colors.white.withValues(alpha: 0.3),
+                  inactiveThumbColor: Colors.white.withValues(alpha: 0.5),
+                  inactiveTrackColor: Colors.white.withValues(alpha: 0.1),
+                ),
+            ],
           ),
         ],
       ),

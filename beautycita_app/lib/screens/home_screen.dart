@@ -450,6 +450,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 ),
 
+          // Fade from scaffold bg → transparent (hard at top, softens downward)
+          Container(
+            height: 40,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Theme.of(context).scaffoldBackgroundColor,
+                  Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0),
+                ],
+              ),
+            ),
+          ),
+
           // Push notification prompt (one-time)
           if (_showPushPrompt)
             Padding(
@@ -722,26 +737,6 @@ class _HeroGradientBackgroundState extends State<_HeroGradientBackground> {
 
             // Dark overlay for text readability
             Container(color: Colors.black.withValues(alpha: 0.4)),
-
-            // Bottom fade to scaffold background
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: 80,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Theme.of(context).scaffoldBackgroundColor,
-                    ],
-                  ),
-                ),
-              ),
-            ),
 
             // Content
             widget.child,
