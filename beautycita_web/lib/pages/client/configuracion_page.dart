@@ -46,23 +46,46 @@ class _ConfiguracionPageState extends State<ConfiguracionPage> {
   }
 
   Future<void> _toggleAnalytics(bool value) async {
+    final previous = _analyticsOn;
     setState(() => _analyticsOn = value);
-    final user = BCSupabase.client.auth.currentUser;
-    if (user == null) return;
-    await BCSupabase.client
-        .from(BCTables.profiles)
-        .update({'opted_out_analytics': !value})
-        .eq('id', user.id);
+    try {
+      final user = BCSupabase.client.auth.currentUser;
+      if (user == null) throw Exception('Not authenticated');
+      await BCSupabase.client
+          .from(BCTables.profiles)
+          .update({
+            'opted_out_analytics': !value,
+            if (!value) 'opted_out_analytics_at': DateTime.now().toUtc().toIso8601String(),
+          })
+          .eq('id', user.id);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _analyticsOn = previous);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error al guardar. Intenta de nuevo.')),
+        );
+      }
+    }
   }
 
   Future<void> _toggleMarketing(bool value) async {
+    final previous = _marketingOn;
     setState(() => _marketingOn = value);
-    final user = BCSupabase.client.auth.currentUser;
-    if (user == null) return;
-    await BCSupabase.client
-        .from(BCTables.profiles)
-        .update({'opted_out_marketing': !value})
-        .eq('id', user.id);
+    try {
+      final user = BCSupabase.client.auth.currentUser;
+      if (user == null) throw Exception('Not authenticated');
+      await BCSupabase.client
+          .from(BCTables.profiles)
+          .update({'opted_out_marketing': !value})
+          .eq('id', user.id);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _marketingOn = previous);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error al guardar. Intenta de nuevo.')),
+        );
+      }
+    }
   }
 
   @override

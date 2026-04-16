@@ -58,12 +58,12 @@ function generateOtp(): string {
   return String(array[0] % 1000000).padStart(6, "0");
 }
 
-/** Send OTP via beautypi WhatsApp API (5s timeout to avoid hanging the isolate) */
+/** Send OTP via beautypi WhatsApp API (25s timeout per step) */
 async function sendWhatsApp(phone: string, code: string): Promise<{ sent: boolean; channel: string }> {
   if (!BEAUTYPI_WA_URL) return { sent: false, channel: "whatsapp" };
   try {
     const ac1 = new AbortController();
-    const t1 = setTimeout(() => ac1.abort(), 15000);
+    const t1 = setTimeout(() => ac1.abort(), 25000);
     const checkRes = await fetch(`${BEAUTYPI_WA_URL}/api/wa/check`, {
       method: "POST",
       headers: {
@@ -89,7 +89,7 @@ async function sendWhatsApp(phone: string, code: string): Promise<{ sent: boolea
     const message = `*BeautyCita* - Tu codigo de verificacion es: *${code}*\n\nValido por ${OTP_EXPIRY_MINUTES} minutos. No compartas este codigo.`;
 
     const ac2 = new AbortController();
-    const t2 = setTimeout(() => ac2.abort(), 10000);
+    const t2 = setTimeout(() => ac2.abort(), 25000);
     const sendRes = await fetch(`${BEAUTYPI_WA_URL}/api/wa/send`, {
       method: "POST",
       headers: {
@@ -190,7 +190,7 @@ Deno.serve(async (req) => {
       return json({ sent: true, channel: recentSend.channel, expires_in: OTP_EXPIRY_MINUTES * 60, deduplicated: true });
     }
 
-    // Try WhatsApp first (increased timeout: 10s)
+    // Try WhatsApp first (25s timeout per step)
     console.log(`[phone-verify] Trying WhatsApp for ${phone.slice(0, 6)}***`);
     let result = await sendWhatsApp(phone, otp);
 

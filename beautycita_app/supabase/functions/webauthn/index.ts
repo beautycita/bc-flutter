@@ -3,10 +3,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders, handleCorsPreflightIfOptions } from "../_shared/cors.ts";
 
 
+let _req: Request;
+
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { ...corsHeaders(req), "Content-Type": "application/json" },
+    headers: { ...corsHeaders(_req), "Content-Type": "application/json" },
   });
 }
 
@@ -209,6 +211,7 @@ function getClientIp(req: Request): string {
 // ── Main handler ────────────────────────────────────────────────────────────
 
 serve(async (req) => {
+  _req = req;
   const _pre = handleCorsPreflightIfOptions(req);
   if (_pre) return _pre;
 
@@ -560,9 +563,18 @@ serve(async (req) => {
         return json({ error: "Auth generation failed" }, 500);
       }
 
+      // Verify OTP server-side and return session tokens (never expose email_otp)
+      const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
+        email: email,
+        token: emailOtp,
+        type: "magiclink",
+      });
+      if (verifyError || !verifyData?.session) {
+        return json({ error: "OTP verification failed" }, 500);
+      }
       return json({
-        email,
-        email_otp: emailOtp,
+        access_token: verifyData.session.access_token,
+        refresh_token: verifyData.session.refresh_token,
       });
     }
 
