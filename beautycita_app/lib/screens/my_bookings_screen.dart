@@ -1408,10 +1408,16 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
       },
     );
 
-    if (confirmed != true || selectedReason == null) return;
+    if (confirmed != true || selectedReason == null) {
+      detailsCtl.dispose();
+      return;
+    }
 
     final userId = SupabaseClientService.currentUserId;
-    if (userId == null) return;
+    if (userId == null) {
+      detailsCtl.dispose();
+      return;
+    }
 
     try {
       await SupabaseClientService.client.from(BCTables.disputes).insert({
