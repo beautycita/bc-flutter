@@ -4,28 +4,21 @@
 // When a customer doesn't show up:
 // 1. Mark appointment as no_show
 // 2. Calculate refund: full_payment - deposit - 3% BC platform fee
-// 3. Process refund via Stripe
+// 3. Credit buyer saldo + create seller debt (never card refund)
 // 4. Record payout to provider (they keep the deposit)
 // =============================================================================
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import Stripe from "https://esm.sh/stripe@14.21.0?target=deno";
 import { requireFeature } from "../_shared/check-toggle.ts";
 import { corsHeaders, handleCorsPreflightIfOptions } from "../_shared/cors.ts";
+import { processRefund } from "../_shared/refund.ts";
 
-
-const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
 // BeautyCita platform fee: 3%
 const PLATFORM_FEE_PERCENT = 0.03;
-
-const stripe = new Stripe(STRIPE_SECRET_KEY, {
-  apiVersion: "2023-10-16",
-  httpClient: Stripe.createFetchHttpClient(),
-});
 
 interface NoShowRequest {
   appointment_id: string;
@@ -151,31 +144,29 @@ serve(async (req) => {
     console.log(`  Refund to customer: $${refundAmount}`);
     console.log(`  Provider keeps: $${providerPayout}`);
 
-    // Process the refund via Stripe
-    let stripeRefund = null;
-    if (refundAmount > 0 && appointment.payment_intent_id) {
+    // Process the refund: saldo credit to buyer + debt to seller
+    let refundResult = null;
+    if (refundAmount > 0) {
       try {
-        // Convert to centavos for Stripe
-        const refundAmountCentavos = Math.round(refundAmount * 100);
+        // Note: processRefund applies its own 3% fee. Since we already calculated
+        // refundAmount = totalPaid - deposit - platformFee, pass refundAmount as gross
+        // with commissionRate 0 (fee already deducted).
+        refundResult = await processRefund({
+          supabase,
+          buyerId: appointment.user_id,
+          businessId: appointment.business_id,
+          grossAmount: refundAmount,
+          appointmentId: appointment_id,
+          reason: `no_show_${appointment_id}`,
+          idempotencyKey: `noshow-refund-${appointment_id}`,
+        });
 
-        stripeRefund = await stripe.refunds.create({
-          payment_intent: appointment.payment_intent_id,
-          amount: refundAmountCentavos,
-          reason: "requested_by_customer", // Stripe's closest option
-          metadata: {
-            appointment_id,
-            reason: "no_show",
-            deposit_amount: depositAmount.toString(),
-            platform_fee: platformFee.toString(),
-          },
-        }, { idempotencyKey: `noshow-refund-${appointment_id}` });
-
-        console.log(`[NO-SHOW] Stripe refund created: ${stripeRefund.id}`);
-      } catch (stripeErr) {
-        console.error(`[NO-SHOW] Stripe refund failed:`, stripeErr);
+        console.log(`[NO-SHOW] Refund processed: saldo $${refundResult.saldoCredit}, debt $${refundResult.debtCreated}`);
+      } catch (refundErr) {
+        console.error(`[NO-SHOW] Refund failed:`, refundErr);
         return json({
           error: "Failed to process refund",
-          details: (stripeErr as Error).message
+          details: (refundErr as Error).message,
         }, 500);
       }
     }

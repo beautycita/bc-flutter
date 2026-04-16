@@ -73,12 +73,13 @@ serve(async (req) => {
       return json({ error: "Valid year and month (1-12) are required" }, 400);
     }
 
-    // Fetch all withholdings for the period
+    // Fetch active withholdings for the period (exclude reversed)
     const { data: withholdings, error: fetchError } = await supabase
       .from("tax_withholdings")
       .select("*")
       .eq("period_year", year)
       .eq("period_month", month)
+      .neq("status", "reversed")
       .order("created_at", { ascending: true });
 
     if (fetchError) {

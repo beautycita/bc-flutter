@@ -595,7 +595,12 @@ serve(async (req) => {
       }
 
       // =======================================================================
-      // Refunds
+      // Refunds (external: chargebacks or manual Stripe dashboard refunds)
+      // =======================================================================
+      // Under our architecture, we NEVER call stripe.refunds.create().
+      // This event only fires on chargebacks or manual Stripe dashboard actions.
+      // Buyer already got card refund from Stripe — do NOT credit saldo (double refund).
+      // Create seller debt + reverse tax withholdings only.
       // =======================================================================
       case "charge.refunded": {
         const charge = event.data.object as Stripe.Charge;
@@ -603,50 +608,53 @@ serve(async (req) => {
 
         if (!paymentIntentId) break;
 
-        console.log(`[STRIPE-WEBHOOK] Refund processed for payment ${paymentIntentId}`);
+        const refundAmount = (charge.amount_refunded ?? 0) / 100;
+        console.log(`[STRIPE-WEBHOOK] External refund $${refundAmount} for PI ${paymentIntentId}`);
 
-        // Find the booking by payment intent
+        // Try appointment first
         const { data: booking } = await supabase
           .from("appointments")
-          .select("id, user_id, price")
+          .select("id, user_id, business_id, price, payment_status")
           .eq("payment_intent_id", paymentIntentId)
           .maybeSingle();
 
         if (booking) {
-          // Idempotency: skip if already refunded
-          const { data: currentAppt } = await supabase
-            .from("appointments")
-            .select("payment_status")
-            .eq("id", booking.id)
-            .single();
-
-          if (currentAppt?.payment_status === "refunded_to_saldo" || currentAppt?.payment_status === "refunded") {
+          if (booking.payment_status === "refunded_to_saldo" || booking.payment_status === "refunded") {
             console.log(`[STRIPE-WEBHOOK] Booking ${booking.id} already refunded, skipping`);
             break;
           }
 
-          await supabase
-            .from("appointments")
-            .update({
-              payment_status: "refunded_to_saldo",
-              refund_amount: charge.amount_refunded / 100,
-              refunded_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", booking.id);
+          // Mark appointment as refunded
+          await supabase.from("appointments").update({
+            payment_status: "refunded",
+            refund_amount: refundAmount,
+            refunded_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }).eq("id", booking.id);
 
-          // Credit refund to user saldo
-          const refundUserId = booking.user_id;
-          const refundAmount = (charge.amount_refunded / 100) || (booking.price as number) || 0;
-          if (refundUserId && refundAmount > 0) {
-            await supabase.rpc("increment_saldo", {
-              p_user_id: refundUserId,
-              p_amount: refundAmount,
-            });
-            console.log(`[STRIPE-WEBHOOK] Credited $${refundAmount} to saldo for user ${refundUserId}`);
+          // Create seller debt (buyer already got card refund from Stripe)
+          if (refundAmount > 0 && booking.business_id) {
+            await supabase.from("salon_debts").insert({
+              business_id: booking.business_id,
+              original_amount: refundAmount,
+              remaining_amount: refundAmount,
+              reason: "chargeback/external refund",
+              source: "chargeback",
+              appointment_id: booking.id,
+            }).then(null, (e: Error) =>
+              console.error(`[STRIPE-WEBHOOK] Debt creation failed: ${e.message}`)
+            );
           }
 
-          // Idempotency: skip refund payment record if one already exists
+          // Reverse tax withholdings
+          await supabase.rpc("reverse_tax_withholding", {
+            p_appointment_id: booking.id,
+            p_reason: "chargeback",
+          }).then(null, (e: Error) =>
+            console.error(`[STRIPE-WEBHOOK] Tax reversal failed: ${e.message}`)
+          );
+
+          // Record in payments table
           const { data: existingRefund } = await supabase
             .from("payments")
             .select("id")
@@ -654,14 +662,12 @@ serve(async (req) => {
             .eq("status", "refunded")
             .maybeSingle();
 
-          if (existingRefund) {
-            console.log(`[STRIPE-WEBHOOK] Refund record already exists for PI ${paymentIntentId}, skipping`);
-          } else {
+          if (!existingRefund) {
             await supabase.from("payments").insert({
               appointment_id: booking.id,
               user_id: booking.user_id,
               stripe_payment_id: paymentIntentId,
-              amount: -(charge.amount_refunded / 100),
+              amount: -refundAmount,
               currency: charge.currency,
               payment_method: "card",
               status: "refunded",
@@ -670,30 +676,35 @@ serve(async (req) => {
           }
         }
 
-        // --- Product order refund handling (fallback when no appointment found) ---
+        // Product order fallback
         if (!booking) {
           const { data: order } = await supabase
             .from("orders")
-            .select("id, buyer_id, business_id, status, total_amount, commission_amount")
+            .select("id, buyer_id, business_id, status, total_amount")
             .eq("stripe_payment_intent_id", paymentIntentId)
             .maybeSingle();
 
-          if (order) {
-            if (order.status === "refunded") {
-              console.log(`[STRIPE-WEBHOOK] Order ${order.id} already refunded, skipping`);
-            } else {
-              await supabase
-                .from("orders")
-                .update({
-                  status: "refunded",
-                  refunded_at: new Date().toISOString(),
-                })
-                .eq("id", order.id);
+          if (order && order.status !== "refunded") {
+            await supabase.from("orders").update({
+              status: "refunded",
+              refunded_at: new Date().toISOString(),
+            }).eq("id", order.id);
 
-              console.log(`[STRIPE-WEBHOOK] Product order ${order.id} marked as refunded via charge.refunded`);
-              // Commission reversal is handled by order-followup (proactive path),
-              // not here. Webhook is reactive — avoids double-processing.
+            // Create seller debt
+            if (refundAmount > 0 && order.business_id) {
+              await supabase.from("salon_debts").insert({
+                business_id: order.business_id,
+                original_amount: refundAmount,
+                remaining_amount: refundAmount,
+                reason: "chargeback/external refund",
+                source: "chargeback",
+                order_id: order.id,
+              }).then(null, (e: Error) =>
+                console.error(`[STRIPE-WEBHOOK] Order debt creation failed: ${e.message}`)
+              );
             }
+
+            console.log(`[STRIPE-WEBHOOK] Product order ${order.id} refunded externally, debt created`);
           }
         }
         break;

@@ -4,12 +4,12 @@
 // Invoked daily by cron (or manually). Handles escalation tiers:
 //   Day 3:  Push notification to salon — gentle reminder
 //   Day 7:  Push + email to salon — urgent warning
-//   Day 14: Stripe refund, status → refunded, notify buyer
+//   Day 14: Saldo refund to buyer + debt to seller, notify both
 // =============================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import Stripe from "https://esm.sh/stripe@14.21.0?target=deno";
 import { requireFeature } from "../_shared/check-toggle.ts";
+import { processRefund } from "../_shared/refund.ts";
 
 const ALLOWED_ORIGINS = [
   "https://beautycita.com",
@@ -28,14 +28,8 @@ const corsHeaders = (req: Request) => ({
     "authorization, x-client-info, apikey, content-type",
 });
 
-const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-
-const stripe = new Stripe(STRIPE_SECRET_KEY, {
-  apiVersion: "2023-10-16",
-  httpClient: Stripe.createFetchHttpClient(),
-});
 
 let _req: Request;
 
@@ -50,28 +44,21 @@ function json(body: unknown, status = 200) {
 // Types
 // ---------------------------------------------------------------------------
 
-// Commission policy: on product refund, BC keeps 3%, returns 7% to seller
-const COMMISSION_KEEP_RATE = 0.03;
-const TOTAL_COMMISSION_RATE = 0.10;
-
 interface Order {
   id: string;
   buyer_id: string;
   business_id: string;
   product_name: string | null;
   total_amount: number;
-  commission_amount: number;
   payment_method: string | null;
   stripe_payment_intent_id: string | null;
   created_at: string;
   status: string;
-  // Joined from businesses
   businesses: {
     id: string;
     owner_id: string;
     name: string;
     email: string | null;
-    stripe_account_id: string | null;
   } | null;
 }
 
@@ -190,13 +177,11 @@ Deno.serve(async (req: Request) => {
         stripe_payment_intent_id,
         created_at,
         status,
-        commission_amount,
         businesses!inner (
           id,
           owner_id,
           name,
-          email,
-          stripe_account_id
+          email
         )
       `)
       .eq("status", "paid");
@@ -298,91 +283,28 @@ Deno.serve(async (req: Request) => {
       const productName = order.product_name ?? "producto";
 
       try {
-        // 5a. Refund — route by payment method
-        if (order.payment_method === "saldo") {
-          // Saldo purchase: credit buyer's saldo back
-          const { error: saldoErr } = await supabase.rpc("increment_saldo", {
-            p_user_id: order.buyer_id,
-            p_amount: order.total_amount,
-            p_reason: `refund_order_${order.id}`,
-            p_idempotency_key: `order-saldo-refund-${order.id}`,
-          });
-          if (saldoErr) {
-            console.error(`[ORDER-FOLLOWUP] Saldo refund failed for ${shortId}:`, saldoErr.message);
-            refundErrors++;
-            continue;
-          }
-          console.log(`[ORDER-FOLLOWUP] Saldo refund $${order.total_amount} for order ${shortId}`);
-        } else if (order.stripe_payment_intent_id) {
-          // Card/OXXO: Stripe refund
-          await stripe.refunds.create({
-            payment_intent: order.stripe_payment_intent_id,
-          }, { idempotencyKey: `order-refund-${order.id}` });
-          console.log(`[ORDER-FOLLOWUP] Stripe refund PI ${order.stripe_payment_intent_id} for order ${shortId}`);
+        // 5a. Refund: saldo credit to buyer + debt to seller (never card)
+        const result = await processRefund({
+          supabase,
+          buyerId: order.buyer_id,
+          businessId: order.business_id,
+          grossAmount: order.total_amount,
+          orderId: order.id,
+          reason: `order_timeout_${order.id}`,
+          idempotencyKey: `order-refund-${order.id}`,
+        });
 
-          // Return 7% of commission to seller via partial application fee refund
-          const commAmt = order.commission_amount ?? 0;
-          const keepAmt = Math.round(order.total_amount * COMMISSION_KEEP_RATE * 100) / 100;
-          const returnCentavos = Math.round(Math.max(commAmt - keepAmt, 0) * 100);
+        console.log(
+          `[ORDER-FOLLOWUP] Refund for ${shortId}: saldo $${result.saldoCredit}, ` +
+          `debt $${result.debtCreated}, BC fee $${result.processingFee}`
+        );
 
-          if (returnCentavos > 0) {
-            try {
-              const charges = await stripe.charges.list({
-                payment_intent: order.stripe_payment_intent_id!,
-                limit: 1,
-              });
-              const feeId = charges.data[0]?.application_fee as string;
-
-              if (feeId) {
-                await stripe.applicationFees.createRefund(feeId, {
-                  amount: returnCentavos,
-                });
-                console.log(`[ORDER-FOLLOWUP] Returned ${returnCentavos} centavos commission to seller for order ${shortId}`);
-              } else {
-                console.warn(`[ORDER-FOLLOWUP] No application fee found for PI ${order.stripe_payment_intent_id}`);
-              }
-            } catch (feeErr) {
-              // Non-fatal: buyer refund succeeded, commission return is best-effort
-              console.error(`[ORDER-FOLLOWUP] Commission return failed for ${shortId}:`, (feeErr as Error).message);
-            }
-          }
-        } else {
-          console.warn(`[ORDER-FOLLOWUP] Order ${shortId} has no payment_method or stripe PI, skipping refund`);
-        }
-
-        // 5b. Record commission reversal (keep 3%, return 7%)
-        const commissionAmount = order.commission_amount ?? 0;
-        const keepAmount = Math.round(order.total_amount * COMMISSION_KEEP_RATE * 100) / 100;
-        const returnToSeller = Math.round((commissionAmount - keepAmount) * 100) / 100;
-
-        if (returnToSeller > 0) {
-          const { error: commErr } = await supabase
-            .from("commission_records")
-            .insert({
-              business_id: order.business_id,
-              order_id: order.id,
-              amount: -returnToSeller,
-              rate: TOTAL_COMMISSION_RATE - COMMISSION_KEEP_RATE,
-              source: "product_sale_reversal",
-              period_month: new Date().getMonth() + 1,
-              period_year: new Date().getFullYear(),
-              status: "collected",
-            });
-
-          if (commErr) {
-            console.error(`[ORDER-FOLLOWUP] Commission reversal record failed for ${shortId}:`, commErr.message);
-          } else {
-            console.log(`[ORDER-FOLLOWUP] Commission reversal: -$${returnToSeller} for order ${shortId}`);
-          }
-        }
-
-        // 5d. Update order status
+        // 5b. Update order status
         const { error: updateErr } = await supabase
           .from("orders")
           .update({
             status: "refunded",
             refunded_at: new Date().toISOString(),
-            commission_refund_amount: returnToSeller > 0 ? returnToSeller : 0,
           })
           .eq("id", order.id);
 
