@@ -191,7 +191,11 @@ serve(async (req) => {
       if (attempt < 2) await new Promise((r) => setTimeout(r, 500));
     }
     if (!roleUpdated) {
-      console.error("[REGISTER-BIZ] All role update attempts failed — portal access may be blocked");
+      console.error("[REGISTER-BIZ] All role update attempts failed — aborting registration");
+      // Rollback: delete business and staff
+      await supabase.from("staff").delete().eq("business_id", business.id);
+      await supabase.from("businesses").delete().eq("id", business.id);
+      return json({ error: "Failed to update user role. Please try again." }, 500);
     }
 
     // 4. Create default weekly schedule

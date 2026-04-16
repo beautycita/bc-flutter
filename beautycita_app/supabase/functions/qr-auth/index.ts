@@ -9,6 +9,25 @@ function generateCode(length = 8): string {
   return Array.from(arr, (b) => chars[b % chars.length]).join("");
 }
 
+// ── Rate limiting ─────────────────────────────────────────────────────────
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(key: string, limit: number, windowMs: number): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(key);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(key, { count: 1, resetAt: now + windowMs });
+    return true;
+  }
+  if (entry.count >= limit) return false;
+  entry.count++;
+  return true;
+}
+
+function getClientIp(req: Request): string {
+  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+}
+
 serve(async (req) => {
   const _pre = handleCorsPreflightIfOptions(req);
   if (_pre) return _pre;
@@ -30,6 +49,9 @@ serve(async (req) => {
 
     // ===== CREATE =====
     if (action === "create") {
+      // Rate limit: 10 per hour per IP (create has no auth)
+      const ip = getClientIp(req);
+      if (!checkRateLimit(`qr_create_${ip}`, 10, 3600000)) return json({ error: "Too many QR sessions. Try again later." }, 429);
       // Generate unique code (retry on collision)
       let code = "";
       for (let i = 0; i < 5; i++) {
@@ -145,6 +167,9 @@ serve(async (req) => {
       } = await supabase.auth.getUser(token);
       if (authError || !user) return json({ error: "Invalid token" }, 401);
 
+      // Rate limit: 5 per minute per user
+      if (!checkRateLimit(`qr_auth_${user.id}`, 5, 60000)) return json({ error: "Too many attempts. Wait a moment." }, 429);
+
       // Find pending session
       const { data: session, error: sessError } = await supabase
         .from("qr_auth_sessions")
@@ -214,6 +239,9 @@ serve(async (req) => {
       const { session_id, verify_token } = body;
       if (!session_id) return json({ error: "session_id is required" }, 400);
       if (!verify_token) return json({ error: "verify_token is required" }, 400);
+
+      // Rate limit: 5 per minute per session_id
+      if (!checkRateLimit(`qr_verify_${session_id}`, 5, 60000)) return json({ error: "Too many verify attempts." }, 429);
 
       const { data: session, error: sessError } = await supabase
         .from("qr_auth_sessions")

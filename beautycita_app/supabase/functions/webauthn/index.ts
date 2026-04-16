@@ -187,6 +187,25 @@ function parseAuthenticatorData(buf: Uint8Array): AuthData {
   return result;
 }
 
+// ── Rate limiting ─────────────────────────────────────────────────────────
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(key: string, limit: number, windowMs: number): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(key);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(key, { count: 1, resetAt: now + windowMs });
+    return true;
+  }
+  if (entry.count >= limit) return false;
+  entry.count++;
+  return true;
+}
+
+function getClientIp(req: Request): string {
+  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+}
+
 // ── Main handler ────────────────────────────────────────────────────────────
 
 serve(async (req) => {
@@ -213,6 +232,9 @@ serve(async (req) => {
         error: authError,
       } = await supabase.auth.getUser(token);
       if (authError || !user) return json({ error: "Invalid token" }, 401);
+
+      // Rate limit: 5 per 15 min per user
+      if (!checkRateLimit(`wa_regchal_${user.id}`, 5, 900000)) return json({ error: "Too many challenge requests. Try again later." }, 429);
 
       const challenge = randomChallenge();
 
@@ -258,6 +280,9 @@ serve(async (req) => {
         error: authError,
       } = await supabase.auth.getUser(token);
       if (authError || !user) return json({ error: "Invalid token" }, 401);
+
+      // Rate limit: 5 per 15 min per user
+      if (!checkRateLimit(`wa_regver_${user.id}`, 5, 900000)) return json({ error: "Too many verify attempts. Try again later." }, 429);
 
       const {
         credential_id,
@@ -355,6 +380,10 @@ serve(async (req) => {
     // ===== LOGIN CHALLENGE =====
     // No auth required — this IS the login
     if (action === "login-challenge") {
+      // Rate limit: 10 per 15 min per IP
+      const ip = getClientIp(req);
+      if (!checkRateLimit(`wa_logchal_${ip}`, 10, 900000)) return json({ error: "Too many challenge requests. Try again later." }, 429);
+
       const challenge = randomChallenge();
 
       const { error: insertErr } = await supabase
@@ -397,6 +426,9 @@ serve(async (req) => {
       ) {
         return json({ error: "Missing assertion data" }, 400);
       }
+
+      // Rate limit: 5 per 15 min per credential_id
+      if (!checkRateLimit(`wa_logver_${credential_id}`, 5, 900000)) return json({ error: "Too many login attempts. Try again later." }, 429);
 
       // Look up credential
       const { data: cred, error: credErr } = await supabase

@@ -294,54 +294,27 @@ Deno.serve(async (req) => {
       })
       .eq("id", user.id);
 
-    // Check if a business exists owned by a different auth user with this phone
-    // (happens when salon registered via web invite, then owner downloads mobile app)
+    // Check if a business matches this phone (for admin visibility only — NO auto-transfer)
     const digits = phone.replace(/[^\d]/g, "");
     const last10 = digits.length >= 10 ? digits.slice(-10) : digits;
-    let businessTransferred = false;
+    let businessMatch = null;
 
     if (last10.length === 10) {
       const { data: existingBiz } = await db
         .from("businesses")
-        .select("id, owner_id, name")
+        .select("id, name")
         .or(`phone.ilike.%${last10}`)
         .neq("owner_id", user.id)
         .limit(1)
         .maybeSingle();
 
       if (existingBiz) {
-        const oldOwnerId = existingBiz.owner_id;
-        console.log(`[phone-verify] Transferring business "${existingBiz.name}" from ${oldOwnerId} to ${user.id}`);
-
-        // Transfer business ownership
-        await db
-          .from("businesses")
-          .update({ owner_id: user.id })
-          .eq("id", existingBiz.id);
-
-        // Transfer staff record
-        await db
-          .from("staff")
-          .update({ user_id: user.id })
-          .eq("business_id", existingBiz.id)
-          .eq("user_id", oldOwnerId);
-
-        // Update current user's role to stylist (constraint: customer/stylist/admin/superadmin/rp)
-        await db
-          .from("profiles")
-          .update({ role: "stylist" })
-          .eq("id", user.id);
-
-        // Delete the orphaned web-created auth user + profile
-        await db.from("profiles").delete().eq("id", oldOwnerId);
-        await db.auth.admin.deleteUser(oldOwnerId);
-
-        businessTransferred = true;
-        console.log(`[phone-verify] Business "${existingBiz.name}" transferred successfully`);
+        businessMatch = { id: existingBiz.id, name: existingBiz.name };
+        console.log(`[phone-verify] Business match found: "${existingBiz.name}" — flagged for manual review (no auto-transfer)`);
       }
     }
 
-    return json({ verified: true, business_transferred: businessTransferred });
+    return json({ verified: true, business_match: businessMatch });
   }
 
   return json({ error: `Unknown action: ${action}` }, 400);
