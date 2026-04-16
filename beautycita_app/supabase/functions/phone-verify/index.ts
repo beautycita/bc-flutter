@@ -12,6 +12,12 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+async function hashOtp(otp: string): Promise<string> {
+  const data = new TextEncoder().encode(otp);
+  const hash = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
 const ALLOWED_ORIGINS = [
   "https://beautycita.com",
   "https://www.beautycita.com",
@@ -226,7 +232,7 @@ Deno.serve(async (req) => {
     await db.from("phone_verification_codes").insert({
       user_id: user.id,
       phone,
-      code: otp,
+      code: await hashOtp(otp),
       channel: result.channel,
       expires_at: expiresAt,
     });
@@ -272,7 +278,7 @@ Deno.serve(async (req) => {
       .eq("id", record.id);
 
     // Direct code comparison — same code for all channels (WA and SMS)
-    const verified = record.code === code;
+    const verified = record.code === await hashOtp(code);
 
     if (!verified) {
       return json({ error: "Codigo incorrecto", remaining: MAX_ATTEMPTS - record.attempts - 1 }, 400);

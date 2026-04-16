@@ -223,9 +223,24 @@ final routerProvider = Provider<GoRouter>((ref) {
         return WebRoutes.auth;
       }
 
+      // Redirect unverified email users to verify page (skip for public routes + verify page itself)
+      if (isAuthenticated && !isPublicRoute && !path.startsWith('/auth/verify')) {
+        final user = BCSupabase.client.auth.currentUser;
+        if (user != null && user.emailConfirmedAt == null && user.email != null) {
+          return WebRoutes.verify;
+        }
+      }
+
       // Authenticated user on auth page → send to correct portal by role
       // (but allow `/` and `/soporte` — those are viewable when logged in)
       if (isAuthenticated && path.startsWith('/auth')) {
+        // Let unverified-email users stay on the verify page
+        if (path == '/auth/verify') {
+          final user = BCSupabase.client.auth.currentUser;
+          if (user != null && user.emailConfirmedAt == null && user.email != null) {
+            return null; // stay on verify page
+          }
+        }
         final role = await ref.read(authProvider.notifier).getUserRole();
         return routeForRole(role);
       }

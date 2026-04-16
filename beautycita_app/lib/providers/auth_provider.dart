@@ -52,8 +52,30 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final BiometricService _biometricService;
   final UserSession _userSession;
 
+  static const _attemptsKey = 'auth_login_attempts';
+  static const _attemptsTimeKey = 'auth_login_attempts_time';
+
   DateTime? _lastLoginAttempt;
   int _loginAttempts = 0;
+
+  Future<void> _loadAttempts() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedTime = prefs.getInt(_attemptsTimeKey) ?? 0;
+    final elapsed = DateTime.now().millisecondsSinceEpoch - savedTime;
+    if (elapsed > 15 * 60 * 1000) {
+      _loginAttempts = 0;
+      await prefs.remove(_attemptsKey);
+      await prefs.remove(_attemptsTimeKey);
+    } else {
+      _loginAttempts = prefs.getInt(_attemptsKey) ?? 0;
+    }
+  }
+
+  Future<void> _saveAttempts() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_attemptsKey, _loginAttempts);
+    await prefs.setInt(_attemptsTimeKey, DateTime.now().millisecondsSinceEpoch);
+  }
 
   AuthNotifier({
     required BiometricService biometricService,
@@ -225,6 +247,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   /// Login with biometric authentication
   Future<bool> login() async {
+    await _loadAttempts();
+
     // Rate limit: 3 second cooldown between attempts
     final now = DateTime.now();
     if (_lastLoginAttempt != null && now.difference(_lastLoginAttempt!) < const Duration(seconds: 3)) {
@@ -235,6 +259,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
     // Exponential backoff after 5 failed attempts
     _loginAttempts++;
+    await _saveAttempts();
     if (_loginAttempts > 5) {
       final backoffSeconds = _loginAttempts * 5;
       state = state.copyWith(error: 'Demasiados intentos. Espera $backoffSeconds segundos.');
@@ -273,6 +298,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
       // Update state
       _loginAttempts = 0;
+      await _saveAttempts();
       state = state.copyWith(
         isLoading: false,
         isAuthenticated: true,
@@ -290,6 +316,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   /// Sign in with email and password (hidden dev/test login)
   Future<bool> signInWithEmail(String email, String password) async {
+    await _loadAttempts();
+
     // Rate limit: 3 second cooldown between attempts
     final now = DateTime.now();
     if (_lastLoginAttempt != null && now.difference(_lastLoginAttempt!) < const Duration(seconds: 3)) {
@@ -300,6 +328,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
     // Exponential backoff after 5 failed attempts
     _loginAttempts++;
+    await _saveAttempts();
     if (_loginAttempts > 5) {
       final backoffSeconds = _loginAttempts * 5;
       state = state.copyWith(error: 'Demasiados intentos. Espera $backoffSeconds segundos.');
@@ -327,6 +356,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _userSession.updateLastLogin();
       final username = await _userSession.getUsername();
       _loginAttempts = 0;
+      await _saveAttempts();
       state = state.copyWith(
         isLoading: false,
         isAuthenticated: true,
