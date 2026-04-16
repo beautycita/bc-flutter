@@ -266,7 +266,8 @@ class _AvatarCircleState extends ConsumerState<_AvatarCircle> {
           _avatarUrl = data?['avatar_url'] as String?;
         });
       }
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[CLIENT-SHELL] Profile load failed: $e');
       if (mounted) setState(() => _role = role);
     }
   }

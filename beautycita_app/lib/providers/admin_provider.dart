@@ -351,7 +351,7 @@ final adminDisputesProvider =
     FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final response = await SupabaseClientService.client
       .from(BCTables.disputes)
-      .select('*, appointments(id, service_name, price, starts_at, status, user_id, businesses(name, owner_id, stripe_account_id))')
+      .select('*, appointments(id, service_name, price, starts_at, status, user_id, businesses(name, owner_id, stripe_account_id)), orders(id, product_name, total_amount, status, created_at)')
       .order('created_at', ascending: false);
   return (response as List).cast<Map<String, dynamic>>();
 });

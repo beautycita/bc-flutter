@@ -15,8 +15,10 @@ import 'package:beautycita/services/supabase_client.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/empty_state.dart';
 import 'package:beautycita/services/toast_service.dart';
+import 'package:beautycita/providers/order_provider.dart';
+import 'package:beautycita_core/models.dart' show Order;
 
-/// Disputes for the current user, keyed by appointment_id.
+/// Disputes for the current user, keyed by appointment_id OR order_id.
 final userDisputesProvider =
     FutureProvider<Map<String, Map<String, dynamic>>>((ref) async {
   final userId = SupabaseClientService.currentUserId;
@@ -27,19 +29,23 @@ final userDisputesProvider =
       .eq('user_id', userId)
       .order('created_at', ascending: false);
   final list = (response as List).cast<Map<String, dynamic>>();
-  // Key by appointment_id for quick lookup
+  // Key by appointment_id or order_id for quick lookup
   final map = <String, Map<String, dynamic>>{};
   for (final d in list) {
     final apptId = d['appointment_id'] as String?;
+    final orderId = d['order_id'] as String?;
     if (apptId != null && !map.containsKey(apptId)) {
       map[apptId] = d;
+    }
+    if (orderId != null && !map.containsKey(orderId)) {
+      map[orderId] = d;
     }
   }
   return map;
 });
 
 /// Filter tabs for the user's bookings list.
-enum _BookingTab { proximas, pasadas, canceladas }
+enum _BookingTab { proximas, pasadas, canceladas, pedidos }
 
 class MyBookingsScreen extends ConsumerStatefulWidget {
   const MyBookingsScreen({super.key});
@@ -111,6 +117,8 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
         return 'Pasadas';
       case _BookingTab.canceladas:
         return 'Canceladas';
+      case _BookingTab.pedidos:
+        return 'Pedidos';
     }
   }
 
@@ -143,6 +151,8 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
             .where((b) => _isCancelled(b.status))
             .toList()
           ..sort((a, b) => b.scheduledAt.compareTo(a.scheduledAt));
+      case _BookingTab.pedidos:
+        return []; // Orders are handled separately, not through this filter
     }
   }
 
@@ -204,6 +214,8 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
         return 'No tienes citas pasadas';
       case _BookingTab.canceladas:
         return 'No tienes citas canceladas';
+      case _BookingTab.pedidos:
+        return 'No tienes pedidos';
     }
   }
 
@@ -1118,6 +1130,311 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
     ToastService.showWarning('Disputa escalada a administracion. Te contactaremos pronto.');
   }
 
+  // ---------------------------------------------------------------------------
+  // Orders tab (Pedidos)
+  // ---------------------------------------------------------------------------
+
+  Widget _buildOrdersContent(
+    TextTheme textTheme,
+    ColorScheme colorScheme,
+    Map<String, Map<String, dynamic>> disputes,
+  ) {
+    final ordersAsync = ref.watch(buyerOrdersProvider);
+    return ordersAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, _) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppConstants.paddingLG),
+          child: Text(
+            'Error al cargar pedidos: $err',
+            style: textTheme.bodyLarge?.copyWith(color: colorScheme.error),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
+      data: (orders) {
+        if (orders.isEmpty) return _buildEmptyState(textTheme);
+
+        return RefreshIndicator(
+          color: colorScheme.primary,
+          onRefresh: () async {
+            ref.invalidate(buyerOrdersProvider);
+            ref.invalidate(userDisputesProvider);
+            await ref.read(buyerOrdersProvider.future);
+          },
+          child: ListView.separated(
+            physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppConstants.screenPaddingHorizontal,
+              vertical: AppConstants.paddingMD,
+            ),
+            itemCount: orders.length,
+            separatorBuilder: (_, __) => const SizedBox(height: AppConstants.paddingSM),
+            itemBuilder: (context, index) => _buildOrderCard(orders[index], textTheme, disputes),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildOrderCard(Order order, TextTheme textTheme, Map<String, Map<String, dynamic>> disputes) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
+    final dispute = disputes[order.id];
+    final hasDispute = dispute != null;
+    final canDispute = order.isDelivered && !hasDispute;
+    final formatter = DateFormat("d MMM yyyy", 'es');
+
+    Color statusColor;
+    String statusLabel;
+    switch (order.status) {
+      case 'paid':
+        statusColor = Colors.amber.shade700;
+        statusLabel = 'Pendiente envio';
+      case 'shipped':
+        statusColor = Colors.blue.shade600;
+        statusLabel = 'Enviado';
+      case 'delivered':
+        statusColor = ext.successColor;
+        statusLabel = 'Entregado';
+      case 'refunded':
+        statusColor = colorScheme.error;
+        statusLabel = 'Reembolsado';
+      case 'cancelled':
+        statusColor = colorScheme.error;
+        statusLabel = 'Cancelado';
+      default:
+        statusColor = colorScheme.onSurface.withValues(alpha: 0.5);
+        statusLabel = order.status;
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(AppConstants.radiusLG),
+        border: Border.all(color: ext.cardBorderColor),
+      ),
+      padding: const EdgeInsets.all(AppConstants.paddingMD),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.shopping_bag_outlined, size: 20, color: colorScheme.primary),
+              const SizedBox(width: AppConstants.paddingXS),
+              Expanded(
+                child: Text(
+                  order.productName,
+                  style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+                ),
+                child: Text(
+                  statusLabel,
+                  style: textTheme.labelSmall?.copyWith(color: statusColor, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppConstants.paddingXS),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '\$${order.totalAmount.toStringAsFixed(2)} MXN',
+                style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+              ),
+              Text(
+                formatter.format(order.createdAt),
+                style: textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurface.withValues(alpha: 0.5),
+                ),
+              ),
+            ],
+          ),
+          if (order.trackingNumber != null) ...[
+            const SizedBox(height: AppConstants.paddingXS),
+            Text(
+              'Guia: ${order.trackingNumber}',
+              style: textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
+            ),
+          ],
+          if (order.isShippingUrgent && order.isPaid) ...[
+            const SizedBox(height: AppConstants.paddingXS),
+            Text(
+              'Envio vence en ${order.shippingDeadlineDaysLeft} dias',
+              style: textTheme.bodySmall?.copyWith(color: Colors.orange.shade700, fontWeight: FontWeight.w600),
+            ),
+          ],
+          if (hasDispute) ...[
+            const SizedBox(height: AppConstants.paddingSM),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: colorScheme.error.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+              ),
+              child: Text(
+                'Disputa: ${dispute['status'] == 'resolved' ? 'Resuelta' : 'En proceso'}',
+                style: textTheme.labelSmall?.copyWith(color: colorScheme.error),
+              ),
+            ),
+          ],
+          if (canDispute) ...[
+            const SizedBox(height: AppConstants.paddingSM),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _openOrderDispute(order),
+                icon: const Icon(Icons.gavel, size: 16),
+                label: const Text('Disputar pedido'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: colorScheme.error,
+                  side: BorderSide(color: colorScheme.error.withValues(alpha: 0.3)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppConstants.radiusLG),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openOrderDispute(Order order) async {
+    final reasons = [
+      'Producto danado',
+      'Producto incorrecto',
+      'No recibi el producto',
+      'Calidad diferente a la descripcion',
+      'Otro',
+    ];
+
+    String? selectedReason;
+    final detailsCtl = TextEditingController();
+
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppConstants.radiusXL)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(builder: (ctx, setSheetState) {
+          return SafeArea(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                AppConstants.paddingLG,
+                AppConstants.paddingMD,
+                AppConstants.paddingLG,
+                MediaQuery.of(ctx).viewInsets.bottom + AppConstants.paddingLG,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40, height: 4,
+                      decoration: BoxDecoration(
+                        color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppConstants.paddingMD),
+                  Icon(Icons.gavel, size: AppConstants.iconSizeXL, color: Theme.of(ctx).colorScheme.error),
+                  const SizedBox(height: AppConstants.paddingSM),
+                  Text('Disputar pedido', style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: AppConstants.paddingXS),
+                  Text(
+                    order.productName,
+                    style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  const SizedBox(height: AppConstants.paddingMD),
+                  ...reasons.map((r) => RadioListTile<String>(
+                    value: r,
+                    groupValue: selectedReason,
+                    onChanged: (v) => setSheetState(() => selectedReason = v),
+                    title: Text(r, style: Theme.of(ctx).textTheme.bodyMedium),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                  )),
+                  const SizedBox(height: AppConstants.paddingSM),
+                  TextField(
+                    controller: detailsCtl,
+                    maxLines: 3,
+                    maxLength: 500,
+                    decoration: InputDecoration(
+                      hintText: 'Detalles adicionales (opcional)',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppConstants.radiusMD)),
+                    ),
+                  ),
+                  const SizedBox(height: AppConstants.paddingMD),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: selectedReason == null
+                          ? null
+                          : () => Navigator.pop(ctx, true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(ctx).colorScheme.error,
+                        foregroundColor: Theme.of(ctx).colorScheme.onError,
+                        minimumSize: const Size(0, AppConstants.minTouchHeight),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppConstants.radiusLG),
+                        ),
+                      ),
+                      child: const Text('Enviar disputa'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        });
+      },
+    );
+
+    if (confirmed != true || selectedReason == null) return;
+
+    final userId = SupabaseClientService.currentUserId;
+    if (userId == null) return;
+
+    try {
+      await SupabaseClientService.client.from(BCTables.disputes).insert({
+        'order_id': order.id,
+        'user_id': userId,
+        'business_id': order.businessId,
+        'reason': selectedReason,
+        'client_evidence': detailsCtl.text.trim().isEmpty ? null : detailsCtl.text.trim(),
+        'status': 'open',
+        'refund_amount': order.totalAmount,
+        'refund_status': 'pending',
+      });
+
+      ref.invalidate(userDisputesProvider);
+      ref.invalidate(buyerOrdersProvider);
+      ToastService.showSuccess('Disputa enviada. Te notificaremos cuando haya una resolucion.');
+    } catch (e) {
+      if (kDebugMode) debugPrint('Order dispute failed: $e');
+      ToastService.showError('Error al enviar disputa. Intenta de nuevo.');
+    }
+    detailsCtl.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final bookingsAsync = ref.watch(userBookingsProvider);
@@ -1134,9 +1451,11 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
           // -- Filter Chips --
           _animated(0, _buildFilterChips(textTheme)),
 
-          // -- Booking List --
+          // -- Content: bookings or orders depending on tab --
           Expanded(
-            child: _animated(1, bookingsAsync.when(
+            child: _animated(1, _activeTab == _BookingTab.pedidos
+              ? _buildOrdersContent(textTheme, colorScheme, disputes)
+              : bookingsAsync.when(
               loading: () =>
                   const Center(child: CircularProgressIndicator()),
               error: (err, _) => Center(

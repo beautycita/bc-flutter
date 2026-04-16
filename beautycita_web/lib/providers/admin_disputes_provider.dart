@@ -12,6 +12,9 @@ class Dispute {
   final String salonId;
   final String salonName;
   final String? bookingRef;
+  final String? orderId;
+  final bool isOrderDispute;
+  final String? orderProductName;
   final String type; // 'service_quality', 'no_show', 'overcharge', 'other'
   final double amount;
   final String status; // 'open', 'salon_responded', 'escalated', 'resolved', 'rejected'
@@ -40,6 +43,9 @@ class Dispute {
     required this.salonId,
     required this.salonName,
     this.bookingRef,
+    this.orderId,
+    this.isOrderDispute = false,
+    this.orderProductName,
     required this.type,
     required this.amount,
     required this.status,
@@ -82,6 +88,11 @@ class Dispute {
               ? json['businesses']['name'] as String? ?? 'Salon'
               : 'Salon'),
       bookingRef: json['appointment_id'] as String?,
+      orderId: json['order_id'] as String?,
+      isOrderDispute: json['order_id'] != null && json['appointment_id'] == null,
+      orderProductName: json['orders'] != null
+          ? (json['orders'] as Map<String, dynamic>)['product_name'] as String?
+          : null,
       type: json['reason'] as String? ?? 'other',
       amount: (json['refund_amount'] as num?)?.toDouble() ?? 0,
       status: json['status'] as String? ?? 'open',

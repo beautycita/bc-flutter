@@ -370,22 +370,11 @@ final businessDisputesProvider =
 
   final bizId = biz['id'] as String;
 
-  // Get appointment IDs for this business
-  final appointments = await SupabaseClientService.client
-      .from(BCTables.appointments)
-      .select('id')
-      .eq('business_id', bizId);
-
-  final appointmentIds = (appointments as List)
-      .map((a) => (a as Map)['id'] as String)
-      .toList();
-
-  if (appointmentIds.isEmpty) return [];
-
+  // Fetch all disputes for this business (appointments + orders)
   final response = await SupabaseClientService.client
       .from(BCTables.disputes)
       .select()
-      .inFilter('appointment_id', appointmentIds)
+      .eq('business_id', bizId)
       .order('created_at', ascending: false);
 
   return (response as List).cast<Map<String, dynamic>>();

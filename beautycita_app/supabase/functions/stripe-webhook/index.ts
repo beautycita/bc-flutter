@@ -213,7 +213,7 @@ serve(async (req) => {
           const { data: existingOrder } = await supabase
             .from("orders")
             .select("id")
-            .eq("stripe_payment_id", paymentIntent.id)
+            .eq("stripe_payment_intent_id", paymentIntent.id)
             .maybeSingle();
 
           if (existingOrder) {
@@ -667,6 +667,33 @@ serve(async (req) => {
               status: "refunded",
               created_at: new Date().toISOString(),
             });
+          }
+        }
+
+        // --- Product order refund handling (fallback when no appointment found) ---
+        if (!booking) {
+          const { data: order } = await supabase
+            .from("orders")
+            .select("id, buyer_id, business_id, status, total_amount, commission_amount")
+            .eq("stripe_payment_intent_id", paymentIntentId)
+            .maybeSingle();
+
+          if (order) {
+            if (order.status === "refunded") {
+              console.log(`[STRIPE-WEBHOOK] Order ${order.id} already refunded, skipping`);
+            } else {
+              await supabase
+                .from("orders")
+                .update({
+                  status: "refunded",
+                  refunded_at: new Date().toISOString(),
+                })
+                .eq("id", order.id);
+
+              console.log(`[STRIPE-WEBHOOK] Product order ${order.id} marked as refunded via charge.refunded`);
+              // Commission reversal is handled by order-followup (proactive path),
+              // not here. Webhook is reactive — avoids double-processing.
+            }
           }
         }
         break;

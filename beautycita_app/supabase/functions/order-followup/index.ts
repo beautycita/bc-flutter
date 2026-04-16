@@ -50,11 +50,18 @@ function json(body: unknown, status = 200) {
 // Types
 // ---------------------------------------------------------------------------
 
+// Commission policy: on product refund, BC keeps 3%, returns 7% to seller
+const COMMISSION_KEEP_RATE = 0.03;
+const TOTAL_COMMISSION_RATE = 0.10;
+
 interface Order {
   id: string;
   buyer_id: string;
   business_id: string;
   product_name: string | null;
+  total_amount: number;
+  commission_amount: number;
+  payment_method: string | null;
   stripe_payment_intent_id: string | null;
   created_at: string;
   status: string;
@@ -64,6 +71,7 @@ interface Order {
     owner_id: string;
     name: string;
     email: string | null;
+    stripe_account_id: string | null;
   } | null;
 }
 
@@ -182,11 +190,13 @@ Deno.serve(async (req: Request) => {
         stripe_payment_intent_id,
         created_at,
         status,
+        commission_amount,
         businesses!inner (
           id,
           owner_id,
           name,
-          email
+          email,
+          stripe_account_id
         )
       `)
       .eq("status", "paid");
@@ -309,16 +319,70 @@ Deno.serve(async (req: Request) => {
             payment_intent: order.stripe_payment_intent_id,
           }, { idempotencyKey: `order-refund-${order.id}` });
           console.log(`[ORDER-FOLLOWUP] Stripe refund PI ${order.stripe_payment_intent_id} for order ${shortId}`);
+
+          // Return 7% of commission to seller via partial application fee refund
+          const commAmt = order.commission_amount ?? 0;
+          const keepAmt = Math.round(order.total_amount * COMMISSION_KEEP_RATE * 100) / 100;
+          const returnCentavos = Math.round(Math.max(commAmt - keepAmt, 0) * 100);
+
+          if (returnCentavos > 0) {
+            try {
+              const charges = await stripe.charges.list({
+                payment_intent: order.stripe_payment_intent_id!,
+                limit: 1,
+              });
+              const feeId = charges.data[0]?.application_fee as string;
+
+              if (feeId) {
+                await stripe.applicationFees.createRefund(feeId, {
+                  amount: returnCentavos,
+                });
+                console.log(`[ORDER-FOLLOWUP] Returned ${returnCentavos} centavos commission to seller for order ${shortId}`);
+              } else {
+                console.warn(`[ORDER-FOLLOWUP] No application fee found for PI ${order.stripe_payment_intent_id}`);
+              }
+            } catch (feeErr) {
+              // Non-fatal: buyer refund succeeded, commission return is best-effort
+              console.error(`[ORDER-FOLLOWUP] Commission return failed for ${shortId}:`, (feeErr as Error).message);
+            }
+          }
         } else {
           console.warn(`[ORDER-FOLLOWUP] Order ${shortId} has no payment_method or stripe PI, skipping refund`);
         }
 
-        // 5b. Update order status
+        // 5b. Record commission reversal (keep 3%, return 7%)
+        const commissionAmount = order.commission_amount ?? 0;
+        const keepAmount = Math.round(order.total_amount * COMMISSION_KEEP_RATE * 100) / 100;
+        const returnToSeller = Math.round((commissionAmount - keepAmount) * 100) / 100;
+
+        if (returnToSeller > 0) {
+          const { error: commErr } = await supabase
+            .from("commission_records")
+            .insert({
+              business_id: order.business_id,
+              order_id: order.id,
+              amount: -returnToSeller,
+              rate: TOTAL_COMMISSION_RATE - COMMISSION_KEEP_RATE,
+              source: "product_sale_reversal",
+              period_month: new Date().getMonth() + 1,
+              period_year: new Date().getFullYear(),
+              status: "collected",
+            });
+
+          if (commErr) {
+            console.error(`[ORDER-FOLLOWUP] Commission reversal record failed for ${shortId}:`, commErr.message);
+          } else {
+            console.log(`[ORDER-FOLLOWUP] Commission reversal: -$${returnToSeller} for order ${shortId}`);
+          }
+        }
+
+        // 5d. Update order status
         const { error: updateErr } = await supabase
           .from("orders")
           .update({
             status: "refunded",
             refunded_at: new Date().toISOString(),
+            commission_refund_amount: returnToSeller > 0 ? returnToSeller : 0,
           })
           .eq("id", order.id);
 
@@ -328,7 +392,7 @@ Deno.serve(async (req: Request) => {
           continue;
         }
 
-        // 5c. Notify buyer
+        // 5e. Notify buyer
         await sendPush(
           order.buyer_id,
           "Pedido reembolsado",
@@ -336,7 +400,7 @@ Deno.serve(async (req: Request) => {
           { type: "order_refunded", order_id: order.id },
         );
 
-        // 5d. Notify salon owner too
+        // 5f. Notify salon owner too
         const ownerId = order.businesses?.owner_id;
         if (ownerId) {
           await sendPush(

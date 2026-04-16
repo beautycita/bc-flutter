@@ -1396,7 +1396,7 @@ Deno.serve(async (req: Request) => {
             name: "Servicio General",
             duration_minutes: 30,
             price: 0,
-            active: true,
+            is_active: true,
           });
         if (serviceError) {
           console.error("[SALON-REG] Failed to create default service:", serviceError);

@@ -1,15 +1,18 @@
 // =============================================================================
 // process-dispute-refund — Process Stripe refund for resolved disputes
 // =============================================================================
+// Handles BOTH appointment disputes and product order disputes.
 // When a dispute resolves with a refund (admin, salon full_refund, or client
 // accepts partial_refund):
 // 1. Validate dispute has pending refund
-// 2. Look up appointment payment_intent_id and business stripe_account_id
-// 3. Call stripe.refunds.create()
-// 4. Update dispute refund_status → processed
-// 5. Update appointment payment_status + refunded_at
-// 6. Record in payments table
-// 7. Notify client
+// 2. Detect dispute type (appointment vs order)
+// 3. Look up payment_intent_id from the correct source
+// 4. Call stripe.refunds.create()
+// 5. For orders: partial application fee refund (keep 3%, return 7%)
+// 6. Update dispute refund_status → processed
+// 7. Update source record (appointment or order)
+// 8. Record commission reversal for orders
+// 9. Notify client
 // =============================================================================
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
@@ -74,32 +77,10 @@ serve(async (req) => {
       return json({ error: "dispute_id is required" }, 400);
     }
 
-    // Fetch dispute with appointment and business data
+    // Fetch dispute base data (without nested joins — we detect type first)
     const { data: dispute, error: fetchError } = await supabase
       .from("disputes")
-      .select(`
-        id,
-        user_id,
-        appointment_id,
-        refund_amount,
-        refund_status,
-        resolution,
-        status,
-        appointments!inner (
-          id,
-          user_id,
-          business_id,
-          price,
-          payment_intent_id,
-          payment_status,
-          businesses!inner (
-            id,
-            name,
-            owner_id,
-            stripe_account_id
-          )
-        )
-      `)
+      .select("id, user_id, business_id, appointment_id, order_id, refund_amount, refund_status, resolution, status")
       .eq("id", dispute_id)
       .single();
 
@@ -108,12 +89,10 @@ serve(async (req) => {
       return json({ error: "Dispute not found" }, 404);
     }
 
-    // Already processed — return early with success
     if (dispute.refund_status === "processed") {
       return json({ success: true, already_processed: true });
     }
 
-    // Must be pending
     if (dispute.refund_status !== "pending") {
       return json({ error: `Refund status is '${dispute.refund_status}', expected 'pending'` }, 400);
     }
@@ -123,111 +102,143 @@ serve(async (req) => {
       return json({ error: "No refund amount set on dispute" }, 400);
     }
 
-    const appointment = dispute.appointments as {
-      id: string;
-      user_id: string;
-      business_id: string;
-      price: number;
-      payment_intent_id: string | null;
-      payment_status: string;
-      businesses: {
-        id: string;
-        name: string;
-        owner_id: string;
-        stripe_account_id: string | null;
-      };
-    };
+    // Detect dispute type and get payment intent
+    const isOrderDispute = !!dispute.order_id && !dispute.appointment_id;
+    let paymentIntentId: string | null = null;
+    let sourcePrice = 0;
+    let commissionAmount = 0;
 
-    // No payment_intent_id — unpaid/test appointment
-    if (!appointment.payment_intent_id) {
-      console.log(`[DISPUTE-REFUND] No payment_intent_id for dispute ${dispute_id}, marking not_applicable`);
+    if (isOrderDispute) {
+      // --- ORDER DISPUTE ---
+      const { data: order } = await supabase
+        .from("orders")
+        .select("id, total_amount, commission_amount, stripe_payment_intent_id, status")
+        .eq("id", dispute.order_id)
+        .single();
 
-      await supabase
-        .from("disputes")
-        .update({ refund_status: "not_applicable" })
-        .eq("id", dispute_id);
+      if (!order) return json({ error: "Order not found" }, 404);
 
-      return json({
-        success: true,
-        refund_amount: 0,
-        stripe_refund_id: null,
-        skipped: "no_payment_intent",
-      });
+      paymentIntentId = order.stripe_payment_intent_id;
+      sourcePrice = order.total_amount;
+      commissionAmount = order.commission_amount ?? 0;
+      console.log(`[DISPUTE-REFUND] Order dispute: order ${order.id}, PI ${paymentIntentId}`);
+    } else {
+      // --- APPOINTMENT DISPUTE ---
+      const { data: appointment } = await supabase
+        .from("appointments")
+        .select("id, price, payment_intent_id, payment_status")
+        .eq("id", dispute.appointment_id)
+        .single();
+
+      if (!appointment) return json({ error: "Appointment not found" }, 404);
+
+      paymentIntentId = appointment.payment_intent_id;
+      sourcePrice = appointment.price ?? 0;
+      console.log(`[DISPUTE-REFUND] Appointment dispute: appt ${appointment.id}, PI ${paymentIntentId}`);
+    }
+
+    // No payment_intent_id — unpaid/test
+    if (!paymentIntentId) {
+      await supabase.from("disputes").update({ refund_status: "not_applicable" }).eq("id", dispute_id);
+      return json({ success: true, refund_amount: 0, stripe_refund_id: null, skipped: "no_payment_intent" });
     }
 
     // Process the Stripe refund
     const refundAmountCentavos = Math.round(refundAmount * 100);
-    const isFullRefund = refundAmount >= (appointment.price ?? 0);
+    const isFullRefund = refundAmount >= sourcePrice;
 
-    console.log(`[DISPUTE-REFUND] Dispute ${dispute_id}:`);
-    console.log(`  Refund amount: $${refundAmount} (${refundAmountCentavos} centavos)`);
-    console.log(`  Payment intent: ${appointment.payment_intent_id}`);
-    console.log(`  Full refund: ${isFullRefund}`);
+    console.log(`[DISPUTE-REFUND] Dispute ${dispute_id}: $${refundAmount} (${refundAmountCentavos} centavos), full=${isFullRefund}`);
 
     let stripeRefund;
     try {
       stripeRefund = await stripe.refunds.create({
-        payment_intent: appointment.payment_intent_id,
+        payment_intent: paymentIntentId,
         amount: refundAmountCentavos,
         reason: "requested_by_customer",
         metadata: {
           dispute_id,
-          appointment_id: appointment.id,
+          ...(isOrderDispute ? { order_id: dispute.order_id } : { appointment_id: dispute.appointment_id }),
           resolution: dispute.resolution ?? "dispute_refund",
         },
       }, { idempotencyKey: `dispute-refund-${dispute_id}` });
-
       console.log(`[DISPUTE-REFUND] Stripe refund created: ${stripeRefund.id}`);
     } catch (stripeErr) {
       console.error(`[DISPUTE-REFUND] Stripe refund failed:`, stripeErr);
-      return json({
-        error: "Failed to process Stripe refund",
-        details: (stripeErr as Error).message,
-      }, 500);
+      return json({ error: "Failed to process Stripe refund", details: (stripeErr as Error).message }, 500);
+    }
+
+    // For order disputes: partial application fee refund (keep 3%, return 7%)
+    if (isOrderDispute && isFullRefund && commissionAmount > 0) {
+      const keepRate = 0.03;
+      const keepAmount = Math.round(sourcePrice * keepRate * 100) / 100;
+      const returnCentavos = Math.round(Math.max(commissionAmount - keepAmount, 0) * 100);
+
+      if (returnCentavos > 0) {
+        try {
+          const charges = await stripe.charges.list({ payment_intent: paymentIntentId, limit: 1 });
+          const feeId = charges.data[0]?.application_fee as string;
+          if (feeId) {
+            await stripe.applicationFees.createRefund(feeId, { amount: returnCentavos });
+            console.log(`[DISPUTE-REFUND] Returned ${returnCentavos} centavos commission to seller`);
+          }
+        } catch (feeErr) {
+          console.error(`[DISPUTE-REFUND] Commission return failed:`, (feeErr as Error).message);
+        }
+
+        // Record commission reversal
+        await supabase.from("commission_records").insert({
+          business_id: dispute.business_id,
+          order_id: dispute.order_id,
+          amount: -(Math.round((commissionAmount - keepAmount) * 100) / 100),
+          rate: 0.07,
+          source: "product_sale_reversal",
+          period_month: new Date().getMonth() + 1,
+          period_year: new Date().getFullYear(),
+          status: "collected",
+        }).then(null, (e: Error) => console.error(`[DISPUTE-REFUND] Commission reversal record failed: ${e.message}`));
+      }
     }
 
     // Update dispute: refund_status → processed
-    const { error: disputeUpdateError } = await supabase
-      .from("disputes")
-      .update({ refund_status: "processed" })
-      .eq("id", dispute_id);
+    await supabase.from("disputes").update({ refund_status: "processed" }).eq("id", dispute_id)
+      .then(null, (e: Error) => console.error("[DISPUTE-REFUND] Failed to update dispute:", e.message));
 
-    if (disputeUpdateError) {
-      console.error("[DISPUTE-REFUND] Failed to update dispute:", disputeUpdateError);
-    }
-
-    // Update appointment: payment_status + refund fields
-    const newPaymentStatus = isFullRefund ? "refunded" : "partial_refund";
-    const { error: apptUpdateError } = await supabase
-      .from("appointments")
-      .update({
+    // Update source record
+    if (isOrderDispute) {
+      const returnToSeller = commissionAmount > 0
+        ? Math.round((commissionAmount - Math.round(sourcePrice * 0.03 * 100) / 100) * 100) / 100
+        : 0;
+      await supabase.from("orders").update({
+        status: "refunded",
+        refunded_at: new Date().toISOString(),
+        commission_refund_amount: returnToSeller,
+      }).eq("id", dispute.order_id);
+    } else {
+      const newPaymentStatus = isFullRefund ? "refunded" : "partial_refund";
+      await supabase.from("appointments").update({
         payment_status: newPaymentStatus,
         refund_amount: refundAmount,
         refunded_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      })
-      .eq("id", appointment.id);
+      }).eq("id", dispute.appointment_id);
 
-    if (apptUpdateError) {
-      console.error("[DISPUTE-REFUND] Failed to update appointment:", apptUpdateError);
+      // Record in payments table (appointment refunds only)
+      await supabase.from("payments").insert({
+        appointment_id: dispute.appointment_id,
+        stripe_payment_intent_id: paymentIntentId,
+        stripe_charge_id: stripeRefund.charge as string | undefined,
+        amount: -Math.round(refundAmount * 100),
+        currency: "mxn",
+        status: "succeeded",
+        type: "refund",
+        metadata: {
+          reason: "dispute_refund",
+          dispute_id,
+          stripe_refund_id: stripeRefund.id,
+          resolution: dispute.resolution,
+        },
+      });
     }
-
-    // Record in payments table
-    await supabase.from("payments").insert({
-      appointment_id: appointment.id,
-      stripe_payment_intent_id: appointment.payment_intent_id,
-      stripe_charge_id: stripeRefund.charge as string | undefined,
-      amount: -Math.round(refundAmount * 100), // negative for refund
-      currency: "mxn",
-      status: "succeeded",
-      type: "refund",
-      metadata: {
-        reason: "dispute_refund",
-        dispute_id,
-        stripe_refund_id: stripeRefund.id,
-        resolution: dispute.resolution,
-      },
-    });
 
     // Notify client
     try {
@@ -237,21 +248,21 @@ serve(async (req) => {
         .eq("id", dispute.user_id)
         .single();
 
-      // In-app notification
+      const refType = isOrderDispute ? "pedido" : "cita";
+
       await supabase.from("notifications").insert({
         user_id: dispute.user_id,
         type: "dispute_refund",
         title: "Reembolso procesado",
-        body: `Se ha procesado tu reembolso de $${refundAmount.toFixed(2)} MXN por la disputa resuelta.`,
+        body: `Se ha procesado tu reembolso de $${refundAmount.toFixed(2)} MXN por la disputa de tu ${refType}.`,
         data: {
           dispute_id,
-          appointment_id: appointment.id,
+          ...(isOrderDispute ? { order_id: dispute.order_id } : { appointment_id: dispute.appointment_id }),
           refund_amount: refundAmount,
           stripe_refund_id: stripeRefund.id,
         },
       });
 
-      // Push notification if FCM token exists
       if (customerProfile?.fcm_token) {
         await supabase.functions.invoke("send-push-notification", {
           body: {
@@ -261,7 +272,6 @@ serve(async (req) => {
             data: {
               type: "dispute_refund",
               dispute_id,
-              appointment_id: appointment.id,
               refund_amount: refundAmount.toString(),
             },
           },
@@ -269,14 +279,13 @@ serve(async (req) => {
       }
     } catch (notifyErr) {
       console.error("[DISPUTE-REFUND] Failed to notify client:", notifyErr);
-      // Don't fail the whole operation for notification errors
     }
 
     return json({
       success: true,
       refund_amount: refundAmount,
       stripe_refund_id: stripeRefund.id,
-      payment_status: newPaymentStatus,
+      dispute_type: isOrderDispute ? "order" : "appointment",
     });
 
   } catch (err) {

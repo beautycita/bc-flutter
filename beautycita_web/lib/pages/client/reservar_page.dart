@@ -2546,7 +2546,9 @@ class _DetailPanelOverlayState extends ConsumerState<_DetailPanelOverlay>
               .from(BCTables.appointments)
               .update({'transport_mode': _selectedTransport})
               .eq('id', appointmentId);
-        } catch (_) {}
+        } catch (e) {
+          debugPrint('[RESERVAR] Transport mode update failed: $e');
+        }
         ref
             .read(bookingFlowProvider.notifier)
             .setTransportMode(_selectedTransport!);
@@ -3787,7 +3789,9 @@ class _DiscoveredSalonsListState extends ConsumerState<_DiscoveredSalonsList> {
           'invited_by': BCSupabase.client.auth.currentUser?.id,
         },
       );
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[RESERVAR] Salon outreach invite failed: $e');
+    }
 
     if (!mounted) return;
     setState(() => _invitedIds.add(salonId));

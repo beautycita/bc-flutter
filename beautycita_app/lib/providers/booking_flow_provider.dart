@@ -377,8 +377,11 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
       'p_idempotency_key': '${userId}_${serviceId}_${result.slot!.startTime.millisecondsSinceEpoch}',
     }).timeout(const Duration(seconds: 15));
 
-    final bookingData = rpcResult as Map<String, dynamic>;
-    final bookingId = bookingData['booking_id'] as String;
+    final bookingData = rpcResult as Map<String, dynamic>?;
+    final bookingId = bookingData?['booking_id'] as String?;
+    if (bookingId == null) {
+      throw Exception('No se pudo crear la cita. Intenta de nuevo.');
+    }
     final booking = Booking(
       id: bookingId,
       userId: userId,
@@ -436,9 +439,12 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
           throw Exception(error);
         }
 
-        final piData = piResponse.data as Map<String, dynamic>;
-        final clientSecret = piData['client_secret'] as String;
-        final paymentIntentId = piData['payment_intent_id'] as String;
+        final piData = piResponse.data as Map<String, dynamic>? ?? {};
+        final clientSecret = piData['client_secret'] as String?;
+        final paymentIntentId = piData['payment_intent_id'] as String?;
+        if (clientSecret == null || paymentIntentId == null) {
+          throw Exception('Error al crear el pago. Intenta de nuevo.');
+        }
         final customerId = piData['customer_id'] as String?;
         final ephemeralKey = piData['ephemeral_key'] as String?;
 

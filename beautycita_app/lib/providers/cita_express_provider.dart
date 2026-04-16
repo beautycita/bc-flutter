@@ -290,7 +290,11 @@ class CitaExpressNotifier extends StateNotifier<CitaExpressState> {
         'p_staff_id': result.staff?.id,
       });
 
-      final bookingId = (rpcResult as Map<String, dynamic>)['booking_id'] as String;
+      final bookingData = rpcResult as Map<String, dynamic>?;
+      final bookingId = bookingData?['booking_id'] as String?;
+      if (bookingId == null) {
+        throw Exception('No se pudo crear la cita. Intenta de nuevo.');
+      }
 
       state = state.copyWith(
         step: CitaExpressStep.booked,
