@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:beautycita_core/supabase.dart';
 
 import '../config/breakpoints.dart';
 import '../config/router.dart';
@@ -224,7 +225,7 @@ class _DesktopNavLinkState extends State<_DesktopNavLink> {
   }
 }
 
-// ── Avatar Circle with Dropdown ─────────────────────────────────────────────
+// ── Avatar Circle with Account Dropdown ─────────────────────────────────────
 
 class _AvatarCircle extends ConsumerStatefulWidget {
   @override
@@ -233,26 +234,66 @@ class _AvatarCircle extends ConsumerStatefulWidget {
 
 class _AvatarCircleState extends ConsumerState<_AvatarCircle> {
   String? _role;
+  String? _username;
+  String? _fullName;
+  String? _avatarUrl;
+  String? _email;
 
   @override
   void initState() {
     super.initState();
-    _loadRole();
+    _loadProfile();
   }
 
-  Future<void> _loadRole() async {
+  Future<void> _loadProfile() async {
+    final user = BCSupabase.client.auth.currentUser;
+    if (user == null) return;
+    _email = user.email;
+
     final role = await ref.read(authProvider.notifier).getUserRole();
-    if (mounted) setState(() => _role = role);
+
+    try {
+      final data = await BCSupabase.client
+          .from(BCTables.profiles)
+          .select('username, full_name, avatar_url')
+          .eq('id', user.id)
+          .maybeSingle();
+      if (mounted) {
+        setState(() {
+          _role = role;
+          _username = data?['username'] as String?;
+          _fullName = data?['full_name'] as String?;
+          _avatarUrl = data?['avatar_url'] as String?;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _role = role);
+    }
   }
 
   bool get _isBusinessUser =>
       _role == 'stylist' || _role == 'business' ||
       _role == 'admin' || _role == 'superadmin';
 
+  String get _initials {
+    if (_fullName != null && _fullName!.isNotEmpty) {
+      final parts = _fullName!.trim().split(' ');
+      if (parts.length >= 2) return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+      return parts[0][0].toUpperCase();
+    }
+    if (_username != null && _username!.isNotEmpty) {
+      return _username![0].toUpperCase();
+    }
+    return '?';
+  }
+
+  String get _displayName => _fullName ?? _username ?? '';
+
   @override
   Widget build(BuildContext context) {
     return PopupMenuButton<String>(
-      offset: const Offset(0, 48),
+      offset: const Offset(0, 52),
+      constraints: const BoxConstraints(minWidth: 240),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: const BorderSide(color: kWebCardBorder),
@@ -260,14 +301,17 @@ class _AvatarCircleState extends ConsumerState<_AvatarCircle> {
       color: kWebSurface,
       onSelected: (value) async {
         switch (value) {
+          case 'cuenta':
+            context.go(WebRoutes.cuenta);
+            break;
           case 'negocio':
             context.go(WebRoutes.negocio);
             break;
           case 'mis_citas':
             context.go(WebRoutes.misCitas);
             break;
-          case 'invitar':
-            context.go(WebRoutes.invitar);
+          case 'config':
+            context.go(WebRoutes.configuracion);
             break;
           case 'soporte':
             context.go(WebRoutes.soporte);
@@ -279,29 +323,76 @@ class _AvatarCircleState extends ConsumerState<_AvatarCircle> {
         }
       },
       itemBuilder: (context) => [
+        // ── Header: name + email ──
+        PopupMenuItem<String>(
+          enabled: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_displayName.isNotEmpty)
+                Text(
+                  _displayName,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: kWebTextPrimary,
+                    fontFamily: 'system-ui',
+                  ),
+                ),
+              if (_email != null)
+                Text(
+                  _email!,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: kWebTextHint,
+                    fontFamily: 'system-ui',
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(),
+
+        // ── Account section ──
+        _menuItem('cuenta', Icons.person_outlined, 'Mi Cuenta'),
         if (_isBusinessUser)
           _menuItem('negocio', Icons.storefront_outlined, 'Mi Negocio'),
         _menuItem('mis_citas', Icons.event_note_outlined, 'Mis Citas'),
-        _menuItem('invitar', Icons.share_outlined, 'Invitar Salon'),
-        _menuItem('soporte', Icons.help_outline_rounded, 'Soporte'),
         const PopupMenuDivider(),
+
+        // ── Settings section ──
+        _menuItem('config', Icons.settings_outlined, 'Configuracion'),
+        _menuItem('soporte', Icons.help_outline_rounded, 'Ayuda'),
+        const PopupMenuDivider(),
+
+        // ── Logout ──
         _menuItem('logout', Icons.logout_outlined, 'Cerrar Sesion'),
       ],
-      child: Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: kWebBrandGradient,
-        ),
-        child: const Center(
-          child: Icon(
-            Icons.person_outlined,
-            size: 20,
-            color: Colors.white,
-          ),
-        ),
-      ),
+      child: _avatarUrl != null
+          ? CircleAvatar(
+              radius: 19,
+              backgroundImage: NetworkImage(_avatarUrl!),
+              backgroundColor: kWebCardBorder,
+            )
+          : Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: kWebBrandGradient,
+              ),
+              child: Center(
+                child: Text(
+                  _initials,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    fontFamily: 'system-ui',
+                  ),
+                ),
+              ),
+            ),
     );
   }
 
