@@ -511,14 +511,16 @@ final _bizStripeBlockedProvider = FutureProvider.family<bool, String>((ref, busi
   if (businessId.isEmpty) return false;
   final data = await SupabaseClientService.client
       .from(BCTables.businesses)
-      .select('deposit_required, stripe_charges_enabled')
+      .select('stripe_charges_enabled')
       .eq('id', businessId)
       .maybeSingle();
   if (data == null) return false;
-  final depositRequired = data['deposit_required'] as bool? ?? false;
   final stripeEnabled = data['stripe_charges_enabled'] as bool? ?? false;
-  // Block Stripe methods when deposit is required but Stripe isn't configured
-  return depositRequired && !stripeEnabled;
+  // Block card/OXXO whenever the salon isn't actually able to accept Stripe
+  // charges. Without this, confirmation auto-selects 'card' and the user hits
+  // a 400 from create-payment-intent ("banking_complete"/"stripe_account_id").
+  // Salons in this state should offer saldo + cash_direct only.
+  return !stripeEnabled;
 });
 
 final _userSaldoProvider = FutureProvider<double>((ref) async {

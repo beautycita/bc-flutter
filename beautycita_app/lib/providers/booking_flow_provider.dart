@@ -305,6 +305,8 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
       switch (state.paymentMethod) {
         case 'saldo':
           await _confirmWithSaldo(result);
+        case 'cash_direct':
+          await _confirmWithCashDirect(result);
         case 'oxxo':
           await _confirmStripe(result, oxxoOnly: true);
         default: // card
@@ -582,6 +584,45 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
     );
   }
 
+
+  /// Pay cash directly at the salon — no money flows through the platform.
+  /// Used when the salon has no Stripe account configured. Booking is
+  /// confirmed immediately; the user pays in person.
+  Future<void> _confirmWithCashDirect(ResultCard result) async {
+    final price = result.service.price ?? 0;
+    final userId = SupabaseClientService.currentUserId;
+    if (userId == null) throw Exception('No autenticado');
+    if (result.slot == null) {
+      throw Exception('No hay horario disponible para este servicio');
+    }
+
+    final endsAt = result.slot!.startTime.add(
+      Duration(minutes: result.service.durationMinutes),
+    );
+
+    final rpcResult = await SupabaseClientService.client.rpc('create_booking_with_financials', params: {
+      'p_user_id': userId,
+      'p_business_id': result.business.id,
+      'p_service_id': result.service.id ?? '',
+      'p_service_name': result.service.name,
+      'p_service_type': state.serviceType ?? '',
+      'p_starts_at': result.slot!.startTime.toUtc().toIso8601String(),
+      'p_ends_at': endsAt.toUtc().toIso8601String(),
+      'p_price': price,
+      'p_payment_method': 'cash_direct',
+      'p_booking_source': 'bc_marketplace',
+      'p_transport_mode': state.transportMode,
+      'p_staff_id': result.staff?.id,
+      'p_idempotency_key': '${userId}_${result.service.id}_${result.slot!.startTime.millisecondsSinceEpoch}',
+    });
+
+    final bookingId = (rpcResult as Map<String, dynamic>)['booking_id'] as String;
+    _sendBookingNotifications(bookingId);
+    state = state.copyWith(
+      step: BookingFlowStep.emailVerification,
+      bookingId: bookingId,
+    );
+  }
 
   /// Pay with saldo (user credit balance) — no Stripe involved.
   /// Uses a single DB transaction (book_with_saldo RPC) to atomically
