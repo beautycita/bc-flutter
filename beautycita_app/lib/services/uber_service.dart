@@ -47,13 +47,17 @@ class UberService {
       'action': 'setPickup',
     };
 
-    // Pickup: use "my_location" if no coordinates provided
+    // Pickup: explicit coords when provided, otherwise "my_location".
+    // Without one of these Uber's universal link falls back to the app
+    // home screen instead of the ride-request sheet.
     if (pickupLat != null && pickupLng != null) {
       params['pickup[latitude]'] = pickupLat.toString();
       params['pickup[longitude]'] = pickupLng.toString();
       if (pickupNickname != null) {
         params['pickup[nickname]'] = pickupNickname;
       }
+    } else {
+      params['pickup'] = 'my_location';
     }
 
     // Dropoff

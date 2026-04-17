@@ -136,11 +136,19 @@ class _BookingConfirmationScreenState
   }
 
   Future<void> _openUber(Booking booking) async {
+    // Uber Universal Link — opens the ride-request screen with pickup and
+    // destination pre-filled. `pickup=my_location` is mandatory to route
+    // past the Uber home screen; without it the app falls back to the
+    // app's launcher screen, which is what we're fixing here.
+    //
+    // Note: Uber Reserve (scheduled rides) is not exposed as a deep-link
+    // destination. Users who want a scheduled pickup for a future booking
+    // tap "Reserve" once the ride-request sheet appears.
     final params = <String, String>{
       'action': 'setPickup',
+      'pickup': 'my_location',
     };
 
-    // Pre-fill salon as destination if we have coordinates
     if (booking.businessLat != null && booking.businessLng != null) {
       params['dropoff[latitude]'] = booking.businessLat.toString();
       params['dropoff[longitude]'] = booking.businessLng.toString();
@@ -152,19 +160,6 @@ class _BookingConfirmationScreenState
 
     final uri = Uri.https('m.uber.com', '/ul/', params);
     await launchUrl(uri, mode: LaunchMode.externalApplication);
-  }
-
-  Future<void> _openDidi() async {
-    // Try DiDi app, fallback to Play Store
-    const didiPackage = 'com.didiglobal.passenger';
-    final playStoreUri = Uri.parse('https://play.google.com/store/apps/details?id=$didiPackage');
-    final didiUri = Uri.parse('didi://');
-
-    if (await canLaunchUrl(didiUri)) {
-      await launchUrl(didiUri);
-    } else {
-      await launchUrl(playStoreUri, mode: LaunchMode.externalApplication);
-    }
   }
 
   @override
@@ -458,7 +453,6 @@ class _BookingConfirmationScreenState
                   // -- Transport offer --
                   _TransportOfferCard(
                     onUber: () => _openUber(booking),
-                    onDidi: () => _openDidi(),
                   ),
 
                   const SizedBox(height: AppConstants.paddingSM),
@@ -795,16 +789,16 @@ class _RingPainter extends CustomPainter {
 // Transport Offer Card
 //
 // Always-visible post-booking prompt: "¿Necesitas transporte?"
-// Uber (deep link with salon destination) + DiDi (app launch)
+// Uber-only. DiDi had no deep link for destination pre-fill and no public
+// ride-scheduling API in Mexico (see ride_hailing_research memory), so
+// sending users to a bare DiDi launch wasn't a useful offer.
 // ═══════════════════════════════════════════════════════════════════════════
 
 class _TransportOfferCard extends StatelessWidget {
   final VoidCallback onUber;
-  final VoidCallback onDidi;
 
   const _TransportOfferCard({
     required this.onUber,
-    required this.onDidi,
   });
 
   @override
@@ -853,36 +847,19 @@ class _TransportOfferCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppConstants.paddingMD),
-          Row(
-            children: [
-              // Uber button
-              Expanded(
-                child: _RideButton(
-                  label: 'Uber',
-                  color: palette.brightness == Brightness.dark
-                      ? const Color(0xFF2A2A2A)
-                      : Theme.of(context).colorScheme.onSurface,
-                  textColor: Theme.of(context).colorScheme.onPrimary,
-                  onTap: () {
-                    HapticFeedback.lightImpact();
-                    onUber();
-                  },
-                ),
-              ),
-              const SizedBox(width: AppConstants.paddingSM),
-              // DiDi button
-              Expanded(
-                child: _RideButton(
-                  label: 'DiDi',
-                  color: const Color(0xFFFF6611),
-                  textColor: Theme.of(context).colorScheme.onPrimary,
-                  onTap: () {
-                    HapticFeedback.lightImpact();
-                    onDidi();
-                  },
-                ),
-              ),
-            ],
+          SizedBox(
+            width: double.infinity,
+            child: _RideButton(
+              label: 'Pedir Uber',
+              color: palette.brightness == Brightness.dark
+                  ? const Color(0xFF2A2A2A)
+                  : Theme.of(context).colorScheme.onSurface,
+              textColor: Theme.of(context).colorScheme.onPrimary,
+              onTap: () {
+                HapticFeedback.lightImpact();
+                onUber();
+              },
+            ),
           ),
         ],
       ),

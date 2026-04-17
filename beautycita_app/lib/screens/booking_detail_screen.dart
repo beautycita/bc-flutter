@@ -34,12 +34,12 @@ final _businessLocationProvider =
     FutureProvider.family<LatLng?, String>((ref, businessId) async {
   final biz = await SupabaseClientService.client
       .from(BCTables.businesses)
-      .select('latitude, longitude')
+      .select('lat, lng')
       .eq('id', businessId)
       .maybeSingle();
   if (biz == null) return null;
-  final lat = (biz['latitude'] as num?)?.toDouble();
-  final lng = (biz['longitude'] as num?)?.toDouble();
+  final lat = (biz['lat'] as num?)?.toDouble();
+  final lng = (biz['lng'] as num?)?.toDouble();
   if (lat == null || lng == null) return null;
   return LatLng(lat: lat, lng: lng);
 });
@@ -162,7 +162,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
     setState(() => _isUpdatingTransport = true);
     try {
       await SupabaseClientService.client
-          .from(BCTables.bookings)
+          .from(BCTables.appointments)
           .update({'transport_mode': mode})
           .eq('id', booking.id);
       ref.invalidate(bookingDetailProvider(widget.bookingId));
@@ -195,13 +195,13 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
     try {
       final biz = await SupabaseClientService.client
           .from(BCTables.businesses)
-          .select('name, address, latitude, longitude')
+          .select('name, address, lat, lng')
           .eq('id', booking.businessId)
           .maybeSingle();
       if (biz == null || !mounted) return;
       final uberService = ref.read(uberServiceProvider);
-      final lat = (biz['latitude'] as num?)?.toDouble();
-      final lng = (biz['longitude'] as num?)?.toDouble();
+      final lat = (biz['lat'] as num?)?.toDouble();
+      final lng = (biz['lng'] as num?)?.toDouble();
       if (lat != null && lng != null) {
         await uberService.openRideToSalon(
           salonLat: lat,
@@ -220,13 +220,13 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
     try {
       final biz = await SupabaseClientService.client
           .from(BCTables.businesses)
-          .select('name, latitude, longitude')
+          .select('name, lat, lng')
           .eq('id', booking.businessId)
           .maybeSingle();
       if (biz == null || !mounted) return;
       final uberService = ref.read(uberServiceProvider);
-      final lat = (biz['latitude'] as num?)?.toDouble();
-      final lng = (biz['longitude'] as num?)?.toDouble();
+      final lat = (biz['lat'] as num?)?.toDouble();
+      final lng = (biz['lng'] as num?)?.toDouble();
       if (lat != null && lng != null) {
         await uberService.openRideHome(
           salonLat: lat,
