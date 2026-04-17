@@ -485,6 +485,10 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
                   const SizedBox(height: 10),
                   _buildBadges(result),
                 ],
+                if (result.business.modifierTags.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  _buildModifierBadges(result.business.modifierTags),
+                ],
                 const Spacer(),
                 _buildActionButtons(result),
               ],
@@ -759,6 +763,63 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
           ],
         ],
       ),
+    );
+  }
+
+  Widget _buildModifierBadges(List<String> tags) {
+    final palette = Theme.of(context).colorScheme;
+
+    IconData? iconFor(String tag) {
+      switch (tag) {
+        case 'kids_friendly':         return Icons.child_care_outlined;
+        case 'accessibility_equipped':return Icons.accessible_outlined;
+        case 'senior_friendly':       return Icons.elderly_outlined;
+        case 'event_specialist':      return Icons.celebration_outlined;
+      }
+      return null;
+    }
+
+    String labelFor(String tag) {
+      switch (tag) {
+        case 'kids_friendly':         return 'Ninos';
+        case 'accessibility_equipped':return 'Accesible';
+        case 'senior_friendly':       return 'Seniors';
+        case 'event_specialist':      return 'Eventos';
+      }
+      return tag;
+    }
+
+    final visible = tags.where((t) => iconFor(t) != null).toList();
+    if (visible.isEmpty) return const SizedBox.shrink();
+
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: visible.map((tag) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: palette.primary.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: palette.primary.withValues(alpha: 0.2)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(iconFor(tag), size: 14, color: palette.primary),
+              const SizedBox(width: 4),
+              Text(
+                labelFor(tag),
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: palette.primary,
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 

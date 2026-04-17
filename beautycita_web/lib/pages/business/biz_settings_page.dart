@@ -70,6 +70,10 @@ class _SettingsContentState extends ConsumerState<_SettingsContent> {
   String? _licenseUrl;
   bool _uploadingLicense = false;
 
+  // Modifier tags (60056 — gated by enable_service_modifiers)
+  Set<String> _serviceTags = <String>{};
+  bool _modifiersEnabled = false;
+
   bool _saving = false;
 
   @override
@@ -96,7 +100,27 @@ class _SettingsContentState extends ConsumerState<_SettingsContent> {
     _licenseStatus = b['municipal_license_status'] as String? ?? 'none';
     _licenseUrl = b['municipal_license_url'] as String?;
 
+    final rawTags = b['service_tags'];
+    _serviceTags = (rawTags is List)
+        ? rawTags.whereType<String>().toSet()
+        : <String>{};
+
     _loadHours(b);
+    _loadModifierToggle();
+  }
+
+  Future<void> _loadModifierToggle() async {
+    try {
+      final row = await BCSupabase.client
+          .from(BCTables.appConfig)
+          .select('value')
+          .eq('key', 'enable_service_modifiers')
+          .maybeSingle();
+      if (!mounted) return;
+      setState(() {
+        _modifiersEnabled = (row?['value'] as String?) == 'true';
+      });
+    } catch (_) {/* leave disabled */}
   }
 
   void _loadHours(Map<String, dynamic> biz) {
@@ -194,6 +218,7 @@ class _SettingsContentState extends ConsumerState<_SettingsContent> {
         'deposit_percent': _depositPercent,
         'no_show_policy': _noShowPolicy,
         'hours': _hoursToJson(),
+        'service_tags': _serviceTags.toList(),
       }).eq('id', widget.biz['id'] as String);
 
       ref.invalidate(currentBusinessProvider);
@@ -429,6 +454,55 @@ class _SettingsContentState extends ConsumerState<_SettingsContent> {
                     ),
                   ),
                   const SizedBox(height: 24),
+
+                  // Service modifiers (60056, toggle-gated)
+                  if (_modifiersEnabled) ...[
+                    _SectionCard(
+                      title: 'Servicios especiales',
+                      icon: Icons.tune_outlined,
+                      child: Column(
+                        children: [
+                          SwitchListTile(
+                            secondary: const Icon(Icons.child_care_outlined),
+                            title: const Text('Atendemos ninos'),
+                            subtitle: const Text('Estaciones infantiles, productos seguros'),
+                            value: _serviceTags.contains('kids_friendly'),
+                            onChanged: isDemo ? null : (v) => setState(() {
+                              v ? _serviceTags.add('kids_friendly') : _serviceTags.remove('kids_friendly');
+                            }),
+                          ),
+                          SwitchListTile(
+                            secondary: const Icon(Icons.accessible_outlined),
+                            title: const Text('Acceso accesible'),
+                            subtitle: const Text('Rampa, bano accesible, planta baja'),
+                            value: _serviceTags.contains('accessibility_equipped'),
+                            onChanged: isDemo ? null : (v) => setState(() {
+                              v ? _serviceTags.add('accessibility_equipped') : _serviceTags.remove('accessibility_equipped');
+                            }),
+                          ),
+                          SwitchListTile(
+                            secondary: const Icon(Icons.elderly_outlined),
+                            title: const Text('Adultos mayores'),
+                            subtitle: const Text('Atencion paciente y especializada'),
+                            value: _serviceTags.contains('senior_friendly'),
+                            onChanged: isDemo ? null : (v) => setState(() {
+                              v ? _serviceTags.add('senior_friendly') : _serviceTags.remove('senior_friendly');
+                            }),
+                          ),
+                          SwitchListTile(
+                            secondary: const Icon(Icons.celebration_outlined),
+                            title: const Text('Eventos especiales'),
+                            subtitle: const Text('Bodas, quinceaneras, paquetes'),
+                            value: _serviceTags.contains('event_specialist'),
+                            onChanged: isDemo ? null : (v) => setState(() {
+                              v ? _serviceTags.add('event_specialist') : _serviceTags.remove('event_specialist');
+                            }),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
 
                   // Save — hidden in demo mode
                   if (!isDemo)

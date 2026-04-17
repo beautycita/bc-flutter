@@ -184,6 +184,7 @@ class BusinessInfo {
   final String? workingHours;
   final String? googleCategory;
   final bool isVerified;
+  final List<String> modifierTags;
 
   const BusinessInfo({
     required this.id,
@@ -200,6 +201,7 @@ class BusinessInfo {
     this.workingHours,
     this.googleCategory,
     this.isVerified = false,
+    this.modifierTags = const [],
   });
 
   factory BusinessInfo.fromJson(Map<String, dynamic> json) {
@@ -218,6 +220,10 @@ class BusinessInfo {
       workingHours: json['working_hours'] as String?,
       googleCategory: json['google_category'] as String?,
       isVerified: json['is_verified'] as bool? ?? false,
+      modifierTags: (json['modifier_tags'] as List?)
+              ?.whereType<String>()
+              .toList() ??
+          const [],
     );
   }
 }

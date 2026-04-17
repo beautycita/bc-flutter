@@ -40,6 +40,7 @@ class _BusinessSettingsScreenState
   bool _depositRequired = false;
   String _noShowPolicy = 'forfeit_deposit';
   Set<int> _reminderHoursList = {24, 1};
+  Set<String> _serviceTags = {};
   bool _initialized = false;
   bool _saving = false;
 
@@ -117,6 +118,12 @@ class _BusinessSettingsScreenState
     _acceptWalkins = biz['accept_walkins'] as bool? ?? false;
     _depositRequired = biz['deposit_required'] as bool? ?? false;
     _noShowPolicy = biz['no_show_policy'] as String? ?? 'forfeit_deposit';
+    final rawTags = biz['service_tags'];
+    if (rawTags is List) {
+      _serviceTags = rawTags.whereType<String>().toSet();
+    } else {
+      _serviceTags = {};
+    }
     final reminderRaw = biz['reminder_hours_list'];
     if (reminderRaw is List && reminderRaw.isNotEmpty) {
       _reminderHoursList = reminderRaw.map((e) => e as int).toSet();
@@ -357,6 +364,64 @@ class _BusinessSettingsScreenState
               label: 'QR para Walk-ins',
               onTap: () => ref.read(businessTabProvider.notifier).state = 8,
             ),
+
+            // ---------- Service modifiers (60056, toggle-gated) ----------
+            if (ref.watch(featureTogglesProvider).isEnabled('enable_service_modifiers')) ...[
+              const SizedBox(height: AppConstants.paddingLG),
+              _SectionHeader(label: 'SERVICIOS ESPECIALES'),
+              const SizedBox(height: AppConstants.paddingSM),
+              Container(
+                decoration: _cardDecoration(colors),
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  children: [
+                    _ModifierTile(
+                      icon: Icons.child_care_outlined,
+                      label: 'Atendemos ninos',
+                      subtitle: 'Estaciones infantiles, productos seguros, paciencia',
+                      active: _serviceTags.contains('kids_friendly'),
+                      onToggle: (v) => setState(() {
+                        v ? _serviceTags.add('kids_friendly') : _serviceTags.remove('kids_friendly');
+                      }),
+                      colors: colors,
+                    ),
+                    const Divider(height: 1),
+                    _ModifierTile(
+                      icon: Icons.accessible_outlined,
+                      label: 'Acceso accesible',
+                      subtitle: 'Rampa, bano accesible, planta baja',
+                      active: _serviceTags.contains('accessibility_equipped'),
+                      onToggle: (v) => setState(() {
+                        v ? _serviceTags.add('accessibility_equipped') : _serviceTags.remove('accessibility_equipped');
+                      }),
+                      colors: colors,
+                    ),
+                    const Divider(height: 1),
+                    _ModifierTile(
+                      icon: Icons.elderly_outlined,
+                      label: 'Adultos mayores',
+                      subtitle: 'Atencion paciente y especializada',
+                      active: _serviceTags.contains('senior_friendly'),
+                      onToggle: (v) => setState(() {
+                        v ? _serviceTags.add('senior_friendly') : _serviceTags.remove('senior_friendly');
+                      }),
+                      colors: colors,
+                    ),
+                    const Divider(height: 1),
+                    _ModifierTile(
+                      icon: Icons.celebration_outlined,
+                      label: 'Eventos especiales',
+                      subtitle: 'Bodas, quinceaneras, sesiones foto, paquetes',
+                      active: _serviceTags.contains('event_specialist'),
+                      onToggle: (v) => setState(() {
+                        v ? _serviceTags.add('event_specialist') : _serviceTags.remove('event_specialist');
+                      }),
+                      colors: colors,
+                    ),
+                  ],
+                ),
+              ),
+            ],
 
             // ---------- Operating hours ----------
             const SizedBox(height: AppConstants.paddingLG),
@@ -820,6 +885,7 @@ class _BusinessSettingsScreenState
         'no_show_policy': _noShowPolicy,
         'reminder_hours_list': _reminderHoursList.toList(),
         'hours': _buildHoursJson(),
+        'service_tags': _serviceTags.toList(),
       }).eq('id', bizId);
 
       ref.invalidate(currentBusinessProvider);
@@ -836,6 +902,37 @@ class _BusinessSettingsScreenState
 // ---------------------------------------------------------------------------
 // Section header
 // ---------------------------------------------------------------------------
+
+class _ModifierTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String subtitle;
+  final bool active;
+  final ValueChanged<bool> onToggle;
+  final ColorScheme colors;
+
+  const _ModifierTile({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.active,
+    required this.onToggle,
+    required this.colors,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SwitchListTile(
+      secondary: Icon(icon, color: colors.primary),
+      title: Text(label,
+          style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500)),
+      subtitle: Text(subtitle, style: GoogleFonts.nunito(fontSize: 12)),
+      value: active,
+      onChanged: onToggle,
+      activeTrackColor: colors.primary,
+    );
+  }
+}
 
 class _SectionHeader extends StatelessWidget {
   final String label;

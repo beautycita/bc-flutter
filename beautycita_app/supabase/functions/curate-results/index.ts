@@ -96,6 +96,121 @@ interface ScoredCandidate extends Candidate {
 type ServiceProfile = Record<string, any>;
 
 // ---------------------------------------------------------------------------
+// Service modifiers (60056) — feature-gated via enable_service_modifiers.
+// When off, loadModifierContext returns enabled=false and the scoring
+// pipeline runs untouched. When on, we filter on accessibility, boost
+// kids_friendly / senior_friendly, and emit business tags in the response
+// so the client can render badges.
+// ---------------------------------------------------------------------------
+
+const MODIFIER_TAGS = [
+  "kids_friendly",
+  "accessibility_equipped",
+  "senior_friendly",
+  "event_specialist",
+] as const;
+
+type ModifierTag = typeof MODIFIER_TAGS[number];
+
+interface ModifierContext {
+  enabled: boolean;
+  userPrefs: {
+    kids_friendly: boolean;
+    accessibility_required: boolean;
+    senior_friendly_effective: boolean;
+  };
+  businessTags: Map<string, ModifierTag[]>;
+}
+
+async function loadModifierContext(
+  sb: SupabaseClient,
+  userId: string | null,
+  candidateBizIds: string[],
+): Promise<ModifierContext> {
+  const empty: ModifierContext = {
+    enabled: false,
+    userPrefs: {
+      kids_friendly: false,
+      accessibility_required: false,
+      senior_friendly_effective: false,
+    },
+    businessTags: new Map(),
+  };
+
+  const { data: toggle } = await sb
+    .from("app_config")
+    .select("value")
+    .eq("key", "enable_service_modifiers")
+    .maybeSingle();
+  if (toggle?.value !== "true") return empty;
+
+  let userPrefs = empty.userPrefs;
+  if (userId) {
+    const { data: p } = await sb
+      .from("profiles")
+      .select("service_preferences, birthday")
+      .eq("id", userId)
+      .maybeSingle();
+    const prefs = (p?.service_preferences ?? {}) as Record<string, unknown>;
+    const override = prefs["senior_friendly_override"];
+    const ageBasedSenior =
+      p?.birthday &&
+      Date.now() - new Date(p.birthday).getTime() >= 65 * 365.25 * 86_400_000;
+    userPrefs = {
+      kids_friendly: prefs["kids_friendly"] === true,
+      accessibility_required: prefs["accessibility_required"] === true,
+      senior_friendly_effective:
+        override === true ? true : override === false ? false : !!ageBasedSenior,
+    };
+  }
+
+  const businessTags = new Map<string, ModifierTag[]>();
+  if (candidateBizIds.length > 0) {
+    const { data: bizRows } = await sb
+      .from("businesses")
+      .select("id, service_tags")
+      .in("id", candidateBizIds);
+    for (const row of bizRows ?? []) {
+      const tags = (row.service_tags ?? []).filter((t: string) =>
+        (MODIFIER_TAGS as readonly string[]).includes(t),
+      ) as ModifierTag[];
+      businessTags.set(row.id as string, tags);
+    }
+  }
+
+  return { enabled: true, userPrefs, businessTags };
+}
+
+function applyModifierFilter<T extends { business_id: string }>(
+  candidates: T[],
+  ctx: ModifierContext,
+): T[] {
+  if (!ctx.enabled) return candidates;
+  if (!ctx.userPrefs.accessibility_required) return candidates;
+  return candidates.filter((c) =>
+    ctx.businessTags.get(c.business_id)?.includes("accessibility_equipped"),
+  );
+}
+
+function applyModifierBoost<T extends { business_id: string; score: number }>(
+  scored: T[],
+  ctx: ModifierContext,
+): T[] {
+  if (!ctx.enabled) return scored;
+  return scored.map((c) => {
+    const tags = ctx.businessTags.get(c.business_id) ?? [];
+    let multiplier = 1.0;
+    if (ctx.userPrefs.kids_friendly && tags.includes("kids_friendly")) {
+      multiplier *= 1.15;
+    }
+    if (ctx.userPrefs.senior_friendly_effective && tags.includes("senior_friendly")) {
+      multiplier *= 1.10;
+    }
+    return { ...c, score: c.score * multiplier };
+  }).sort((a, b) => b.score - a.score);
+}
+
+// ---------------------------------------------------------------------------
 // In-memory profile cache (profiles rarely change)
 // ---------------------------------------------------------------------------
 
@@ -272,23 +387,42 @@ serve(async (req) => {
     // ==================================================================
     let registeredResults: unknown[] = [];
     if (candidates.length > 0) {
+      // Modifier context (feature-gated). Must load BEFORE scoring so we can
+      // hard-filter on accessibility_required early.
+      const uniqueBizIds = Array.from(new Set(candidates.map((c) => c.business_id)));
+      const modifierCtx = await loadModifierContext(supabase, user_id, uniqueBizIds);
+
+      const afterHardFilter = applyModifierFilter(candidates, modifierCtx);
+      if (afterHardFilter.length === 0 && modifierCtx.enabled) {
+        // All candidates filtered out by accessibility requirement.
+        return json({ booking_window: windowSummary(window), results: [] });
+      }
+
       const scored = await scoreCandidates(
-        candidates,
+        afterHardFilter,
         profile,
         window,
         validTransport,
         location,
       );
 
+      const boosted = applyModifierBoost(scored, modifierCtx);
+
       // ==================================================================
       // STEP 5 — Pick Top 3
       // ==================================================================
-      const top3 = pickTop3(scored);
+      const top3 = pickTop3(boosted);
 
       // ==================================================================
       // STEP 6 — Build Response (<5ms)
       // ==================================================================
-      registeredResults = await buildResponse(supabase, top3, profile, service_type);
+      registeredResults = await buildResponse(
+        supabase,
+        top3,
+        profile,
+        service_type,
+        modifierCtx,
+      );
     }
 
     const result = {
@@ -978,6 +1112,7 @@ async function buildResponse(
   top3: ScoredCandidate[],
   profile: ServiceProfile,
   serviceType: string,
+  modifierCtx?: ModifierContext,
 ) {
   if (top3.length === 0) return [];
 
@@ -1148,6 +1283,9 @@ async function buildResponse(
         lat: c.business_lat,
         lng: c.business_lng,
         whatsapp: c.business_whatsapp,
+        modifier_tags: modifierCtx?.enabled
+          ? (modifierCtx.businessTags.get(c.business_id) ?? [])
+          : [],
       },
       staff: {
         id: c.staff_id,

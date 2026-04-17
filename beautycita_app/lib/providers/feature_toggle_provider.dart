@@ -48,6 +48,8 @@ const _defaults = <String, bool>{
   // UI Experiments
   'enable_photo_category_cards': true,
   'enable_haptic_feedback': true,
+  // Search modifiers
+  'enable_service_modifiers': false,
 };
 
 /// Fetches all boolean feature toggles from app_config and returns a map.

@@ -9,7 +9,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart' as ll;
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/config/theme_extension.dart';
+import 'package:beautycita/providers/feature_toggle_provider.dart';
 import 'package:beautycita/providers/profile_provider.dart';
+import 'package:beautycita/providers/service_modifiers_provider.dart';
 import 'package:beautycita/providers/theme_provider.dart';
 import 'package:beautycita/providers/user_preferences_provider.dart';
 import 'package:beautycita/services/location_service.dart';
@@ -166,6 +168,9 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
                 // ── Accessibility ──
                 _buildAccessibilitySection(cs),
                 const SizedBox(height: AppConstants.paddingLG),
+
+                // ── Service modifiers (gated on enable_service_modifiers) ──
+                _buildServiceModifiersSection(cs),
 
                 // ── Notifications ──
                 _buildNotificationsSection(cs, ext),
@@ -801,6 +806,129 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
                 ref.read(themeProvider.notifier).setThemeMode(mode),
           ),
         ],
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // 5b. Service Modifiers Section (60056, toggle-gated)
+  // ══════════════════════════════════════════════════════════════════════════
+
+  Widget _buildServiceModifiersSection(ColorScheme cs) {
+    final toggles = ref.watch(featureTogglesProvider);
+    if (!toggles.isEnabled('enable_service_modifiers')) {
+      return const SizedBox.shrink();
+    }
+
+    final prefsAsync = ref.watch(servicePreferencesProvider);
+    final prefs = prefsAsync.valueOrNull ?? ServicePreferences.empty();
+
+    Widget rowToggle({
+      required IconData icon,
+      required String label,
+      required String subtitle,
+      required bool value,
+      required ValueChanged<bool> onChanged,
+    }) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: cs.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: cs.onSurface.withValues(alpha: 0.08)),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: cs.primary),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: cs.onSurface,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: GoogleFonts.nunito(
+                        fontSize: 11,
+                        color: cs.onSurface.withValues(alpha: 0.5),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: value,
+                onChanged: onChanged,
+                activeColor: cs.primary,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppConstants.paddingLG),
+      child: Container(
+        padding: const EdgeInsets.all(AppConstants.paddingMD),
+        decoration: BoxDecoration(
+          color: cs.surface,
+          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+          border: Border.all(color: cs.onSurface.withValues(alpha: 0.08)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'PREFERENCIAS DE BUSQUEDA',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: cs.onSurface.withValues(alpha: 0.5),
+                    letterSpacing: 1.0,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            const SizedBox(height: AppConstants.paddingSM),
+            rowToggle(
+              icon: Icons.child_care_outlined,
+              label: 'Tengo hijos pequenos',
+              subtitle: 'Prioriza salones con experiencia infantil',
+              value: prefs.kidsFriendly,
+              onChanged: (v) => updateServicePreferences(
+                ref,
+                prefs.copyWith(kidsFriendly: v),
+              ),
+            ),
+            rowToggle(
+              icon: Icons.accessible_outlined,
+              label: 'Necesito acceso accesible',
+              subtitle: 'Solo muestra salones con rampa, acceso silla de ruedas',
+              value: prefs.accessibilityRequired,
+              onChanged: (v) => updateServicePreferences(
+                ref,
+                prefs.copyWith(accessibilityRequired: v),
+              ),
+            ),
+            rowToggle(
+              icon: Icons.elderly_outlined,
+              label: 'Atencion para adultos mayores',
+              subtitle: 'Prioriza salones con paciencia y cuidado especial',
+              value: prefs.seniorFriendlyOverride == true,
+              onChanged: (v) => updateServicePreferences(
+                ref,
+                prefs.copyWith(seniorFriendlyOverride: v ? true : null),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
