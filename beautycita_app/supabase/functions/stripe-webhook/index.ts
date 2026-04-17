@@ -75,16 +75,44 @@ serve(async (req) => {
         if (chargesEnabled && payoutsEnabled && detailsSubmitted) {
           console.log(`[STRIPE-WEBHOOK] Account ${account.id} onboarding complete`);
 
-          // Find and update the business
+          // Find and update the business (pull beneficiary_name to compare against Stripe)
           const { data: business, error: findError } = await supabase
             .from("businesses")
-            .select("id, name")
+            .select("id, name, beneficiary_name")
             .eq("stripe_account_id", account.id)
             .single();
 
           if (findError || !business) {
             console.error(`[STRIPE-WEBHOOK] Business not found for account ${account.id}`);
             break;
+          }
+
+          // Compare Stripe's verified account holder name against our beneficiary_name.
+          // Mismatch opens a payout hold and an audit entry; Stripe onboarding still proceeds
+          // (we don't block flag updates), but future bookings will be blocked by the hold.
+          const stripeName = extractStripeAccountName(account);
+          const ourName = business.beneficiary_name ?? "";
+          if (stripeName && ourName && !namesMatch(stripeName, ourName)) {
+            console.warn(
+              `[STRIPE-WEBHOOK] Name drift — Stripe='${stripeName}' BC='${ourName}' for ${business.id}`
+            );
+            await supabase.from("payout_holds").insert({
+              business_id: business.id,
+              reason: "identity_mismatch",
+              old_value: ourName,
+              new_value: stripeName,
+            });
+            await supabase.from("audit_log").insert({
+              admin_id: "00000000-0000-0000-0000-000000000000",
+              action: "stripe_name_drift_detected",
+              target_type: "business",
+              target_id: business.id,
+              details: {
+                stripe_account_id: account.id,
+                stripe_name: stripeName,
+                our_beneficiary_name: ourName,
+              },
+            });
           }
 
           // Mark onboarding as complete
@@ -451,7 +479,27 @@ serve(async (req) => {
                 });
               }
             } catch (debtErr) {
-              console.error(`[STRIPE-WEBHOOK] Debt collection error (non-fatal):`, debtErr);
+              // Distinguish payout-hold from unexpected errors.
+              const msg = debtErr instanceof Error ? debtErr.message : String(debtErr);
+              if (msg.includes("PAYOUT_HOLD_ACTIVE")) {
+                console.warn(`[STRIPE-WEBHOOK] Skipped debt collection — business ${businessId} on payout hold`);
+                await supabase.from("audit_log").insert({
+                  admin_id: "00000000-0000-0000-0000-000000000000",
+                  action: "payout_hold_blocked_debt_collection",
+                  target_type: "business",
+                  target_id: businessId,
+                  details: {
+                    booking_id: bookingId,
+                    gross_amount: grossAmount,
+                    commission: commission,
+                    iva_withheld: ivaWithheld,
+                    isr_withheld: isrWithheld,
+                    note: "Debt collection skipped due to active payout hold. Stripe destination transfer may have still occurred if PaymentIntent was created before hold was opened.",
+                  },
+                });
+              } else {
+                console.error(`[STRIPE-WEBHOOK] Debt collection error (non-fatal):`, debtErr);
+              }
             }
           }
 
@@ -727,6 +775,74 @@ serve(async (req) => {
     });
   }
 });
+
+// ---------------------------------------------------------------------------
+// Helper: Extract the account holder name Stripe has on file.
+// For individual accounts: first_name + last_name.
+// For company accounts: company.name.
+// Returns null if neither is populated.
+// ---------------------------------------------------------------------------
+function extractStripeAccountName(account: Stripe.Account): string | null {
+  if (account.business_type === "individual" && account.individual) {
+    const first = account.individual.first_name ?? "";
+    const last = account.individual.last_name ?? "";
+    const combined = `${first} ${last}`.trim();
+    return combined.length > 0 ? combined : null;
+  }
+  if (account.business_type === "company" && account.company) {
+    const name = account.company.name ?? "";
+    return name.trim().length > 0 ? name.trim() : null;
+  }
+  // Fallback: try both structures regardless of business_type
+  const fallback =
+    [account.individual?.first_name, account.individual?.last_name].filter(Boolean).join(" ") ||
+    account.company?.name ||
+    "";
+  return fallback.trim().length > 0 ? fallback.trim() : null;
+}
+
+// ---------------------------------------------------------------------------
+// Helper: Fuzzy name match. RFC-matching is exact; names need tolerance for
+// legal suffixes, accent differences, word order.
+// Returns true when normalized names are identical OR Levenshtein distance
+// is ≤ 2 on strings of length ≥ 5.
+// ---------------------------------------------------------------------------
+function namesMatch(a: string, b: string): boolean {
+  const normalize = (s: string) =>
+    s
+      .toUpperCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "") // strip accents
+      .replace(/\b(S\.A\.?|DE C\.V\.?|SA|CV|SRL|S DE RL)\b/g, "") // strip corporate suffixes
+      .replace(/[^A-Z0-9 ]/g, " ")
+      .split(/\s+/)
+      .filter((w) => w.length > 0)
+      .sort()
+      .join(" ");
+
+  const na = normalize(a);
+  const nb = normalize(b);
+  if (na === nb) return true;
+  if (na.length < 5 || nb.length < 5) return false;
+
+  // Levenshtein distance
+  const m = na.length;
+  const n = nb.length;
+  if (Math.abs(m - n) > 2) return false;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + (na[i - 1] === nb[j - 1] ? 0 : 1)
+      );
+    }
+  }
+  return dp[m][n] <= 2;
+}
 
 // ---------------------------------------------------------------------------
 // Helper: Send email via send-email edge function

@@ -74,6 +74,22 @@ serve(async (req) => {
       return json({ error: "Este negocio no tiene pagos en linea configurados" }, 400, corsHeaders);
     }
 
+    // Block new purchases if the business has an active payout hold.
+    const { data: holdCheck, error: holdErr } = await supabase.rpc("has_active_payout_hold", {
+      p_business_id: business.id,
+    });
+    if (holdErr) {
+      console.error(`[GIFT-CARD] has_active_payout_hold error:`, holdErr);
+      return json({ error: "No se pudo verificar el estado del negocio. Intenta de nuevo." }, 500, corsHeaders);
+    }
+    if (holdCheck === true) {
+      console.warn(`[GIFT-CARD] Purchase rejected — business ${business.id} has active payout hold`);
+      return json({
+        error: "Este negocio temporalmente no puede vender tarjetas de regalo. Intenta de nuevo mas tarde.",
+        code: "PAYOUT_HOLD_ACTIVE",
+      }, 409, corsHeaders);
+    }
+
     // Generate gift card code
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     let code = "";

@@ -156,6 +156,24 @@ serve(async (req) => {
       return json({ error: "Este negocio no ha completado la configuracion de Stripe Connect" }, 400);
     }
 
+    // Block new bookings if the business has an active payout hold.
+    // Holds are opened automatically when beneficiary_name / rfc / clabe / stripe_account_id
+    // change, and stay active until an admin releases them.
+    const { data: holdCheck, error: holdErr } = await supabase.rpc("has_active_payout_hold", {
+      p_business_id: business.id,
+    });
+    if (holdErr) {
+      console.error(`[PAYMENT] has_active_payout_hold error:`, holdErr);
+      return json({ error: "No se pudo verificar el estado del negocio. Intenta de nuevo." }, 500);
+    }
+    if (holdCheck === true) {
+      console.warn(`[PAYMENT] Booking rejected — business ${business.id} has active payout hold`);
+      return json({
+        error: "Este negocio temporalmente no puede recibir pagos. Intenta de nuevo mas tarde o contacta al negocio.",
+        code: "PAYOUT_HOLD_ACTIVE",
+      }, 409);
+    }
+
     // Calculate amounts
     const servicePrice = service.price ?? 0;
 

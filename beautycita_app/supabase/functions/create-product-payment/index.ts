@@ -130,6 +130,22 @@ serve(async (req) => {
       return json({ error: "Este negocio no tiene pagos en linea configurados" }, 400, req);
     }
 
+    // Block new purchases if the business has an active payout hold.
+    const { data: holdCheck, error: holdErr } = await supabase.rpc("has_active_payout_hold", {
+      p_business_id: business.id,
+    });
+    if (holdErr) {
+      console.error(`[PRODUCT-PAYMENT] has_active_payout_hold error:`, holdErr);
+      return json({ error: "No se pudo verificar el estado del negocio. Intenta de nuevo." }, 500, req);
+    }
+    if (holdCheck === true) {
+      console.warn(`[PRODUCT-PAYMENT] Purchase rejected — business ${business.id} has active payout hold`);
+      return json({
+        error: "Este negocio temporalmente no puede vender productos. Intenta de nuevo mas tarde.",
+        code: "PAYOUT_HOLD_ACTIVE",
+      }, 409, req);
+    }
+
     // Calculate amounts
     const productPrice = product.price ?? 0;
 
