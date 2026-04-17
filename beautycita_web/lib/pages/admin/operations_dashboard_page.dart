@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher_string.dart';
 import '../../config/breakpoints.dart';
 import '../../config/web_theme.dart';
 import '../../providers/admin_operations_provider.dart';
+import '../../providers/admin_payout_holds_provider.dart';
 import '../../widgets/web_design_system.dart';
 
 /// CEO Operations Dashboard — system health, business activity, and logs.
@@ -56,6 +57,8 @@ class OperationsDashboardPage extends ConsumerWidget {
                 const SizedBox(height: 16),
                 _AlertsLogsColumn(ref: ref),
               ],
+              const SizedBox(height: 24),
+              const _PayoutHoldsSection(),
               const SizedBox(height: 24),
             ],
           ),
@@ -848,6 +851,235 @@ class _LogRow extends StatelessWidget {
     if (diff.inHours < 24) return 'hace ${diff.inHours}h';
     if (diff.inDays < 7) return 'hace ${diff.inDays}d';
     return DateFormat('d/M HH:mm').format(dt);
+  }
+}
+
+// ── Payout Holds Section ─────────────────────────────────────────────────────
+
+class _PayoutHoldsSection extends ConsumerWidget {
+  const _PayoutHoldsSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final holdsAsync = ref.watch(activePayoutHoldsProvider);
+
+    return WebCard(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.gavel, color: kWebPrimary, size: 22),
+                const SizedBox(width: 10),
+                Text('Pagos detenidos', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                const Spacer(),
+                holdsAsync.maybeWhen(
+                  data: (rows) => Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: rows.isEmpty ? kWebSuccess.withValues(alpha: 0.15) : const Color(0xFFFFF3E0),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      rows.isEmpty ? 'Ninguno activo' : '${rows.length} activo${rows.length == 1 ? "" : "s"}',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: rows.isEmpty ? kWebSuccess : const Color(0xFFE65100),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  orElse: () => const SizedBox.shrink(),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  tooltip: 'Actualizar',
+                  icon: const Icon(Icons.refresh, size: 20),
+                  onPressed: () => ref.invalidate(activePayoutHoldsProvider),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Holds abiertos automaticamente por cambios en beneficiary_name, rfc, clabe, stripe_account_id o deriva con Stripe. Liberar requiere una nota justificativa de al menos 10 caracteres.',
+              style: theme.textTheme.bodySmall?.copyWith(color: kWebTextSecondary),
+            ),
+            const SizedBox(height: 16),
+            holdsAsync.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (e, _) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Text('Error: $e', style: theme.textTheme.bodySmall?.copyWith(color: kWebError)),
+              ),
+              data: (rows) {
+                if (rows.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Text(
+                      'No hay holds activos. Todos los salones pueden recibir pagos normalmente.',
+                      style: theme.textTheme.bodySmall?.copyWith(color: kWebTextSecondary),
+                    ),
+                  );
+                }
+                return Column(
+                  children: [
+                    for (final row in rows) _PayoutHoldRowTile(row: row),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PayoutHoldRowTile extends ConsumerWidget {
+  const _PayoutHoldRowTile({required this.row});
+  final PayoutHoldRow row;
+
+  String _formatAgo(DateTime then) {
+    final diff = DateTime.now().difference(then);
+    if (diff.inMinutes < 60) return 'hace ${diff.inMinutes}min';
+    if (diff.inHours < 24) return 'hace ${diff.inHours}h';
+    if (diff.inDays < 30) return 'hace ${diff.inDays}d';
+    return DateFormat('d/M').format(then);
+  }
+
+  Future<void> _showReleaseDialog(BuildContext context, WidgetRef ref) async {
+    final noteController = TextEditingController();
+    final err = await showDialog<String?>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Liberar hold'),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 460),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Negocio: ${row.businessName}'),
+              const SizedBox(height: 4),
+              Text('Razon: ${row.reasonLabel}'),
+              if (row.oldValue != null || row.newValue != null) ...[
+                const SizedBox(height: 4),
+                Text('Antes: ${row.oldValue ?? "(vacio)"}'),
+                Text('Despues: ${row.newValue ?? "(vacio)"}'),
+              ],
+              const SizedBox(height: 12),
+              TextField(
+                controller: noteController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Nota justificativa (minimo 10 caracteres)',
+                  hintText: 'Ej: Verificado con el salon por teléfono, RFC coincide con nueva ID.',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop('__cancel__'),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final note = noteController.text.trim();
+              if (note.length < 10) {
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  const SnackBar(content: Text('La nota debe tener al menos 10 caracteres')),
+                );
+                return;
+              }
+              final error = await releasePayoutHold(holdId: row.id, note: note);
+              if (!dialogContext.mounted) return;
+              Navigator.of(dialogContext).pop(error);
+            },
+            child: const Text('Liberar'),
+          ),
+        ],
+      ),
+    );
+    noteController.dispose();
+    if (err == null) {
+      ref.invalidate(activePayoutHoldsProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Hold liberado. Los pagos se reanudaran.')),
+        );
+      }
+    } else if (err != '__cancel__' && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al liberar: $err')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: kWebBackground,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: kWebCardBorder),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 6,
+            height: 52,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE65100),
+              borderRadius: BorderRadius.circular(3),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(row.businessName, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 2),
+                Text(row.reasonLabel, style: theme.textTheme.bodySmall),
+                if ((row.oldValue ?? '').isNotEmpty || (row.newValue ?? '').isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    '${row.oldValue ?? "(vacio)"} → ${row.newValue ?? "(vacio)"}',
+                    style: theme.textTheme.labelSmall?.copyWith(color: kWebTextSecondary),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+                const SizedBox(height: 2),
+                Text(
+                  'Abierto ${_formatAgo(row.startedAt)}',
+                  style: theme.textTheme.labelSmall?.copyWith(color: kWebTextHint),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          FilledButton.icon(
+            onPressed: () => _showReleaseDialog(context, ref),
+            icon: const Icon(Icons.lock_open_outlined, size: 16),
+            label: const Text('Liberar'),
+          ),
+        ],
+      ),
+    );
   }
 }
 
