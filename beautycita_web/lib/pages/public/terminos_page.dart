@@ -27,7 +27,7 @@ class TerminosPage extends StatelessWidget {
                 Text('Terminos y Condiciones de Uso',
                     style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-                Text('Ultima actualizacion: 10 de abril de 2026',
+                Text('Ultima actualizacion: 17 de abril de 2026',
                     style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey)),
                 const SizedBox(height: 12),
                 Text('BEAUTYCITA, S.A. de C.V. (RFC: BEA260313MI8)\nAvenida Manuel Corona, Alazan 11A, C.P. 48290, Jalisco, Mexico',
@@ -122,6 +122,16 @@ class TerminosPage extends StatelessWidget {
                     '  e) Completar el proceso de verificacion (servicios, horarios, cuenta Stripe, RFC)\n'
                     '  f) Mantener estandares de calidad e higiene en la prestacion de servicios\n'
                     '  g) Responder a las comunicaciones de clientes en tiempo razonable'),
+
+                _section('11 bis. Cuenta Bancaria de Beneficiario y Pagos',
+                    'Para los salones y profesionales (el "Establecimiento") que reciban pagos a traves de la Plataforma:\n\n'
+                    '§ 1. Identidad del Beneficiario. Al registrarse, el Establecimiento proporciona (i) el nombre completo del titular de la cuenta bancaria destinada a recibir pagos ("Nombre del Beneficiario") y (ii) el RFC del mismo titular. El Establecimiento declara, bajo protesta de decir verdad, que ambos datos corresponden de manera inequivoca a la persona fisica o moral titular de la cuenta bancaria designada.\n\n'
+                    '§ 2. Correspondencia Obligatoria. La Plataforma unicamente realizara pagos, dispersiones o transferencias a cuentas cuyo titular coincida con la Identidad del Beneficiario registrada. La Plataforma se reserva el derecho de verificar por cualquier medio, incluyendo cotejo con la institucion bancaria receptora o con el SAT, que la cuenta bancaria corresponda a los datos declarados.\n\n'
+                    '§ 3. Suspension Automatica por Modificacion. Cualquier cambio en el Nombre del Beneficiario, el RFC o la CLABE suspendera inmediatamente todos los pagos pendientes y programados, sin necesidad de notificacion adicional, hasta que un administrador de la Plataforma verifique y autorice expresamente la nueva informacion. La Plataforma no sera responsable por retrasos derivados de dicha suspension.\n\n'
+                    '§ 4. Quejas de Terceros y Facultad de Cancelacion. Si cualquier tercero, incluyendo clientes, autoridades, instituciones financieras o titulares originales de la cuenta bancaria, presenta una queja que alegue que un pago fue realizado a una cuenta cuyo titular no corresponde a la Identidad del Beneficiario declarada, la Plataforma, a su entera discrecion y sin necesidad de demostrar la veracidad de la queja, podra cancelar la cuenta del Establecimiento en cualquier momento.\n\n'
+                    '§ 5. Apelacion por Panel Arbitral. El Establecimiento podra apelar la cancelacion mediante solicitud por escrito a apelaciones@beautycita.com dentro de los diez (10) dias naturales siguientes a la notificacion. La apelacion sera resuelta por un Panel Arbitral integrado por tres (3) personas designadas por la Plataforma al momento de la controversia, ninguna de las cuales podra ser empleado directamente involucrado en la transaccion o queja. La resolucion sera final, inapelable y vinculante en terminos del articulo 1423 del Codigo de Comercio, con sede en la Ciudad de Mexico e idioma espanol. Las partes renuncian a cualquier recurso judicial distinto a la accion de nulidad prevista en el articulo 1457 del mismo Codigo.\n\n'
+                    '§ 6. Consecuencias de la Cancelacion. Cancelada la cuenta del Establecimiento: (a) cualquier saldo a su favor sera remitido en su totalidad a la Plataforma como compensacion por gastos administrativos, de verificacion y resolucion de controversias, asi como posibles danos reputacionales; y (b) cualquier adeudo pendiente del Establecimiento frente a la Plataforma quedara extinguido en su totalidad. Dichas medidas constituyen compensacion integra y final respecto a esos rubros.\n\n'
+                    '§ 7. Naturaleza Esencial. El Establecimiento reconoce haber leido y aceptado la presente clausula y su caracter de condicion esencial. La invalidez de cualquier disposicion de la misma no afectara la validez del resto del contrato ni de las demas disposiciones de la clausula.'),
 
                 _section('12. Propiedad Intelectual',
                     'Todo el contenido de la Plataforma, incluyendo disenos, logotipos, interfaces, codigo fuente, algoritmos de recomendacion, modelos de IA (Aphrodite, Eros), textos y graficos, es propiedad exclusiva de BEAUTYCITA, S.A. de C.V. o sus licenciantes, y esta protegido por las leyes de propiedad intelectual de Mexico y tratados internacionales.\n\n'

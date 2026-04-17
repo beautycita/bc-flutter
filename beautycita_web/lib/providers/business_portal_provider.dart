@@ -43,6 +43,22 @@ final currentBusinessProvider =
   return response;
 });
 
+// ── Payout Holds ─────────────────────────────────────────────────────────────
+
+/// True when the business has an active payout_holds row (released_at IS NULL).
+/// Triggers when beneficiary_name, rfc, clabe, or stripe_account_id change,
+/// or when Stripe-side name drift is detected. Admin must release via RPC.
+final activePayoutHoldProvider =
+    FutureProvider.autoDispose.family<bool, String>((ref, businessId) async {
+  if (!BCSupabase.isInitialized) return false;
+  final result = await BCSupabase.client.rpc(
+    'has_active_payout_hold',
+    params: {'p_business_id': businessId},
+  );
+  if (result is bool) return result;
+  return false;
+});
+
 // ── Business Stats ───────────────────────────────────────────────────────────
 
 /// Aggregated stats for the business dashboard.

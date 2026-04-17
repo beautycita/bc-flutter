@@ -850,6 +850,60 @@ class _BankingSetupScreenState extends ConsumerState<BankingSetupScreen> {
     );
   }
 
+  /// Payout-lock disclosure modal — fires when EDITING existing beneficiary/CLABE.
+  /// Not shown on first-time setup. DB trigger opens the hold regardless; this
+  /// dialog just makes the consequence visible at the edit point.
+  Future<bool> _confirmPayoutLockChange({required String changedFields}) async {
+    var acknowledged = false;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Confirmar cambio en datos de pago'),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Estas a punto de modificar $changedFields. Al confirmar:'),
+                const SizedBox(height: 10),
+                const Text('1. Se suspenderan todos los pagos pendientes hasta que un administrador verifique la nueva informacion (24-72 h habiles).'),
+                const SizedBox(height: 6),
+                const Text('2. La nueva cuenta debe pertenecer a la misma persona o empresa con el nombre y RFC registrados.'),
+                const SizedBox(height: 6),
+                const Text('3. Si alguien reclama que enviaste pagos a una cuenta que no corresponde al titular, BeautyCita puede cancelar tu cuenta.'),
+                const SizedBox(height: 6),
+                const Text('4. En caso de cancelacion, el saldo a tu favor se retiene como compensacion y la deuda queda extinguida. Apelable ante Panel Arbitral.'),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Checkbox(
+                      value: acknowledged,
+                      onChanged: (v) => setDialogState(() => acknowledged = v ?? false),
+                    ),
+                    const Expanded(child: Text('He leido y acepto.', style: TextStyle(fontSize: 13))),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: acknowledged ? () => Navigator.of(dialogContext).pop(true) : null,
+              child: const Text('Confirmar'),
+            ),
+          ],
+        ),
+      ),
+    );
+    return confirmed ?? false;
+  }
+
   Future<void> _submit() async {
     setState(() {
       _submitting = true;
@@ -870,6 +924,25 @@ class _BankingSetupScreenState extends ConsumerState<BankingSetupScreen> {
       final clabe = _clabeController.text.replaceAll(RegExp(r'\D'), '');
       final beneficiary = _beneficiaryController.text.trim();
       final client = SupabaseClientService.client;
+
+      // Disclosure modal on edit (not on first-time setup)
+      final existingBeneficiary = (biz['beneficiary_name'] as String?)?.trim();
+      final existingClabe = (biz['clabe'] as String?)?.trim();
+      final nameChanged = existingBeneficiary != null && existingBeneficiary.isNotEmpty && existingBeneficiary != beneficiary;
+      final clabeChanged = existingClabe != null && existingClabe.isNotEmpty && existingClabe != clabe;
+      if (nameChanged || clabeChanged) {
+        final parts = <String>[];
+        if (nameChanged) parts.add('el Nombre del Beneficiario');
+        if (clabeChanged) parts.add('la CLABE');
+        if (!mounted) return;
+        final confirmed = await _confirmPayoutLockChange(changedFields: parts.join(' y '));
+        if (!confirmed) {
+          setState(() {
+            _submitting = false;
+          });
+          return;
+        }
+      }
 
       // 1. Upload ID front
       final frontPath = 'salon-ids/$businessId/id_front.jpg';

@@ -166,20 +166,116 @@ class _BizBankingPageState extends ConsumerState<BizBankingPage> {
     return true;
   }
 
+  // ── Payout-lock disclosure modal (fires on edit, not first-time setup) ───
+  //
+  // Per decision #15 / ToS § 1-7, changing beneficiary_name, rfc, or clabe
+  // auto-freezes all payouts until admin review. User must acknowledge before
+  // the write goes through. The DB trigger will open the payout_hold whether
+  // or not the modal is shown — this dialog exists to make the consequence
+  // visible at the point of edit.
+  Future<bool> _confirmPayoutLockChange({required String changedFields}) async {
+    var acknowledged = false;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Confirmar cambio en datos de pago'),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Estas a punto de modificar $changedFields asociado a tu cuenta bancaria para recibir pagos de BeautyCita. Al confirmar este cambio:',
+                    style: Theme.of(ctx).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 12),
+                  const _BulletLine(
+                    number: '1',
+                    text: 'Se suspenderan inmediatamente todos los pagos pendientes y programados hacia tu cuenta hasta que un administrador verifique y autorice la nueva informacion. Este proceso puede tardar entre 24 y 72 horas habiles.',
+                  ),
+                  const _BulletLine(
+                    number: '2',
+                    text: 'La nueva cuenta bancaria debe pertenecer a la misma persona o empresa cuyo nombre y RFC declares en este formulario. BeautyCita unicamente transferira fondos a cuentas cuyo titular coincida con los datos registrados.',
+                  ),
+                  const _BulletLine(
+                    number: '3',
+                    text: 'Si alguien reclama posteriormente que enviaste pagos a una cuenta que no corresponde al titular original, BeautyCita puede cancelar tu cuenta por cualquier motivo, a nuestra entera discrecion.',
+                  ),
+                  const _BulletLine(
+                    number: '4',
+                    text: 'En caso de cancelacion, cualquier saldo a tu favor en la Plataforma se retiene como compensacion, y cualquier deuda que tengas con BeautyCita queda extinguida. La decision puede apelarse ante un Panel Arbitral de tres personas designadas por BeautyCita; su resolucion es final.',
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: acknowledged,
+                        onChanged: (v) => setDialogState(() => acknowledged = v ?? false),
+                      ),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setDialogState(() => acknowledged = !acknowledged),
+                          child: Text(
+                            'He leido y acepto estas condiciones y los Terminos y Condiciones completos.',
+                            style: Theme.of(ctx).textTheme.bodySmall,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: acknowledged ? () => Navigator.of(dialogContext).pop(true) : null,
+              child: const Text('Confirmar cambio'),
+            ),
+          ],
+        ),
+      ),
+    );
+    return confirmed ?? false;
+  }
+
   // ── Step 3 submit ─────────────────────────────────────────────────────────
 
   Future<void> _submit() async {
     final biz = await ref.read(currentBusinessProvider.future);
     if (biz == null) return;
 
+    final bizId = biz['id'] as String;
+    final clabe = _clabeController.text.trim();
+    final beneficiary = _beneficiaryController.text.trim();
+
+    // Disclosure modal — fires only when EDITING existing values, not on first setup.
+    final existingBeneficiary = (biz['beneficiary_name'] as String?)?.trim();
+    final existingClabe = (biz['clabe'] as String?)?.trim();
+    final nameChanged = existingBeneficiary != null && existingBeneficiary.isNotEmpty && existingBeneficiary != beneficiary;
+    final clabeChanged = existingClabe != null && existingClabe.isNotEmpty && existingClabe != clabe;
+    if (nameChanged || clabeChanged) {
+      final parts = <String>[];
+      if (nameChanged) parts.add('el Nombre del Beneficiario');
+      if (clabeChanged) parts.add('la CLABE');
+      final confirmed = await _confirmPayoutLockChange(changedFields: parts.join(' y '));
+      if (!confirmed) {
+        return; // user cancelled — keep existing state
+      }
+    }
+
     setState(() {
       _submitting = true;
       _resultMessage = null;
     });
-
-    final bizId = biz['id'] as String;
-    final clabe = _clabeController.text.trim();
-    final beneficiary = _beneficiaryController.text.trim();
 
     try {
       // Upload ID images to Supabase storage
@@ -929,6 +1025,31 @@ class _IdPreview extends StatelessWidget {
         const SizedBox(height: 4),
         Text(label, style: theme.textTheme.labelSmall?.copyWith(color: kWebTextSecondary)),
       ],
+    );
+  }
+}
+
+/// Numbered bullet line used inside the payout-lock disclosure dialog.
+class _BulletLine extends StatelessWidget {
+  const _BulletLine({required this.number, required this.text});
+  final String number;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 22,
+            child: Text('$number.', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
+          ),
+          Expanded(child: Text(text, style: theme.textTheme.bodySmall)),
+        ],
+      ),
     );
   }
 }

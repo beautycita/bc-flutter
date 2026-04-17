@@ -110,8 +110,11 @@ class _PaymentsContent extends ConsumerWidget {
               _StripeBanner(biz: biz),
               const SizedBox(height: 16),
 
-              // Banking setup banner
-              if (biz['banking_complete'] != true) _BankingBanner(biz: biz),
+              // Banking section — setup banner when incomplete, summary+edit card when complete
+              if (biz['banking_complete'] != true)
+                _BankingBanner(biz: biz)
+              else
+                _BankingSummaryCard(biz: biz),
               const SizedBox(height: 24),
 
               // Filters
@@ -798,6 +801,110 @@ class _CommissionMobileRow extends StatelessWidget {
 }
 
 // ── Banking Setup Banner ───────────────────────────────────────────────────
+
+/// Banking summary card shown once banking setup is complete.
+/// Displays masked CLABE + bank + beneficiary + an Editar button that routes
+/// to /negocio/banking. The banking page itself fires the payout-lock modal
+/// when the user attempts to change sensitive fields.
+class _BankingSummaryCard extends ConsumerWidget {
+  const _BankingSummaryCard({required this.biz});
+  final Map<String, dynamic> biz;
+
+  String _maskClabe(String? clabe) {
+    if (clabe == null || clabe.length < 4) return '••••';
+    return '••••${clabe.substring(clabe.length - 4)}';
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final bizId = biz['id'] as String;
+    final holdAsync = ref.watch(activePayoutHoldProvider(bizId));
+    final clabe = biz['clabe'] as String?;
+    final bankName = (biz['bank_name'] as String?)?.trim().isNotEmpty == true ? biz['bank_name'] as String : '—';
+    final beneficiary = (biz['beneficiary_name'] as String?)?.trim().isNotEmpty == true ? biz['beneficiary_name'] as String : '—';
+
+    final hasHold = holdAsync.maybeWhen(data: (v) => v, orElse: () => false);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (hasHold)
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF3E0),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE65100).withValues(alpha: 0.35)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.warning_amber_rounded, color: Color(0xFFE65100), size: 22),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Pagos detenidos', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: const Color(0xFFE65100))),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Detectamos un cambio reciente en tus datos de pago. Un administrador revisara la nueva informacion antes de reanudar los pagos. 24-72 h habiles.',
+                        style: theme.textTheme.labelSmall?.copyWith(color: const Color(0xFF5D4037)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: kWebSurface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: kWebCardBorder),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: kWebPrimary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.account_balance, size: 20, color: kWebPrimary),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Cuenta bancaria', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 2),
+                    Text(
+                      '$bankName · ${_maskClabe(clabe)} · $beneficiary',
+                      style: theme.textTheme.labelSmall?.copyWith(color: kWebTextSecondary),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              OutlinedButton.icon(
+                onPressed: () => context.go('/negocio/banking'),
+                icon: const Icon(Icons.edit_outlined, size: 16),
+                label: const Text('Editar'),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
 
 class _BankingBanner extends StatelessWidget {
   const _BankingBanner({required this.biz});
