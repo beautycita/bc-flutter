@@ -71,3 +71,4 @@ scripts/outscraper*.py
 scripts/import_outscraper*.py
 scripts/test_sat_api.sh
 behavioral-intelligence/
+.claude/
