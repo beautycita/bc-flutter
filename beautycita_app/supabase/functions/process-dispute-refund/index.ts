@@ -90,6 +90,17 @@ serve(async (req) => {
 
     console.log(`[DISPUTE-REFUND] Dispute ${dispute_id}: $${refundAmount}, type=${isOrderDispute ? "order" : "appointment"}`);
 
+    // Look up original order payment method to decide whether commission reversal applies
+    let orderPaymentMethod: string | null = null;
+    if (isOrderDispute && dispute.order_id) {
+      const { data: orderRow } = await supabase
+        .from("orders")
+        .select("payment_method")
+        .eq("id", dispute.order_id)
+        .maybeSingle();
+      orderPaymentMethod = orderRow?.payment_method ?? null;
+    }
+
     // Process refund: saldo credit to buyer + debt to seller + tax reversal
     const result = await processRefund({
       supabase,
@@ -98,6 +109,7 @@ serve(async (req) => {
       grossAmount: refundAmount,
       appointmentId: dispute.appointment_id ?? undefined,
       orderId: dispute.order_id ?? undefined,
+      paymentMethod: orderPaymentMethod,
       reason: `dispute_${dispute_id}`,
       idempotencyKey: `dispute-refund-${dispute_id}`,
     });

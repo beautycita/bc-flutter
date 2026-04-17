@@ -1324,6 +1324,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
     String? selectedReason;
     final detailsCtl = TextEditingController();
 
+    try {
     final confirmed = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -1408,16 +1409,10 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
       },
     );
 
-    if (confirmed != true || selectedReason == null) {
-      detailsCtl.dispose();
-      return;
-    }
+    if (confirmed != true || selectedReason == null) return;
 
     final userId = SupabaseClientService.currentUserId;
-    if (userId == null) {
-      detailsCtl.dispose();
-      return;
-    }
+    if (userId == null) return;
 
     try {
       await SupabaseClientService.client.from(BCTables.disputes).insert({
@@ -1438,7 +1433,9 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
       if (kDebugMode) debugPrint('Order dispute failed: $e');
       ToastService.showError('Error al enviar disputa. Intenta de nuevo.');
     }
-    detailsCtl.dispose();
+    } finally {
+      detailsCtl.dispose();
+    }
   }
 
   @override

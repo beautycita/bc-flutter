@@ -290,6 +290,7 @@ Deno.serve(async (req: Request) => {
           businessId: order.business_id,
           grossAmount: order.total_amount,
           orderId: order.id,
+          paymentMethod: order.payment_method,
           reason: `order_timeout_${order.id}`,
           idempotencyKey: `order-refund-${order.id}`,
         });

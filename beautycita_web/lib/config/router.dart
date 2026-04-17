@@ -149,9 +149,6 @@ abstract final class WebRoutes {
   // Public invite
   static const String invitarPublic = '/invitar';
 
-  // Public salon page
-  static const String salon = '/salon';
-
   // Demo (read-only business portal preview)
   static const String demo = '/demo';
   static const String demoCalendar = '/demo/calendar';
@@ -167,7 +164,6 @@ abstract final class WebRoutes {
 
   // Public
   static const String soporte = '/soporte';
-  static const String registro = '/registro';
   static const String registrar = '/registrar';
   static const String terminos = '/terminos';
   static const String privacidad = '/privacidad';

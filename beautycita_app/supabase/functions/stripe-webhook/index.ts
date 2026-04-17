@@ -728,7 +728,7 @@ serve(async (req) => {
         if (!booking) {
           const { data: order } = await supabase
             .from("orders")
-            .select("id, buyer_id, business_id, status, total_amount")
+            .select("id, buyer_id, business_id, product_name, status, total_amount")
             .eq("stripe_payment_intent_id", paymentIntentId)
             .maybeSingle();
 
@@ -753,6 +753,54 @@ serve(async (req) => {
             }
 
             console.log(`[STRIPE-WEBHOOK] Product order ${order.id} refunded externally, debt created`);
+
+            // Notify buyer + seller (parity with order-followup auto-refund notifications)
+            const shortId = order.id.slice(0, 8).toUpperCase();
+            const productName = order.product_name ?? "producto";
+            try {
+              await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-push-notification`, {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  user_id: order.buyer_id,
+                  notification_type: "new_booking",
+                  custom_title: "Pedido reembolsado",
+                  custom_body: `Tu pedido de ${productName} fue reembolsado. El monto regresara a tu tarjeta.`,
+                  data: { type: "order_refunded_external", order_id: order.id },
+                }),
+              });
+            } catch (e) {
+              console.error(`[STRIPE-WEBHOOK] Buyer push failed: ${(e as Error).message}`);
+            }
+
+            const { data: biz } = await supabase
+              .from("businesses")
+              .select("owner_id")
+              .eq("id", order.business_id)
+              .maybeSingle();
+            if (biz?.owner_id) {
+              try {
+                await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-push-notification`, {
+                  method: "POST",
+                  headers: {
+                    Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    user_id: biz.owner_id,
+                    notification_type: "new_booking",
+                    custom_title: "Pedido reembolsado manualmente",
+                    custom_body: `El pedido #${shortId} de ${productName} fue reembolsado externamente. Se registro adeudo por $${refundAmount}.`,
+                    data: { type: "order_refunded_external", order_id: order.id },
+                  }),
+                });
+              } catch (e) {
+                console.error(`[STRIPE-WEBHOOK] Seller push failed: ${(e as Error).message}`);
+              }
+            }
           }
         }
         break;

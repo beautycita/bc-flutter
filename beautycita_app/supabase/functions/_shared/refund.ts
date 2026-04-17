@@ -8,7 +8,7 @@
 
 import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const BC_PROCESSING_FEE_RATE = 0.03;
+const DEFAULT_PROCESSING_FEE_RATE = 0.03;
 
 export interface RefundParams {
   supabase: SupabaseClient;
@@ -17,8 +17,22 @@ export interface RefundParams {
   grossAmount: number;
   appointmentId?: string;
   orderId?: string;
+  /** Original order payment method. Non-Stripe methods (saldo/cash) skip commission reversal ledger. */
+  paymentMethod?: string | null;
   reason: string;
   idempotencyKey: string;
+}
+
+async function readProcessingFeeRate(supabase: SupabaseClient): Promise<number> {
+  const { data } = await supabase
+    .from("app_config")
+    .select("value")
+    .eq("key", "commission_keep_on_product_refund")
+    .maybeSingle();
+  const parsed = Number(data?.value);
+  return Number.isFinite(parsed) && parsed >= 0 && parsed <= 1
+    ? parsed
+    : DEFAULT_PROCESSING_FEE_RATE;
 }
 
 export interface RefundResult {
@@ -31,10 +45,11 @@ export interface RefundResult {
 export async function processRefund(params: RefundParams): Promise<RefundResult> {
   const {
     supabase, buyerId, businessId, grossAmount,
-    appointmentId, orderId, reason, idempotencyKey,
+    appointmentId, orderId, paymentMethod, reason, idempotencyKey,
   } = params;
 
-  const processingFee = Math.round(grossAmount * BC_PROCESSING_FEE_RATE * 100) / 100;
+  const feeRate = await readProcessingFeeRate(supabase);
+  const processingFee = Math.round(grossAmount * feeRate * 100) / 100;
   const saldoCredit = Math.round((grossAmount - processingFee) * 100) / 100;
 
   // 1. Credit buyer saldo
@@ -97,15 +112,19 @@ export async function processRefund(params: RefundParams): Promise<RefundResult>
     }
   }
 
-  // 4. For product orders: record commission reversal (keep 3%, return 7%)
-  if (orderId) {
-    const commissionReturn = Math.round((grossAmount * 0.07) * 100) / 100;
+  // 4. For product orders paid via Stripe: record commission reversal (keep 3%, return 7%).
+  //    Saldo/cash orders never moved money through Stripe — no commission to reverse.
+  const stripeFundedOrder = orderId && paymentMethod !== "saldo" &&
+    paymentMethod !== "cash" && paymentMethod !== "cash_direct" &&
+    paymentMethod !== "cash_walk_in";
+  if (stripeFundedOrder) {
+    const commissionReturn = Math.round((grossAmount * (0.10 - feeRate)) * 100) / 100;
     if (commissionReturn > 0) {
       await supabase.from("commission_records").insert({
         business_id: businessId,
         order_id: orderId,
         amount: -commissionReturn,
-        rate: 0.07,
+        rate: Math.round((0.10 - feeRate) * 10000) / 10000,
         source: "product_sale_reversal",
         period_month: new Date().getMonth() + 1,
         period_year: new Date().getFullYear(),
