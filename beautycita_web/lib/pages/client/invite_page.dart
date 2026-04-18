@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:beautycita_core/supabase.dart';
 
 import '../../config/breakpoints.dart';
 import '../../providers/web_invite_provider.dart';
@@ -32,9 +33,13 @@ class _InvitePageState extends ConsumerState<InvitePage> {
   }
 
   Future<void> _bootstrap() async {
-    // Location will be handled by the provider if available.
-    // On web, we skip JS geolocation interop to avoid dart2js type issues
-    // and let the provider load salons without location (shows all nearby).
+    // initState fires before BCSupabase finishes booting on a fresh page
+    // load; wait for it so the provider's first edge-function call has a
+    // client to hand. Without this, /invitar throws
+    // `Bad state: Supabase not initialized` on every cold open.
+    if (!BCSupabase.isInitialized) {
+      await BCSupabase.initialize();
+    }
     if (!mounted) return;
 
     ref.read(webInviteProvider.notifier).initialize(

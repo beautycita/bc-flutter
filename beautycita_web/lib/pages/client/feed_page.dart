@@ -71,29 +71,41 @@ class _FeedPageState extends ConsumerState<FeedPage> {
     try {
       final baseUrl = dotenv.env['SUPABASE_URL'] ?? '';
       final anonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
-      final uri = Uri.parse('$baseUrl/functions/v1/feed-public');
 
-      final body = <String, dynamic>{
-        'page': _page,
-        'page_size': _pageSize,
+      // feed-public is a GET endpoint (see mobile FeedService for the
+      // reference shape). Posting JSON yields 405 and the page crashed.
+      final params = <String, String>{
+        'page': _page.toString(),
+        'limit': _pageSize.toString(),
+        if (_selectedCategory != null) 'category': _selectedCategory!,
       };
-      if (_selectedCategory != null) {
-        body['category'] = _selectedCategory;
-      }
+      final uri = Uri.parse('$baseUrl/functions/v1/feed-public')
+          .replace(queryParameters: params);
+
+      final accessToken = BCSupabase.isAuthenticated
+          ? BCSupabase.client.auth.currentSession?.accessToken
+          : null;
 
       final headers = <String, String>{
-        'Content-Type': 'application/json',
         'apikey': anonKey,
-        'Authorization': 'Bearer ${BCSupabase.isAuthenticated ? BCSupabase.client.auth.currentSession?.accessToken ?? anonKey : anonKey}',
+        'Authorization': 'Bearer ${accessToken ?? anonKey}',
       };
 
-      final response = await http.post(uri, headers: headers, body: jsonEncode(body));
+      final response = await http.get(uri, headers: headers);
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final rawItems = data['items'] as List? ?? data as List? ?? [];
+        final decoded = jsonDecode(response.body);
+        final List rawItems;
+        if (decoded is Map<String, dynamic> && decoded['items'] is List) {
+          rawItems = decoded['items'] as List;
+        } else if (decoded is List) {
+          rawItems = decoded;
+        } else {
+          rawItems = const [];
+        }
         final newItems = rawItems
-            .map((e) => FeedItem.fromJson(e as Map<String, dynamic>))
+            .whereType<Map<String, dynamic>>()
+            .map(FeedItem.fromJson)
             .toList();
 
         if (mounted) {
@@ -114,8 +126,9 @@ class _FeedPageState extends ConsumerState<FeedPage> {
           });
         }
       }
-    } catch (e) {
-      debugPrint('[FeedPage._loadFeed] error: $e');
+    } catch (e, st) {
+      debugPrint('[FeedPage._loadFeed] error: $e (type=${e.runtimeType})');
+      debugPrint('[FeedPage._loadFeed] stack: $st');
       if (mounted) {
         setState(() {
           _isLoading = false;

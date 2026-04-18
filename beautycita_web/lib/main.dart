@@ -11,6 +11,17 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   usePathUrlStrategy(); // Clean URLs — no #/ hash
 
+  // Widen what we log when something throws on the web. dart2js minifies
+  // class names in release builds so stack traces read like "bSh.$2" —
+  // surface runtimeType + full details so bughunter (and real users via
+  // Sentry) see something actionable.
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    debugPrint(
+      '[FlutterError] ${details.exception.runtimeType}: ${details.exceptionAsString()}',
+    );
+  };
+
   await initializeDateFormatting('es');
 
   // Start Supabase init WITHOUT awaiting — lets Flutter render immediately

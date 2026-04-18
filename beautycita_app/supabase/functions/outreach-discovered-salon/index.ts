@@ -137,55 +137,68 @@ serve(async (req: Request) => {
       }
 
       const { lat, lng, radius_km = 50, limit = 20, service_query } = params;
-      if (!lat || !lng) {
-        return jsonResponse({ error: "lat and lng required" }, 400);
-      }
+      const hasCoords = typeof lat === "number" && typeof lng === "number";
 
       // Build service keywords for filtering
       const serviceKeywords = service_query
         ? buildServiceKeywords(service_query)
         : null;
 
-      // Fetch a candidate pool to rank from (RPC handles primary case; fallback is smaller)
       const candidatePool = 200;
-
-      // Use PostGIS to find nearby discovered salons not yet registered
-      const { data, error } = await serviceClient.rpc("nearby_discovered_salons", {
-        user_lat: lat,
-        user_lng: lng,
-        radius_km: radius_km,
-        max_results: candidatePool,
-      });
 
       let results: any[];
 
-      if (error) {
-        // Fallback: plain query without PostGIS function
-        const { data: fallback, error: fallbackErr } = await serviceClient
+      if (hasCoords) {
+        // Use PostGIS to find nearby discovered salons
+        const { data, error } = await serviceClient.rpc("nearby_discovered_salons", {
+          user_lat: lat,
+          user_lng: lng,
+          radius_km: radius_km,
+          max_results: candidatePool,
+        });
+
+        if (error) {
+          // Fallback: plain query without PostGIS function
+          const { data: fallback, error: fallbackErr } = await serviceClient
+            .from("discovered_salons")
+            .select("id, business_name, phone, whatsapp, location_address, location_city, latitude, longitude, feature_image_url, rating_average, rating_count, interest_count, categories, specialties, matched_categories, status, created_at")
+            .eq("country", "MX")
+            .in("status", ["discovered", "selected", "outreach_sent"])
+            .not("latitude", "is", null)
+            .order("business_name", { ascending: true })
+            .limit(candidatePool);
+
+          if (fallbackErr) {
+            return jsonResponse({ error: fallbackErr.message }, 500);
+          }
+          results = (fallback ?? [])
+            .map((s: any) => ({
+              ...s,
+              distance_km: haversineKm(lat, lng, s.latitude, s.longitude),
+            }))
+            .filter((s: any) => s.distance_km <= radius_km);
+        } else {
+          results = (data ?? []).map((s: any) => ({
+            ...s,
+            distance_km: s.distance_km ?? haversineKm(lat, lng, s.latitude, s.longitude),
+          }));
+        }
+      } else {
+        // No coords (e.g. /invitar page where we skip JS geolocation):
+        // return the top discovered salons nationwide, sorted by popularity.
+        const { data: popular, error: popularErr } = await serviceClient
           .from("discovered_salons")
           .select("id, business_name, phone, whatsapp, location_address, location_city, latitude, longitude, feature_image_url, rating_average, rating_count, interest_count, categories, specialties, matched_categories, status, created_at")
           .eq("country", "MX")
           .in("status", ["discovered", "selected", "outreach_sent"])
-          .not("latitude", "is", null)
-          .order("business_name", { ascending: true })
+          .order("interest_count", { ascending: false, nullsFirst: false })
+          .order("rating_average", { ascending: false, nullsFirst: false })
           .limit(candidatePool);
 
-        if (fallbackErr) {
-          return jsonResponse({ error: fallbackErr.message }, 500);
+        if (popularErr) {
+          return jsonResponse({ error: popularErr.message }, 500);
         }
-
-        // Client-side distance filtering
-        results = (fallback ?? [])
-          .map((s: any) => ({
-            ...s,
-            distance_km: haversineKm(lat, lng, s.latitude, s.longitude),
-          }))
-          .filter((s: any) => s.distance_km <= radius_km);
-      } else {
-        results = (data ?? []).map((s: any) => ({
-          ...s,
-          distance_km: s.distance_km ?? haversineKm(lat, lng, s.latitude, s.longitude),
-        }));
+        results = (popular ?? []).map((s: any) => ({ ...s, distance_km: null }));
       }
 
       // Apply STRICT service-type filtering when a service query is provided.
