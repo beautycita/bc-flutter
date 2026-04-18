@@ -246,6 +246,10 @@ class _AvatarCircleState extends ConsumerState<_AvatarCircle> {
   }
 
   Future<void> _loadProfile() async {
+    if (!BCSupabase.isInitialized) {
+      await BCSupabase.initialize();
+    }
+    if (!mounted) return;
     final user = BCSupabase.client.auth.currentUser;
     if (user == null) return;
     _email = user.email;

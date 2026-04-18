@@ -24,9 +24,14 @@ Future<void> main() async {
 
   await initializeDateFormatting('es');
 
-  // Start Supabase init WITHOUT awaiting — lets Flutter render immediately
-  // so the splash screen shows. The login page awaits the same future.
-  BCSupabase.initialize();
+  // Await Supabase init before mounting the router. The not-awaiting
+  // variant let the router mount authed pages before Supabase had an
+  // instance, which threw StateError from BCSupabase.client in
+  // downstream widgets (client_shell avatar, reservar, cuenta, etc).
+  // The index.html splash stays visible until runApp, so the user still
+  // sees something immediately; we just don't ship widgets that depend
+  // on Supabase until it's ready.
+  await BCSupabase.initialize();
 
   const sentryDsn = String.fromEnvironment('SENTRY_DSN');
 

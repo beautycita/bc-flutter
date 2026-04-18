@@ -104,7 +104,7 @@ class PayoutRecord {
               : 'Salon'),
       amount: (json['amount'] as num?)?.toDouble() ?? 0,
       status: json['status'] as String? ?? 'pending',
-      method: json['method'] as String? ?? 'stripe',
+      method: json['payment_method'] as String? ?? 'stripe',
       date: DateTime.tryParse(json['created_at'] as String? ?? '') ??
           DateTime.now(),
     );
@@ -163,15 +163,24 @@ final financeKpisProvider = FutureProvider<FinanceKpis>((ref) async {
     // Current month revenue
     final currentPayments = await client
         .from(BCTables.payments)
-        .select('amount, platform_fee')
+        .select('amount')
         .gte('created_at', startOfMonth)
         .eq('status', 'succeeded');
 
     double totalRevenue = 0;
-    double platformFees = 0;
     for (final row in currentPayments) {
       totalRevenue += (row['amount'] as num?)?.toDouble() ?? 0;
-      platformFees += (row['platform_fee'] as num?)?.toDouble() ?? 0;
+    }
+
+    // Platform fees come from commission_records, not payments.
+    final commissionRows = await client
+        .from(BCTables.commissionRecords)
+        .select('amount')
+        .gte('created_at', startOfMonth);
+
+    double platformFees = 0;
+    for (final row in commissionRows) {
+      platformFees += (row['amount'] as num?)?.toDouble() ?? 0;
     }
 
     // Previous month for change %
@@ -202,11 +211,12 @@ final financeKpisProvider = FutureProvider<FinanceKpis>((ref) async {
       pendingPayouts += (row['amount'] as num?)?.toDouble() ?? 0;
     }
 
-    // Active subscriptions (businesses with active status)
+    // "Active subscriptions" — we don't track subscriptions yet, so use
+    // is_active as a proxy for salons onboarded and operational.
     final subsResult = await client
         .from(BCTables.businesses)
         .select('id')
-        .eq('subscription_status', 'active')
+        .eq('is_active', true)
         .count();
 
     return FinanceKpis(
@@ -285,7 +295,7 @@ final paymentMethodsProvider =
 
     final data = await BCSupabase.client
         .from(BCTables.payments)
-        .select('amount, method')
+        .select('amount, payment_method')
         .gte('created_at', startOfMonth)
         .eq('status', 'succeeded');
 
@@ -295,7 +305,7 @@ final paymentMethodsProvider =
 
     for (final row in data) {
       final amount = (row['amount'] as num?)?.toDouble() ?? 0;
-      final method = row['method'] as String? ?? '';
+      final method = row['payment_method'] as String? ?? '';
       switch (method) {
         case 'stripe':
           stripe += amount;
@@ -326,17 +336,19 @@ final payoutHistoryProvider = FutureProvider<List<PayoutRecord>>((ref) async {
   if (!BCSupabase.isInitialized) return [];
 
   try {
+    // payments has no direct FK to businesses — go through appointments.
     final data = await BCSupabase.client
         .from(BCTables.payments)
-        .select('*, businesses!salon_id(name)')
+        .select('*, appointments!inner(business:businesses(name))')
         .order('created_at', ascending: false)
         .limit(20);
 
     return (data as List).map((row) {
-      final bizData = row['businesses'] as Map<String, dynamic>?;
+      final appt = row['appointments'] as Map<String, dynamic>?;
+      final biz = appt?['business'] as Map<String, dynamic>?;
       final json = Map<String, dynamic>.from(row);
-      if (bizData != null) {
-        json['salon_name'] = bizData['name'] ?? 'Salon';
+      if (biz != null) {
+        json['salon_name'] = biz['name'] ?? 'Salon';
       }
       return PayoutRecord.fromJson(json);
     }).toList();
@@ -346,22 +358,26 @@ final payoutHistoryProvider = FutureProvider<List<PayoutRecord>>((ref) async {
   }
 });
 
-/// Platform fee collection records.
+/// Platform fee collection records. Sourced from commission_records, which
+/// is the source of truth for platform revenue (payments tracks gross).
 final platformFeesProvider =
     FutureProvider<List<PlatformFeeRecord>>((ref) async {
   if (!BCSupabase.isInitialized) return [];
 
   try {
     final data = await BCSupabase.client
-        .from(BCTables.payments)
-        .select('id, appointment_id, platform_fee, status, created_at')
-        .gt('platform_fee', 0)
+        .from(BCTables.commissionRecords)
+        .select('id, appointment_id, amount, status, created_at')
         .order('created_at', ascending: false)
         .limit(20);
 
-    return (data as List)
-        .map((row) => PlatformFeeRecord.fromJson(row))
-        .toList();
+    return (data as List).map((row) {
+      final json = Map<String, dynamic>.from(row as Map);
+      // PlatformFeeRecord.fromJson still reads 'platform_fee' — alias the
+      // commission amount so the model doesn't need a shape change.
+      json['platform_fee'] = json['amount'];
+      return PlatformFeeRecord.fromJson(json);
+    }).toList();
   } catch (e) {
     debugPrint('Platform fees error: $e');
     return [];

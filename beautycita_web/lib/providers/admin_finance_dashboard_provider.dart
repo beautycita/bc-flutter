@@ -671,10 +671,12 @@ class PlatformSatDeclaration {
   double get commissions => totalRevenue * 0.03;
 
   factory PlatformSatDeclaration.fromJson(Map<String, dynamic> json) {
+    final pm = (json['period_month'] as num?)?.toInt() ?? 0;
+    final py = (json['period_year'] as num?)?.toInt() ?? 0;
     return PlatformSatDeclaration(
       id: json['id']?.toString() ?? '',
-      period: json['period'] as String? ?? '',
-      totalRevenue: (json['total_revenue'] as num?)?.toDouble() ?? 0,
+      period: '$py-${pm.toString().padLeft(2, '0')}',
+      totalRevenue: (json['total_revenue_all'] as num?)?.toDouble() ?? 0,
       ivaCollected: (json['iva_collected'] as num?)?.toDouble() ?? 0,
       isrCollected: (json['isr_collected'] as num?)?.toDouble() ?? 0,
       bankInterest: (json['bank_interest'] as num?)?.toDouble() ?? 0,
@@ -694,7 +696,8 @@ final platformSatDeclarationsProvider =
     final data = await BCSupabase.client
         .from(BCTables.platformSatDeclarations)
         .select()
-        .order('period', ascending: false)
+        .order('period_year', ascending: false)
+        .order('period_month', ascending: false)
         .limit(24);
 
     return (data as List)
@@ -753,8 +756,9 @@ final commissionDetailProvider =
   try {
     final data = await BCSupabase.client
         .from(BCTables.commissionRecords)
-        .select('source, amount, period, status')
-        .order('period', ascending: false)
+        .select('source, amount, period_month, period_year, status')
+        .order('period_year', ascending: false)
+        .order('period_month', ascending: false)
         .limit(2000);
 
     final rows = data as List;
@@ -767,7 +771,9 @@ final commissionDetailProvider =
     for (final row in rows) {
       final source = row['source'] as String? ?? 'appointment';
       final amount = (row['amount'] as num?)?.toDouble() ?? 0;
-      final period = row['period'] as String? ?? '';
+      final pm = (row['period_month'] as num?)?.toInt() ?? 0;
+      final py = (row['period_year'] as num?)?.toInt() ?? 0;
+      final period = '$py-${pm.toString().padLeft(2, '0')}';
       final status = row['status'] as String? ?? 'collected';
 
       if (status == 'collected' || status == 'succeeded') {
