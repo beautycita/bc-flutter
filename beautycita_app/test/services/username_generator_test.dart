@@ -31,24 +31,23 @@ void main() {
       });
     });
 
-    group('generateUsernameWithSuffix', () {
-      test('ends with a 2-digit number (10-99)', () {
+    group('generateUsernameWithSuffix (three-word collision fallback)', () {
+      test('is alpha-only (no numbers per "no numbers on usernames" rule)', () {
         for (var i = 0; i < 50; i++) {
           final username = UsernameGenerator.generateUsernameWithSuffix();
-          final suffix = username.replaceAll(RegExp(r'^[a-zA-Z]+'), '');
-          final num = int.tryParse(suffix);
-          expect(num, isNotNull, reason: '$username should end with digits');
-          expect(num, inInclusiveRange(10, 99),
-              reason: 'Suffix $num should be 10-99');
+          expect(username, matches(RegExp(r'^[a-zA-Z]+$')),
+              reason: '$username should be alpha-only');
         }
       });
 
-      test('base part is camelCase', () {
+      test('camelCase with two capital letters (three-word form)', () {
         for (var i = 0; i < 20; i++) {
           final username = UsernameGenerator.generateUsernameWithSuffix();
-          final base = username.replaceAll(RegExp(r'\d+$'), '');
-          expect(base[0], equals(base[0].toLowerCase()));
-          expect(base, matches(RegExp(r'[A-Z]')));
+          expect(username[0], equals(username[0].toLowerCase()),
+              reason: '$username should start with lowercase');
+          final uppers = RegExp(r'[A-Z]').allMatches(username).length;
+          expect(uppers, equals(2),
+              reason: '$username should have exactly 2 capitals (3-word camelCase)');
         }
       });
     });
@@ -65,12 +64,15 @@ void main() {
             reason: 'Suggestions should be unique');
       });
 
-      test('respects withSuffix parameter', () {
+      test('respects withSuffix parameter (three-word form, still alpha)', () {
         final withSuffix =
             UsernameGenerator.generateSuggestions(count: 5, withSuffix: true);
         for (final name in withSuffix) {
-          expect(name, matches(RegExp(r'\d{2}$')),
-              reason: '$name should end with 2-digit suffix');
+          expect(name, matches(RegExp(r'^[a-zA-Z]+$')),
+              reason: '$name must stay alpha-only per "no numbers" rule');
+          final uppers = RegExp(r'[A-Z]').allMatches(name).length;
+          expect(uppers, equals(2),
+              reason: '$name should be 3-word camelCase');
         }
 
         final withoutSuffix =

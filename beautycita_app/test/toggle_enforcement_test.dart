@@ -67,10 +67,10 @@ void main() {
     const AsyncValue<Map<String, bool>> toggles = AsyncData({});
 
     // These are defaulted to false in _defaults
-    expect(toggles.isEnabled('enable_uber_integration'), isFalse);
-    expect(toggles.isEnabled('enable_waitlist'), isFalse);
     expect(toggles.isEnabled('enable_maintenance_mode'), isFalse);
-    expect(toggles.isEnabled('enable_voice_booking'), isFalse);
+    expect(toggles.isEnabled('enable_salon_registration'), isFalse);
+    expect(toggles.isEnabled('enable_screenshot_report'), isFalse);
+    expect(toggles.isEnabled('enable_service_modifiers'), isFalse);
   });
 
   test('isEnabled returns false for unknown keys', () {

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:beautycita/providers/auth_provider.dart';
 import '../helpers/test_mocks.dart';
 import '../helpers/test_helpers.dart';
@@ -48,6 +49,7 @@ void main() {
       mockBio = MockBiometricService();
       mockSession = MockUserSession();
       setUpSupabaseTestClient();
+      SharedPreferences.setMockInitialValues({});
 
       notifier = AuthNotifier(
         biometricService: mockBio,
