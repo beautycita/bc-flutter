@@ -87,6 +87,9 @@ class _UsersPageState extends ConsumerState<UsersPage> {
       selectedItem: _selectedUser,
       onSelect: (user) => setState(() => _selectedUser = user),
       detailTitle: _selectedUser?.username ?? 'Usuario',
+      // User profile is tab-dense; 400px was cropping sections. 560 fits
+      // the trait bars + chips comfortably without eating the master list.
+      detailWidth: 560,
       detailBuilder: (user) => UserDetailContent(
         user: user,
         onUserUpdated: () => ref.invalidate(adminUsersProvider),

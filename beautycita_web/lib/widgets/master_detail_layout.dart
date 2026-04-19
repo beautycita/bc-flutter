@@ -41,8 +41,14 @@ class MasterDetailLayout<T> extends StatelessWidget {
     this.pagination,
     this.emptyTitle,
     this.emptySubtitle,
+    this.detailWidth,
     super.key,
   });
+
+  /// Optional override for the slide-in detail panel width. Defaults to
+  /// 400px for list-style detail views; pages with denser detail (user
+  /// profile, booking detail) can widen up to ~560px.
+  final double? detailWidth;
 
   /// Current page of data items.
   final List<T> items;
@@ -100,6 +106,7 @@ class MasterDetailLayout<T> extends StatelessWidget {
             table: table,
             bulkActionBar: bulkActionBar,
             pagination: pagination,
+            detailWidth: detailWidth ?? _DesktopLayout._defaultDetailWidth,
           );
         }
 
@@ -133,8 +140,11 @@ class _DesktopLayout<T> extends StatelessWidget {
     required this.table,
     this.bulkActionBar,
     this.pagination,
+    this.detailWidth = _defaultDetailWidth,
     super.key,
   });
+
+  final double detailWidth;
 
   final T? selectedItem;
   final ValueChanged<T?> onSelect;
@@ -146,7 +156,7 @@ class _DesktopLayout<T> extends StatelessWidget {
   final Widget? bulkActionBar;
   final Widget? pagination;
 
-  static const double _detailWidth = 400;
+  static const double _defaultDetailWidth = 400;
 
   @override
   Widget build(BuildContext context) {
@@ -174,10 +184,10 @@ class _DesktopLayout<T> extends StatelessWidget {
         AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeOut,
-          width: hasDetail ? _detailWidth : 0,
+          width: hasDetail ? detailWidth : 0,
           child: hasDetail
               ? Container(
-                  width: _detailWidth,
+                  width: detailWidth,
                   decoration: BoxDecoration(
                     border: Border(
                       left: BorderSide(color: colors.outlineVariant),
