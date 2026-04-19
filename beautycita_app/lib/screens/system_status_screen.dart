@@ -1061,7 +1061,7 @@ class _TestResult {
 
 class _TestResultTile extends StatelessWidget {
   final _TestResult result;
-  const _TestResultTile({required this.result, super.key});
+  const _TestResultTile({required this.result});
 
   @override
   Widget build(BuildContext context) {

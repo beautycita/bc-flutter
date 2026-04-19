@@ -133,7 +133,7 @@ class _ReportProblemScreenState extends ConsumerState<ReportProblemScreen> {
                     ),
                     const SizedBox(height: AppConstants.paddingSM),
                     DropdownButtonFormField<String>(
-                      value: _selectedCategory,
+                      initialValue: _selectedCategory,
                       decoration: _inputDecoration(
                         context: context,
                         hintText: 'Selecciona una categoria',

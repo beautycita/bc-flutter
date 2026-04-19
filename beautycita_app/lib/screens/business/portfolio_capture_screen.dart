@@ -304,7 +304,7 @@ class _PortfolioCaptureScreenState
               // Service category dropdown
               if (_services.isNotEmpty)
                 DropdownButtonFormField<String>(
-                  value: _selectedCategory,
+                  initialValue: _selectedCategory,
                   decoration: InputDecoration(
                     labelText: 'Categoría de servicio',
                     labelStyle: GoogleFonts.nunito(fontSize: 14),
@@ -331,7 +331,7 @@ class _PortfolioCaptureScreenState
               if (_isOwner && _staffList.isNotEmpty) ...[
                 const SizedBox(height: AppConstants.paddingMD),
                 DropdownButtonFormField<String>(
-                  value: _selectedStaffId,
+                  initialValue: _selectedStaffId,
                   decoration: InputDecoration(
                     labelText: 'Estilista',
                     labelStyle: GoogleFonts.nunito(fontSize: 14),

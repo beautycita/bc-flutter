@@ -269,6 +269,5 @@ class _SlideData {
     required this.icon,
     required this.title,
     required this.body,
-    this.imagePath,
   });
 }

@@ -82,7 +82,9 @@ class _ChatConversationScreenState
     // 2-second debounce to prevent double-sends
     final now = DateTime.now();
     if (_lastSentAt != null &&
-        now.difference(_lastSentAt!).inMilliseconds < 2000) return;
+        now.difference(_lastSentAt!).inMilliseconds < 2000) {
+      return;
+    }
     _lastSentAt = now;
 
     _textController.clear();

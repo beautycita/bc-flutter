@@ -137,8 +137,10 @@ class UserSession {
     // anon key + RLS policies.
     final storedSupabaseId = await _getSecureSupabaseUserId();
     if (storedSupabaseId != null) {
-      if (kDebugMode) debugPrint('[UserSession] Have stored user $storedSupabaseId but SDK session lost. '
+      if (kDebugMode) {
+        debugPrint('[UserSession] Have stored user $storedSupabaseId but SDK session lost. '
           'Creating fresh anonymous session and migrating profile server-side.');
+      }
       try {
         final response =
             await SupabaseClientService.client.auth.signInAnonymously();

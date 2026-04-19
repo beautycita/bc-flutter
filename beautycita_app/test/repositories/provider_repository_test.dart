@@ -8,7 +8,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:beautycita/repositories/provider_repository.dart';
 
 void main() {
   group('ProviderRepository', () {

@@ -306,7 +306,7 @@ class _BusinessPaymentsScreenState
                   onPressed: () => _exportPayoutsCsv(context, payouts),
                 ),
                 loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
+                error: (_, _) => const SizedBox.shrink(),
               ),
             ],
           ),

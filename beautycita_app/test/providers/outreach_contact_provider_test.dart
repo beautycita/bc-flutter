@@ -8,7 +8,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:beautycita/providers/outreach_contact_provider.dart';
 
 void main() {
   group('OutreachTemplate', () {

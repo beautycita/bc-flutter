@@ -8,7 +8,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:beautycita/providers/profile_provider.dart';
 
 void main() {
   group('ProfileState', () {

@@ -262,7 +262,7 @@ class _TopStaffSection extends ConsumerWidget {
 
     return dataAsync.when(
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
       data: (data) {
         if (data.entries.isEmpty) return const SizedBox.shrink();
 
@@ -1184,7 +1184,7 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
                           controller: scrollCtrl,
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                           itemCount: _expenseRows.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 4),
+                          separatorBuilder: (_, _) => const SizedBox(height: 4),
                           itemBuilder: (ctx, i) {
                             final row = _expenseRows[i];
                             final amount = (row['amount'] as num?)?.toDouble() ?? 0;
@@ -1328,7 +1328,7 @@ class _TaxRow extends StatelessWidget {
                 color: color,
               ),
             ),
-            if (trailing != null) trailing!,
+            ?trailing,
           ],
         ),
       ],
@@ -1728,7 +1728,7 @@ class _BankingBanner extends ConsumerWidget {
         );
       },
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
 }

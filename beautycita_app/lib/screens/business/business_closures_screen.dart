@@ -484,7 +484,7 @@ class _BusinessClosuresSectionState extends ConsumerState<BusinessClosuresSectio
 
     return bizAsync.when(
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
       data: (biz) {
         if (biz == null) return const SizedBox.shrink();
         final bizId = biz['id'] as String;

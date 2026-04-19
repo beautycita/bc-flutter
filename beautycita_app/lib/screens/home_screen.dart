@@ -1,6 +1,5 @@
 import 'package:beautycita/config/app_transitions.dart';
 import 'package:beautycita/services/gyro_parallax_service.dart';
-import 'package:beautycita/widgets/parallax_tilt.dart';
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -113,8 +112,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       await Navigator.of(context).push(
         PageRouteBuilder(
           opaque: true,
-          pageBuilder: (_, __, ___) => const OnboardingScreen(),
-          transitionsBuilder: (_, anim, __, child) =>
+          pageBuilder: (_, _, _) => const OnboardingScreen(),
+          transitionsBuilder: (_, anim, _, child) =>
               FadeTransition(opacity: anim, child: child),
           transitionDuration: AppConstants.mediumAnimation,
         ),

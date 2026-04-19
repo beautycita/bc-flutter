@@ -1372,7 +1372,7 @@ class _SatReportTile extends StatelessWidget {
 }
 
 /// Free function used in detail sheets across the finance dashboard tiles.
-Widget _FinDetailRow(String label, String? value, {BuildContext? ctx}) => Builder(
+Widget _FinDetailRow(String label, String? value) => Builder(
   builder: (context) => Padding(
   padding: const EdgeInsets.only(bottom: 8),
   child: Row(

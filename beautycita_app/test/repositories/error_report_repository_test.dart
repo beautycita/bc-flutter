@@ -7,7 +7,6 @@
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:beautycita/repositories/error_report_repository.dart';
 
 void main() {
   test('placeholder', () {

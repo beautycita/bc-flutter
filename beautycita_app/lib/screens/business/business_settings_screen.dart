@@ -1085,7 +1085,7 @@ class _AiDescriptionButtonState extends ConsumerState<_AiDescriptionButton> {
               .eq('is_active', true)
           : [];
 
-      final serviceNames = (svcs as List)
+      final serviceNames = (svcs)
           .map((s) => s['name'] as String)
           .take(6)
           .join(', ');

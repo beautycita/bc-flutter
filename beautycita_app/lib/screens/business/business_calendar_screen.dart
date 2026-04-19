@@ -1168,7 +1168,7 @@ class _HorizontalTimelineState extends State<_HorizontalTimeline> {
         'reschedule-notification',
         body: {
           'appointment_id': appointmentId,
-          if (oldStaffId != null) 'old_staff_id': oldStaffId,
+          'old_staff_id': ?oldStaffId,
         },
       );
     } catch (e) {

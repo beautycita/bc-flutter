@@ -212,13 +212,13 @@ class _ProductShowcaseCard extends StatelessWidget {
                   CachedNetworkImage(
                     imageUrl: product.photoUrl,
                     fit: BoxFit.cover,
-                    placeholder: (_, __) => Container(
+                    placeholder: (_, _) => Container(
                       color: palette.surfaceContainerHighest,
                       child: const Center(
                         child: CircularProgressIndicator(strokeWidth: 2),
                       ),
                     ),
-                    errorWidget: (_, __, ___) => Container(
+                    errorWidget: (_, _, _) => Container(
                       color: palette.surfaceContainerHighest,
                       child: Icon(Icons.shopping_bag_outlined,
                           size: 48, color: palette.onSurface.withValues(alpha: 0.2)),
@@ -574,7 +574,7 @@ class _MainImage extends StatelessWidget {
             CachedNetworkImage(
               imageUrl: imageUrl,
               fit: BoxFit.cover,
-              placeholder: (_, __) => Container(
+              placeholder: (_, _) => Container(
                 color: palette.surfaceContainerHighest,
                 child: Center(
                   child: CircularProgressIndicator(
@@ -583,7 +583,7 @@ class _MainImage extends StatelessWidget {
                   ),
                 ),
               ),
-              errorWidget: (_, __, ___) => Container(
+              errorWidget: (_, _, _) => Container(
                 color: palette.surfaceContainerHighest,
                 child: Icon(
                   Icons.broken_image_outlined,

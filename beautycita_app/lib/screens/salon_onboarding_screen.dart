@@ -1526,7 +1526,7 @@ class _ConfirmationCardState extends State<_ConfirmationCard>
                     child: Image.network(
                       photoUrl.toString(),
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
+                      errorBuilder: (_, _, _) => Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             begin: Alignment.topLeft,
@@ -1855,7 +1855,7 @@ class _NearbyMatchListState extends State<_NearbyMatchList>
                                 ? Image.network(
                                     photoUrl.toString(),
                                     fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Icon(
+                                    errorBuilder: (_, _, _) => Icon(
                                       Icons.store_rounded,
                                       size: 28,
                                       color: colors.primary.withValues(alpha: 0.5),

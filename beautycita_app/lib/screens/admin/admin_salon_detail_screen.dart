@@ -1068,7 +1068,7 @@ class _SalonDetailBody extends ConsumerWidget {
           ],
         ),
       ),
-      error: (_, __) => _SectionCard(
+      error: (_, _) => _SectionCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1205,7 +1205,7 @@ class _SalonDetailBody extends ConsumerWidget {
           ],
         ),
       ),
-      error: (_, __) => _SectionCard(
+      error: (_, _) => _SectionCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

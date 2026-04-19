@@ -391,7 +391,7 @@ class _MessageTypeCardState extends State<_MessageTypeCard> {
                       setState(() => _isActive = v);
                       _save();
                     },
-                    activeColor: t.color,
+                    activeThumbColor: t.color,
                   ),
                 ],
               ),

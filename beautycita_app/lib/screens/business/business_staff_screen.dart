@@ -829,7 +829,7 @@ class _AddStaffSheetState extends ConsumerState<_AddStaffSheet> {
                           Switch(
                             value: _linkAccount,
                             onChanged: (v) => setState(() => _linkAccount = v),
-                            activeColor: const Color(0xFF059669),
+                            activeThumbColor: const Color(0xFF059669),
                           ),
                         ],
                       ),
@@ -848,7 +848,7 @@ class _AddStaffSheetState extends ConsumerState<_AddStaffSheet> {
 
               // Position selector
               DropdownButtonFormField<String>(
-                value: _position,
+                initialValue: _position,
                 decoration: _styledInput('Posicion',
                     prefixIcon: const Icon(Icons.badge_outlined, size: 20)),
                 items: const [
@@ -1440,7 +1440,7 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
             const SizedBox(height: 12),
             // Position
             DropdownButtonFormField<String>(
-              value: _position,
+              initialValue: _position,
               decoration: const InputDecoration(labelText: 'Posicion', isDense: true),
               items: const [
                 DropdownMenuItem(value: 'owner', child: Text('Dueno')),

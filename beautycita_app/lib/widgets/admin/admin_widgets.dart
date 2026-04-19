@@ -4,6 +4,7 @@
 /// ```dart
 /// import 'package:beautycita/widgets/admin/admin_widgets.dart';
 /// ```
+library;
 export 'admin_data_controller.dart';
 export 'admin_toolbar.dart';
 export 'csv_exporter.dart';

@@ -1169,7 +1169,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
               vertical: AppConstants.paddingMD,
             ),
             itemCount: orders.length,
-            separatorBuilder: (_, __) => const SizedBox(height: AppConstants.paddingSM),
+            separatorBuilder: (_, _) => const SizedBox(height: AppConstants.paddingSM),
             itemBuilder: (context, index) => _buildOrderCard(orders[index], textTheme, disputes),
           ),
         );
