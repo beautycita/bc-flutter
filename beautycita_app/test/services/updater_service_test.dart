@@ -170,13 +170,11 @@ void main() {
         final lastCheck = prefs.getString('last_version_check');
         final lastTime = DateTime.tryParse(lastCheck ?? '');
 
-        // Simulate force=true logic — bypasses rate limit
-        const force = true;
-        final shouldSkip = !force &&
-            lastTime != null &&
-            DateTime.now().difference(lastTime) < const Duration(hours: 24);
-
+        // Simulate force=true logic — bypasses rate limit entirely.
+        // force=true means shouldSkip is always false regardless of lastTime.
+        final shouldSkip = false;
         expect(shouldSkip, isFalse);
+        expect(lastTime, isNotNull);
       });
 
       test('check proceeds when last check was > 24h ago', () async {

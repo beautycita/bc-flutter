@@ -339,7 +339,7 @@ class _OrderList extends StatelessWidget {
 // Order card
 // ---------------------------------------------------------------------------
 
-Widget _OrderDetailRow(String label, String? value) => Builder(
+Widget _orderDetailRow(String label, String? value) => Builder(
   builder: (context) => Padding(
   padding: const EdgeInsets.only(bottom: 8),
   child: Row(
@@ -413,22 +413,22 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
               Text('Detalle Pedido',
                   style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700)),
               const SizedBox(height: 16),
-              _OrderDetailRow('ID', order.id),
-              _OrderDetailRow('Comprador ID', order.buyerId),
-              _OrderDetailRow('Negocio ID', order.businessId),
-              _OrderDetailRow('Producto ID', order.productId),
-              _OrderDetailRow('Producto', order.productName),
-              _OrderDetailRow('Cantidad', order.quantity.toString()),
-              _OrderDetailRow('Total', '\$${order.totalAmount.toStringAsFixed(2)} MXN'),
-              _OrderDetailRow('Comision', '\$${order.commissionAmount.toStringAsFixed(2)} MXN'),
-              _OrderDetailRow('Estado', order.status),
-              _OrderDetailRow('Rastreo', order.trackingNumber),
-              _OrderDetailRow('Stripe PI', order.stripePaymentIntentId),
-              _OrderDetailRow('Direccion', fmtAddr(order.shippingAddress)),
-              _OrderDetailRow('Creado', fmtDt(order.createdAt)),
-              _OrderDetailRow('Enviado', fmtDt(order.shippedAt)),
-              _OrderDetailRow('Entregado', fmtDt(order.deliveredAt)),
-              _OrderDetailRow('Reembolsado', fmtDt(order.refundedAt)),
+              _orderDetailRow('ID', order.id),
+              _orderDetailRow('Comprador ID', order.buyerId),
+              _orderDetailRow('Negocio ID', order.businessId),
+              _orderDetailRow('Producto ID', order.productId),
+              _orderDetailRow('Producto', order.productName),
+              _orderDetailRow('Cantidad', order.quantity.toString()),
+              _orderDetailRow('Total', '\$${order.totalAmount.toStringAsFixed(2)} MXN'),
+              _orderDetailRow('Comision', '\$${order.commissionAmount.toStringAsFixed(2)} MXN'),
+              _orderDetailRow('Estado', order.status),
+              _orderDetailRow('Rastreo', order.trackingNumber),
+              _orderDetailRow('Stripe PI', order.stripePaymentIntentId),
+              _orderDetailRow('Direccion', fmtAddr(order.shippingAddress)),
+              _orderDetailRow('Creado', fmtDt(order.createdAt)),
+              _orderDetailRow('Enviado', fmtDt(order.shippedAt)),
+              _orderDetailRow('Entregado', fmtDt(order.deliveredAt)),
+              _orderDetailRow('Reembolsado', fmtDt(order.refundedAt)),
             ],
           );
         },

@@ -789,7 +789,7 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
                     Switch(
                       value: prefs.reduceAnimations,
                       onChanged: (_) => ref.read(userPrefsProvider.notifier).toggleReduceAnimations(),
-                      activeColor: cs.primary,
+                      activeThumbColor: cs.primary,
                     ),
                   ],
                 ),
@@ -868,7 +868,7 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
               Switch(
                 value: value,
                 onChanged: onChanged,
-                activeColor: cs.primary,
+                activeThumbColor: cs.primary,
               ),
             ],
           ),

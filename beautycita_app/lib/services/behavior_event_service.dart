@@ -69,10 +69,10 @@ class BehaviorEventService {
     targetId: bookingId,
     metadata: {
       'business_id': businessId,
-      if (serviceId != null) 'service_id': serviceId,
-      if (price != null) 'price': price,
-      if (paymentMethod != null) 'payment_method': paymentMethod,
-      if (city != null) 'city': city,
+      'service_id': ?serviceId,
+      'price': ?price,
+      'payment_method': ?paymentMethod,
+      'city': ?city,
     },
   );
 
@@ -83,7 +83,7 @@ class BehaviorEventService {
     eventType: 'booking_cancelled',
     targetType: 'booking',
     targetId: bookingId,
-    metadata: {if (reason != null) 'reason': reason},
+    metadata: {'reason': ?reason},
   );
 
   void reviewSubmitted({
@@ -96,7 +96,7 @@ class BehaviorEventService {
     targetId: businessId,
     metadata: {
       'rating': rating,
-      if (appointmentId != null) 'appointment_id': appointmentId,
+      'appointment_id': ?appointmentId,
     },
   );
 
@@ -110,9 +110,9 @@ class BehaviorEventService {
     targetType: 'salon',
     targetId: salonId,
     metadata: {
-      if (salonName != null) 'salon_name': salonName,
-      if (city != null) 'city': city,
-      if (state != null) 'state': state,
+      'salon_name': ?salonName,
+      'city': ?city,
+      'state': ?state,
     },
   );
 
@@ -125,8 +125,8 @@ class BehaviorEventService {
     targetType: 'salon',
     targetId: businessId,
     metadata: {
-      if (context != null) 'context': context,
-      if (city != null) 'city': city,
+      'context': ?context,
+      'city': ?city,
     },
   );
 
@@ -140,9 +140,9 @@ class BehaviorEventService {
     targetType: 'service',
     targetId: serviceType,
     metadata: {
-      if (category != null) 'category': category,
-      if (resultCount != null) 'result_count': resultCount,
-      if (city != null) 'city': city,
+      'category': ?category,
+      'result_count': ?resultCount,
+      'city': ?city,
     },
   );
 

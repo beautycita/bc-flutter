@@ -472,7 +472,7 @@ class _BookingConfirmationScreenState
                     onPressed: () {
                       final msg = 'Acabo de reservar ${booking.serviceName} en BeautyCita! '
                           'Reserva tu cita de belleza en segundos: https://beautycita.com';
-                      Share.share(msg);
+                      SharePlus.instance.share(ShareParams(text: msg));
                     },
                     icon: const Icon(Icons.share_rounded, size: 18),
                     label: const Text('Comparte tu cita'),
@@ -618,43 +618,6 @@ class _BookingConfirmationScreenState
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
           gradient: gradient,
-          borderRadius: BorderRadius.circular(AppConstants.radiusLG),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 20, color: Theme.of(context).colorScheme.onPrimary),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: GoogleFonts.poppins(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onPrimary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _solidButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        onTap();
-      },
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: color,
           borderRadius: BorderRadius.circular(AppConstants.radiusLG),
         ),
         child: Row(

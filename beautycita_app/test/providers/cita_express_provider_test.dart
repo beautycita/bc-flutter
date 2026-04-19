@@ -96,20 +96,16 @@ void main() {
       notifier.dispose();
     });
 
-    ResultCard _makeResult({int rank = 1, String businessId = 'biz-1'}) {
+    ResultCard makeResult({int rank = 1, String businessId = 'biz-1'}) {
       return ResultCard.fromJson(resultCardJson(
         rank: rank,
         businessId: businessId,
       ));
     }
 
-    CurateResponse _makeCurateResponse() {
-      return CurateResponse.fromJson(curateResponseJson());
-    }
-
     group('selectResult', () {
       test('transitions to confirming step', () {
-        final result = _makeResult();
+        final result = makeResult();
         notifier.selectResult(result);
 
         expect(notifier.state.step, CitaExpressStep.confirming);
@@ -120,7 +116,7 @@ void main() {
 
     group('backToServices', () {
       test('transitions to serviceSelect and clears result', () {
-        final result = _makeResult();
+        final result = makeResult();
         notifier.selectResult(result);
         expect(notifier.state.step, CitaExpressStep.confirming);
         expect(notifier.state.selectedResult, isNotNull);
@@ -135,7 +131,7 @@ void main() {
 
     group('backToResults', () {
       test('goes to serviceSelect when no curateResponse', () {
-        final result = _makeResult();
+        final result = makeResult();
         notifier.selectResult(result);
         expect(notifier.state.step, CitaExpressStep.confirming);
 
@@ -179,7 +175,7 @@ void main() {
 
     group('selectNearbyResult', () {
       test('transitions to confirming with selected result', () {
-        final result = _makeResult(businessId: 'nearby-biz');
+        final result = makeResult(businessId: 'nearby-biz');
         notifier.selectNearbyResult(result);
 
         expect(notifier.state.step, CitaExpressStep.confirming);
@@ -194,7 +190,7 @@ void main() {
         expect(notifier.state.step, CitaExpressStep.loading);
 
         // Select a result (simulating having gone through service select)
-        final result = _makeResult();
+        final result = makeResult();
         notifier.selectResult(result);
         expect(notifier.state.step, CitaExpressStep.confirming);
 
@@ -214,7 +210,7 @@ void main() {
         expect(notifier.state.step, CitaExpressStep.noSlotsToday);
 
         // Select a nearby result
-        final nearby = _makeResult(businessId: 'nearby-1');
+        final nearby = makeResult(businessId: 'nearby-1');
         notifier.selectNearbyResult(nearby);
         expect(notifier.state.step, CitaExpressStep.confirming);
         expect(notifier.state.selectedResult!.business.id, 'nearby-1');

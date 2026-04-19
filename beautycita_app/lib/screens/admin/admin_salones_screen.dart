@@ -1238,14 +1238,14 @@ class _IntelligenceTabState extends State<_IntelligenceTab> {
                       itemBuilder: (context, i) {
                         if (i >= _results.length) {
                           return const Padding(
-                            padding: const EdgeInsets.all(16),
+                            padding: EdgeInsets.all(16),
                             child: Center(
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)),
-                                  const SizedBox(height: 8),
-                                  const Text('Cargando mas...'),
+                                  SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)),
+                                  SizedBox(height: 8),
+                                  Text('Cargando mas...'),
                                 ],
                               ),
                             ),

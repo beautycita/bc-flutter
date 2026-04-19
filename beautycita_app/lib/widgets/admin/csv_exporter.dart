@@ -48,10 +48,10 @@ class CsvExporter {
       await file.writeAsString(buffer.toString());
 
       // Share
-      await Share.shareXFiles(
-        [XFile(file.path, mimeType: 'text/csv')],
+      await SharePlus.instance.share(ShareParams(
+        files: [XFile(file.path, mimeType: 'text/csv')],
         subject: '$filename - ${items.length} registros',
-      );
+      ));
 
       ToastService.showSuccess('${items.length} registros exportados');
     } catch (e) {
@@ -59,7 +59,7 @@ class CsvExporter {
     }
   }
 
-  /// Export raw maps (for screens that work with Map<String, dynamic>).
+  /// Export raw maps (for screens that work with `Map<String, dynamic>`).
   static Future<void> exportMaps({
     required BuildContext context,
     required String filename,

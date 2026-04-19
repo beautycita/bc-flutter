@@ -125,9 +125,7 @@ Future<void> main() async {
       options.beforeSend = (SentryEvent event, Hint hint) {
         // Strip user PII from events — keep only anonymous id
         if (event.user != null) {
-          return event.copyWith(
-            user: SentryUser(id: event.user?.id),
-          );
+          event.user = SentryUser(id: event.user?.id);
         }
         return event;
       };

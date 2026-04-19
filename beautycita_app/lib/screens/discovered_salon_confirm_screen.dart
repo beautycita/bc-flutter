@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:beautycita/config/fonts.dart';
 import '../config/constants.dart';
-import '../config/theme_extension.dart';
 import '../providers/profile_provider.dart';
 import '../services/supabase_client.dart';
 import '../services/toast_service.dart';
@@ -98,7 +97,6 @@ class _DiscoveredSalonConfirmScreenState
   @override
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
-    final bcTheme = Theme.of(context).extension<BCThemeExtension>()!;
     final onSurfaceLight =
         Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
 

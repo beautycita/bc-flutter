@@ -108,9 +108,7 @@ final citaExpressProvider =
 // ---------------------------------------------------------------------------
 
 class CitaExpressNotifier extends StateNotifier<CitaExpressState> {
-  final BookingRepository _bookingRepo;
-
-  CitaExpressNotifier(this._bookingRepo) : super(const CitaExpressState());
+  CitaExpressNotifier(BookingRepository bookingRepo) : super(const CitaExpressState());
 
   /// Load business info + services for the scanned salon.
   Future<void> loadBusiness(String businessId) async {
@@ -389,11 +387,6 @@ class CitaExpressNotifier extends StateNotifier<CitaExpressState> {
   // ---------------------------------------------------------------------------
   // Business hours helper
   // ---------------------------------------------------------------------------
-
-  static const _dayKeys = [
-    'sunday', 'monday', 'tuesday', 'wednesday',
-    'thursday', 'friday', 'saturday',
-  ];
 
   /// Check if a slot falls within business hours.
   bool _isWithinBusinessHours(DateTime slotStart, DateTime slotEnd) {

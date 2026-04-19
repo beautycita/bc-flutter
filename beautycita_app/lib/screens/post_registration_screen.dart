@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:beautycita/config/fonts.dart';
 import '../config/constants.dart';
-import '../config/theme_extension.dart';
 
 /// Success screen shown after salon owner creates their stylist account.
 /// Prompts them to add a service and configure their schedule.
@@ -12,7 +11,6 @@ class PostRegistrationScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final bcTheme = Theme.of(context).extension<BCThemeExtension>()!;
     final onSurfaceLight =
         Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
 

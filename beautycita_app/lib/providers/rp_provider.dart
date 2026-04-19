@@ -177,7 +177,7 @@ Future<void> rpToggleChecklistItem({
       'rp_user_id': userId,
       'item_key': itemKey,
       'checked_at': DateTime.now().toIso8601String(),
-      if (notes != null) 'notes': notes,
+      'notes': ?notes,
     }, onConflict: 'discovered_salon_id,item_key');
   } else {
     await sb
@@ -261,7 +261,7 @@ final rpTemplatesProvider = FutureProvider.family<List<Map<String, dynamic>>, St
     final sb = SupabaseClientService.client;
     final res = await sb.functions.invoke('outreach-contact', body: {
       'action': 'get_templates',
-      if (channel != null) 'channel': channel,
+      'channel': ?channel,
     });
     if (res.status != 200) return [];
     return List<Map<String, dynamic>>.from(res.data['templates'] ?? []);
@@ -287,8 +287,8 @@ Future<bool> rpSendMessage({
     'action': action,
     'discovered_salon_id': salonId,
     'message': message,
-    if (subject != null) 'subject': subject,
-    if (templateId != null) 'template_id': templateId,
+    'subject': ?subject,
+    'template_id': ?templateId,
     'rp_name': profile['full_name'] ?? 'RP',
     'rp_phone': profile['phone'] ?? '',
   });
@@ -309,7 +309,7 @@ Future<void> rpCloseProcess({
   await sb.from(BCTables.rpAssignments).update({
     'closed_at': DateTime.now().toIso8601String(),
     'close_outcome': outcome,
-    if (reason != null) 'close_reason': reason,
+    'close_reason': ?reason,
     if (outcome == 'not_converted')
       'unassigned_at': DateTime.now().toUtc().toIso8601String(),
   }).eq('id', assignmentId);

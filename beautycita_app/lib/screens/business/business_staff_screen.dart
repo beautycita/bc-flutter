@@ -829,7 +829,7 @@ class _AddStaffSheetState extends ConsumerState<_AddStaffSheet> {
                           Switch(
                             value: _linkAccount,
                             onChanged: (v) => setState(() => _linkAccount = v),
-                            activeColor: const Color(0xFF059669),
+                            activeThumbColor: const Color(0xFF059669),
                           ),
                         ],
                       ),
@@ -848,7 +848,7 @@ class _AddStaffSheetState extends ConsumerState<_AddStaffSheet> {
 
               // Position selector
               DropdownButtonFormField<String>(
-                value: _position,
+                initialValue: _position,
                 decoration: _styledInput('Posicion',
                     prefixIcon: const Icon(Icons.badge_outlined, size: 20)),
                 items: const [
@@ -1440,7 +1440,7 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
             const SizedBox(height: 12),
             // Position
             DropdownButtonFormField<String>(
-              value: _position,
+              initialValue: _position,
               decoration: const InputDecoration(labelText: 'Posicion', isDense: true),
               items: const [
                 DropdownMenuItem(value: 'owner', child: Text('Dueno')),
@@ -1773,7 +1773,8 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
                   version: QrVersions.auto,
                   size: 180,
                   backgroundColor: Colors.white, // QR must stay white for scannability
-                  foregroundColor: const Color(0xFF1a1a2e),
+                  eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Color(0xFF1a1a2e)),
+                  dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: Color(0xFF1a1a2e)),
                 ),
               ),
             ),
@@ -1829,7 +1830,7 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () {
-                      Share.share('Sube tus fotos antes/despues en: $uploadUrl\nPIN: $pin', subject: 'Portafolio BeautyCita');
+                      SharePlus.instance.share(ShareParams(text: 'Sube tus fotos antes/despues en: $uploadUrl\nPIN: $pin', subject: 'Portafolio BeautyCita'));
                     },
                     icon: const Icon(Icons.share, size: 16),
                     label: Text('Compartir', maxLines: 1, overflow: TextOverflow.ellipsis),

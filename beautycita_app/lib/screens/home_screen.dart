@@ -1,6 +1,5 @@
 import 'package:beautycita/config/app_transitions.dart';
 import 'package:beautycita/services/gyro_parallax_service.dart';
-import 'package:beautycita/widgets/parallax_tilt.dart';
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -38,25 +37,6 @@ import '../providers/feature_toggle_provider.dart';
 import '../providers/review_prompt_provider.dart';
 import '../widgets/particle_rain.dart';
 import '../widgets/review_prompt_sheet.dart';
-import 'package:beautycita_core/supabase.dart';
-import '../services/supabase_client.dart';
-
-/// Fetches the saldo from profiles.saldo for the current user.
-final _saldoProvider = FutureProvider<double>((ref) async {
-  if (!SupabaseClientService.isInitialized) return 0;
-  final userId = SupabaseClientService.currentUserId;
-  if (userId == null) return 0;
-  try {
-    final data = await SupabaseClientService.client
-        .from(BCTables.profiles)
-        .select('saldo')
-        .eq('id', userId)
-        .single();
-    return (data['saldo'] as num?)?.toDouble() ?? 0;
-  } catch (_) {
-    return 0;
-  }
-});
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -113,8 +93,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       await Navigator.of(context).push(
         PageRouteBuilder(
           opaque: true,
-          pageBuilder: (_, __, ___) => const OnboardingScreen(),
-          transitionsBuilder: (_, anim, __, child) =>
+          pageBuilder: (_, _, _) => const OnboardingScreen(),
+          transitionsBuilder: (_, anim, _, child) =>
               FadeTransition(opacity: anim, child: child),
           transitionDuration: AppConstants.mediumAnimation,
         ),

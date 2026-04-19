@@ -145,7 +145,7 @@ class _RPChatScreenState extends ConsumerState<RPChatScreen> {
     if (isVisit) {
       return Column(
         children: [
-          if (dateSeparator != null) dateSeparator,
+          ?dateSeparator,
           _systemCard(msg),
         ],
       );
@@ -154,7 +154,7 @@ class _RPChatScreenState extends ConsumerState<RPChatScreen> {
     // All salon_outreach_log entries are outbound
     return Column(
       children: [
-        if (dateSeparator != null) dateSeparator,
+        ?dateSeparator,
         Align(
           alignment: Alignment.centerRight,
           child: Container(

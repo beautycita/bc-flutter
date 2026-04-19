@@ -952,7 +952,7 @@ class _AvailabilityChip extends ConsumerWidget {
 
     return slotsAsync.when(
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
       data: (slots) {
         if (slots.isNotEmpty) {
           return Padding(
@@ -982,7 +982,7 @@ class _AvailabilityChip extends ConsumerWidget {
         )));
         return tomorrowSlots.when(
           loading: () => const SizedBox.shrink(),
-          error: (_, __) => const SizedBox.shrink(),
+          error: (_, _) => const SizedBox.shrink(),
           data: (tmSlots) {
             if (tmSlots.isNotEmpty) {
               return Padding(

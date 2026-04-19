@@ -171,7 +171,7 @@ class _SubcategorySheetState extends State<SubcategorySheet>
                     return Stack(
                       children: [
                         ...previousChildren,
-                        if (currentChild != null) currentChild,
+                        ?currentChild,
                       ],
                     );
                   },

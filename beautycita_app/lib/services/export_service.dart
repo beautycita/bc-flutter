@@ -49,10 +49,10 @@ class ExportService {
         file = await _generateVcard(filePath, data);
     }
 
-    await Share.shareXFiles(
-      [XFile(file.path)],
+    await SharePlus.instance.share(ShareParams(
+      files: [XFile(file.path)],
       text: '$title - ${data.length} registros',
-    );
+    ));
   }
 
   static String _extensionFor(ExportFormat format) {

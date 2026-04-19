@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita/config/fonts.dart';
 import '../config/constants.dart';
-import '../config/theme_extension.dart';
 import '../providers/security_provider.dart';
 import '../services/toast_service.dart';
 
@@ -104,7 +103,6 @@ class _EmailVerificationScreenState
   Widget build(BuildContext context) {
     final securityState = ref.watch(securityProvider);
     final theme = Theme.of(context);
-    final bcTheme = theme.extension<BCThemeExtension>()!;
 
     // React to Google link success
     ref.listen(securityProvider, (previous, next) {

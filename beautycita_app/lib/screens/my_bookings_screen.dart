@@ -1169,7 +1169,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
               vertical: AppConstants.paddingMD,
             ),
             itemCount: orders.length,
-            separatorBuilder: (_, __) => const SizedBox(height: AppConstants.paddingSM),
+            separatorBuilder: (_, _) => const SizedBox(height: AppConstants.paddingSM),
             itemBuilder: (context, index) => _buildOrderCard(orders[index], textTheme, disputes),
           ),
         );
@@ -1365,14 +1365,19 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
                     ),
                   ),
                   const SizedBox(height: AppConstants.paddingMD),
-                  ...reasons.map((r) => RadioListTile<String>(
-                    value: r,
+                  RadioGroup<String>(
                     groupValue: selectedReason,
                     onChanged: (v) => setSheetState(() => selectedReason = v),
-                    title: Text(r, style: Theme.of(ctx).textTheme.bodyMedium),
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                  )),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: reasons.map((r) => RadioListTile<String>(
+                        value: r,
+                        title: Text(r, style: Theme.of(ctx).textTheme.bodyMedium),
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                      )).toList(),
+                    ),
+                  ),
                   const SizedBox(height: AppConstants.paddingSM),
                   TextField(
                     controller: detailsCtl,

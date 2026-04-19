@@ -86,7 +86,7 @@ class _SaveContactSheet extends StatelessWidget {
               ),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: const Icon(Icons.contact_phone_rounded, color: const Color(0xFFFFFFFF), size: 32),
+            child: const Icon(Icons.contact_phone_rounded, color: Color(0xFFFFFFFF), size: 32),
           ),
           const SizedBox(height: 20),
 
