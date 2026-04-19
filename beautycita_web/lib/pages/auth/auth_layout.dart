@@ -39,7 +39,7 @@ class AuthLayout extends StatelessWidget {
           child: Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFF8A6B8A), Color(0xFFC8A2C8)],
+                colors: [Color(0xFFEC4899), Color(0xFFC8A2C8)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -129,7 +129,7 @@ class AuthLayout extends StatelessWidget {
           child: Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFF8A6B8A), Color(0xFFC8A2C8)],
+                colors: [Color(0xFFEC4899), Color(0xFFC8A2C8)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -211,7 +211,7 @@ class AuthLayout extends StatelessWidget {
           height: 120,
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [Color(0xFF8A6B8A), Color(0xFFC8A2C8)],
+              colors: [Color(0xFFEC4899), Color(0xFFC8A2C8)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),

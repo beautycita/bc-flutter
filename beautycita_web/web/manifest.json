@@ -4,7 +4,7 @@
     "start_url": "/",
     "display": "standalone",
     "background_color": "#1a1a2e",
-    "theme_color": "#C8A2C8",
+    "theme_color": "#EC4899",
     "description": "Plataforma de gestion para salones de belleza. Administra citas, personal y pagos.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
