@@ -72,9 +72,9 @@ class TerminosPage extends StatelessWidget {
 
                 _section('6. Cancelaciones y Reembolsos',
                     'La politica de cancelacion es configurable por cada salon. Las reglas generales son:\n\n'
-                    'Cancelacion gratuita: Si el usuario cancela con la anticipacion establecida por el salon (por defecto, 24 horas antes), recibe un reembolso completo del precio pagado, acreditado a su saldo en la Plataforma. La comision de plataforma (3%) la asume el salon como adeudo, no se descuenta del reembolso al usuario.\n\n'
-                    'Cancelacion tardia: Si el usuario cancela dentro del periodo no reembolsable y el salon requiere deposito, el deposito se pierde. El monto restante se reembolsa al saldo del usuario.\n\n'
-                    'Cancelacion por el salon: Si el salon cancela la cita, el usuario recibe un reembolso completo acreditado a su saldo. El salon asume la comision (3%) como adeudo.\n\n'
+                    'Cancelacion gratuita por el usuario: Si el usuario cancela con la anticipacion establecida por el salon (por defecto, 24 horas antes), recibe un reembolso del precio menos la comision de plataforma del 3%, acreditado a su saldo en la Plataforma. La comision retenida cubre el procesamiento de pago y operacion de la cita.\n\n'
+                    'Cancelacion tardia: Si el usuario cancela dentro del periodo no reembolsable y el salon requiere deposito, el deposito se pierde. El monto restante se reembolsa al saldo, tambien menos la comision del 3%.\n\n'
+                    'Cancelacion por el salon: Si el salon cancela la cita, el usuario recibe un reembolso COMPLETO del precio acreditado a su saldo. La comision (3%) la asume el salon como adeudo, no se descuenta del usuario.\n\n'
                     'No se realizan devoluciones a tarjetas de credito o cuentas bancarias. Todos los reembolsos se procesan como credito en la Plataforma (saldo).'),
 
                 _section('7. Comisiones',

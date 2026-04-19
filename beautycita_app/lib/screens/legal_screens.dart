@@ -72,19 +72,19 @@ class _TermsAndPolicyScreenState extends State<TermsAndPolicyScreen>
           _LegalTab(
             icon: Icons.description_outlined,
             subtitle: 'Reglas de uso de la plataforma',
-            lastUpdated: '19 de marzo de 2026',
+            lastUpdated: '19 de abril de 2026',
             sections: _termsSections,
           ),
           _LegalTab(
             icon: Icons.privacy_tip_outlined,
             subtitle: 'Aviso de Privacidad Integral (LFPDPPP)',
-            lastUpdated: '19 de marzo de 2026',
+            lastUpdated: '19 de abril de 2026',
             sections: _privacySections,
           ),
           _LegalTab(
             icon: Icons.storage_outlined,
             subtitle: 'Que guardamos en tu dispositivo',
-            lastUpdated: '19 de marzo de 2026',
+            lastUpdated: '19 de abril de 2026',
             sections: _storageSections,
           ),
         ],
@@ -909,10 +909,17 @@ const _privacySections = [
         'nombre y apellidos (opcional), correo electronico, numero telefonico, '
         'genero, fecha de nacimiento y direccion de domicilio.\n\n'
         'B) Datos de contacto: correo electronico, numero de telefono.\n\n'
-        'B-1) Datos de lista de contactos: BeautyCita accede a los numeros de '
-        'telefono de tu lista de contactos para identificar salones registrados. '
-        'Solo se comparan numeros de telefono; no se almacenan ni transmiten '
-        'nombres ni otros datos de contactos.\n\n'
+        'B-1) Datos de lista de contactos: con tu permiso explicito del sistema, '
+        'BeautyCita lee los nombres y numeros de telefono de tu lista de contactos '
+        'para identificar cuales corresponden a salones registrados. El procesamiento '
+        'ocurre completamente en tu dispositivo. Solo las coincidencias resultantes '
+        '(nombre del contacto + identificador del salon) se almacenan en cache local '
+        'en tu dispositivo (SharedPreferences) para mostrar resultados al instante. '
+        'En Android, opcionalmente, agregamos un acceso "Reservar en BeautyCita" '
+        'al contacto coincidente vivendo en tu propia agenda mediante el SyncAdapter '
+        'del sistema. La lista completa de contactos NUNCA se transmite a nuestros '
+        'servidores. Puedes revocar el permiso en cualquier momento desde los '
+        'ajustes del sistema operativo.\n\n'
         'C) Datos de ubicacion: coordenadas GPS (solo con su consentimiento '
         'explicito a traves del permiso de ubicacion de su dispositivo).\n\n'
         'D) Datos de transacciones: historial de reservas, preferencias de '
@@ -1187,7 +1194,10 @@ const _privacySections = [
         '• No compartimos perfiles individuales con terceros.\n\n'
         'SU CONTROL:\n'
         '• Puede desactivar el analisis de comportamiento en cualquier momento '
-        'desde Ajustes > Privacidad > "Analisis de actividad".\n'
+        'iniciando sesion en beautycita.com > Configuracion > Privacidad > '
+        '"Analisis de actividad" (toggle disponible en la version web; el '
+        'control nativo en la app movil llegara en una proxima version), '
+        'o solicitandolo a soporte@beautycita.com.\n'
         '• Al desactivar, detenemos la recopilacion y eliminamos sus puntuaciones '
         'dentro de 30 dias.\n'
         '• Los registros transaccionales (reservas, pagos) se mantienen por '
@@ -1247,9 +1257,12 @@ const _privacySections = [
         'funcion de estudio virtual, mediante confirmacion explicita '
         'en pantalla antes del procesamiento.\n\n'
         'Puede revocar el consentimiento para el analisis de comportamiento '
-        'en cualquier momento desde Ajustes > Privacidad sin afectar su uso '
-        'de la plataforma.\n\n'
-        'Fecha de ultima actualizacion: 15 de abril de 2026.',
+        'en cualquier momento desde beautycita.com > Configuracion > Privacidad > '
+        '"Analisis de actividad" (control disponible en la version web), '
+        'o escribiendo a soporte@beautycita.com, sin afectar su uso '
+        'de la plataforma. El control nativo en la app movil llegara en una '
+        'proxima version.\n\n'
+        'Fecha de ultima actualizacion: 19 de abril de 2026.',
   ),
 ];
 
@@ -1276,7 +1289,12 @@ const _storageSections = [
     body:
         'Firebase almacena un token para notificaciones push. '
         'Stripe y Google Sign-In usan sus propios tokens de sesion, '
-        'regidos por sus respectivas politicas.',
+        'regidos por sus respectivas politicas.\n\n'
+        'Sentry almacena temporalmente reportes de errores tecnicos en el '
+        'dispositivo (tipo de error, version de la app, modelo de dispositivo) '
+        'hasta que se sincronizan con el servidor de Sentry. No incluye datos '
+        'personales identificables (sendDefaultPii = false). Muestreo del 20% '
+        'en produccion.',
   ),
   _Section(
     heading: '4. Como eliminar datos',

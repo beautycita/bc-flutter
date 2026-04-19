@@ -75,5 +75,7 @@
 	<string>BeautyCita necesita acceso a tus fotos para seleccionar imágenes de perfil</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>BeautyCita usa Face ID para autenticación segura</string>
+	<key>NSContactsUsageDescription</key>
+	<string>BeautyCita compara tus contactos con salones registrados para mostrarte los que ya conoces. Los nombres y teléfonos se procesan en tu dispositivo y no se envían a nuestros servidores.</string>
 </dict>
 </plist>

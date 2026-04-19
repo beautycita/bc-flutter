@@ -108,7 +108,8 @@ class PrivacidadPage extends StatelessWidget {
                     '  - Sentry (EE.UU.): Reportes de errores anonimizados (sin datos personales identificables)\n'
                     '  - OpenAI (EE.UU.): Procesamiento de mensajes del asistente virtual (sin datos fiscales ni de pago)\n'
                     '  - Cloudflare (global): Almacenamiento de medios (fotos de portafolio)\n'
-                    '  - Meta / WhatsApp (EE.UU.): Comunicaciones de negocio (numero de telefono)\n\n'
+                    '  - Meta / WhatsApp (EE.UU.): Comunicaciones de negocio (numero de telefono)\n'
+                    '  - LightX (India): Procesamiento de IA para transformaciones de imagen del estudio virtual. Solo la imagen seleccionada por el usuario se transmite; no se envian datos de identificacion personal ni datos de pago. LightX no retiene imagenes para entrenamiento de modelos.\n\n'
                     'No vendemos, rentamos ni compartimos sus datos personales con terceros para fines publicitarios, de mercadotecnia o perfilamiento comercial.'),
 
                 _section('Medidas de Seguridad',
