@@ -1,0 +1,5 @@
+Got dependencies!
+45 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+Analyzing beautycita_app...                                     
+No issues found! (ran in 17.3s)
