@@ -71,9 +71,17 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen>
 
   Future<void> _handleConfirm() async {
     final notifier = ref.read(bookingFlowProvider.notifier);
-    final profile = ref.read(profileProvider);
+    var profile = ref.read(profileProvider);
 
-    // Phone verification gate
+    // Phone verification gate. If the in-memory state says not verified,
+    // refresh from the DB first — ProfileNotifier.load() runs once at
+    // construction and silently bails when Supabase isn't ready yet, so
+    // the state can stay at defaults through the first session.
+    if (!profile.hasVerifiedPhone) {
+      await ref.read(profileProvider.notifier).load();
+      if (!mounted) return;
+      profile = ref.read(profileProvider);
+    }
     if (!profile.hasVerifiedPhone) {
       final verified = await showPhoneVerifyGate(context);
       if (!verified || !mounted) return;
