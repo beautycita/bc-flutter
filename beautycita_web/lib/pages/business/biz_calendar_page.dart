@@ -1774,6 +1774,24 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
                   const SizedBox(height: 16),
                   _ContactSalonButton(bizId: widget.bizId, isDemo: isDemo),
 
+                  // Demo: expose Cancel only (paired with the drag-reschedule
+                  // flow already in-place) so the WA cancel message loop can
+                  // be demoed end-to-end. Other status actions stay gated —
+                  // wiring Confirmar/Completar/no-show is scope creep.
+                  if (isDemo && (status == 'pending' || status == 'confirmed')) ...[
+                    const SizedBox(height: 16),
+                    if (_updating)
+                      const Center(child: CircularProgressIndicator(strokeWidth: 2))
+                    else
+                      _ActionButton(
+                        label: 'Cancelar cita',
+                        icon: Icons.cancel_outlined,
+                        color: colors.error,
+                        onPressed: () => _confirmCancel(context),
+                        outlined: true,
+                      ),
+                  ],
+
                   if (!isDemo) ...[
                     const SizedBox(height: 12),
                     Row(
@@ -1872,6 +1890,51 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
   Future<void> _updateStatus(String newStatus) async {
     final id = widget.appt['id'] as String?;
     if (id == null) return;
+
+    // Demo short-circuit — mutate the session store instead of prod DB,
+    // then fire the labeled WA cancel sequence via demo-reschedule. Keeps
+    // the demo/prod boundary clean and avoids touching real payment data.
+    if (ref.read(isDemoProvider) && newStatus == 'cancelled_business') {
+      setState(() => _updating = true);
+      try {
+        ref.read(demoSessionStoreProvider.notifier).cancel(
+              appointmentId: id,
+              reason: 'business',
+            );
+
+        // Fire-and-forget the WA labeled-messages demo.
+        final staff = widget.appt['staff'] as Map?;
+        final staffName =
+            '${staff?['first_name'] ?? ''} ${staff?['last_name'] ?? ''}'.trim();
+        try {
+          await BCSupabase.client.functions.invoke('demo-reschedule', body: {
+            'kind': 'cancel',
+            'service_name': widget.appt['service_name'] ?? 'Servicio',
+            'client_name': widget.appt['customer_name'] ?? 'Cliente',
+            'staff_name': staffName,
+            'salon_name': 'Ejemplo Salon',
+            'salon_phone': '+52 322 142 9800',
+          });
+        } catch (e) {
+          debugPrint('[DemoCancel] Edge function error: $e');
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Cita cancelada — mensajes enviados a tu WhatsApp'),
+              backgroundColor: Color(0xFF9333ea),
+              behavior: SnackBarBehavior.floating,
+              duration: Duration(seconds: 4),
+            ),
+          );
+          ref.read(selectedAppointmentProvider.notifier).state = null;
+        }
+      } finally {
+        if (mounted) setState(() => _updating = false);
+      }
+      return;
+    }
 
     setState(() => _updating = true);
     try {

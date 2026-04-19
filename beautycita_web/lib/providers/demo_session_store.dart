@@ -111,6 +111,31 @@ class DemoSessionNotifier extends StateNotifier<DemoSessionState> {
     _persist();
   }
 
+  /// Flip an appointment's status to cancelled and flip paid→refunded so
+  /// the "Pagos" tab and dashboard counts update alongside the calendar.
+  /// `reason` is the short enum (customer / business / admin).
+  void cancel({
+    required String appointmentId,
+    String reason = 'business',
+  }) {
+    final status = switch (reason) {
+      'customer' => 'cancelled_customer',
+      'admin' => 'cancelled_admin',
+      _ => 'cancelled_business',
+    };
+    final updated = state.appointments.map((a) {
+      if (a['id'] != appointmentId) return a;
+      final wasPaid = a['payment_status'] == 'paid';
+      return {
+        ...a,
+        'status': status,
+        if (wasPaid) 'payment_status': 'refunded',
+      };
+    }).toList();
+    state = state.copyWith(appointments: updated);
+    _persist();
+  }
+
   void _persist() {
     try {
       web.window.sessionStorage.setItem(

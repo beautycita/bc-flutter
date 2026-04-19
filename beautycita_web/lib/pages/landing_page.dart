@@ -1582,6 +1582,20 @@ class _LandingPageState extends State<LandingPage>
             web.window.localStorage.setItem(demoTokenKey, uid);
           } catch (_) {/* storage unavailable — continue anyway */}
         }
+        // Register the demo funnel row (feeds 24h follow-up + conversion
+        // tracking) — fire-and-forget so nav isn't blocked on it.
+        Supabase.instance.client.functions.invoke(
+          'demo-wa-funnel',
+          body: {'action': 'register_session', 'phone': _demoPhone},
+        ).then((res) {
+          final token = (res.data as Map?)?['demo_token'] as String?;
+          if (token != null) {
+            Supabase.instance.client.functions.invoke(
+              'demo-wa-funnel',
+              body: {'action': 'demo_opened', 'demo_token': token},
+            );
+          }
+        }).catchError((_) {/* funnel tracking is best-effort */});
         // Navigate to demo after brief success animation
         Future.delayed(const Duration(milliseconds: 800), () {
           if (mounted) context.go('/demo');

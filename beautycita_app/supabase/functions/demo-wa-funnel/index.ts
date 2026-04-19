@@ -281,6 +281,82 @@ Deno.serve(async (req) => {
       return json({ verified: true, demo_token });
     }
 
+    // ─── REGISTER SESSION (post phone-verify) ────────────────
+    // The landing page now uses `phone-verify` for the OTP (so the
+    // calendar's gate doesn't re-prompt). This action lets it register
+    // the funnel row afterwards WITHOUT sending another WA code: we
+    // trust the auth JWT, check that the phone matches `profiles.phone`
+    // for that user, and mint a demo_token for the client to store.
+    if (action === "register_session") {
+      const authHeader = req.headers.get("authorization") ?? "";
+      const jwt = authHeader.replace("Bearer ", "");
+      if (!jwt) return json({ error: "Missing auth token" }, 401);
+
+      const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+        global: { headers: { Authorization: `Bearer ${jwt}` } },
+      });
+      const { data: { user }, error: authErr } = await userClient.auth.getUser();
+      if (authErr || !user) return json({ error: "Unauthorized" }, 401);
+
+      // Use service role to look up profile phone + insert the funnel row.
+      const { data: profile } = await db
+        .from("profiles")
+        .select("phone")
+        .eq("id", user.id)
+        .single();
+
+      const profilePhone = (profile?.phone as string | null) ?? "";
+      const cleanProfile = profilePhone.replace(/\D/g, "");
+      const bodyPhone = String(body.phone ?? "").replace(/\D/g, "");
+
+      // Tolerate ±52 country-code variance between the two fields.
+      const endsWithSame =
+        cleanProfile.endsWith(bodyPhone) || bodyPhone.endsWith(cleanProfile);
+      if (!cleanProfile || !bodyPhone || !endsWithSame) {
+        return json({ error: "Phone mismatch" }, 400);
+      }
+
+      const phone = cleanProfile.startsWith("52")
+        ? cleanProfile
+        : `52${cleanProfile}`;
+
+      // Reuse the row that send_code would have created if it exists,
+      // otherwise insert a fresh one. Either way mark it verified now.
+      const nowIso = new Date().toISOString();
+      const { data: existing } = await db
+        .from("demo_verifications")
+        .select("id")
+        .eq("phone", phone)
+        .is("verified_at", null)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      let recordId: number;
+      if (existing) {
+        await db
+          .from("demo_verifications")
+          .update({ verified_at: nowIso })
+          .eq("id", existing.id);
+        recordId = existing.id as number;
+      } else {
+        const { data: inserted, error: insertErr } = await db
+          .from("demo_verifications")
+          .insert({ phone, code: "phone-verify", verified_at: nowIso })
+          .select("id")
+          .single();
+        if (insertErr || !inserted) {
+          console.error(`[demo-wa] register_session insert: ${insertErr?.message}`);
+          return json({ error: "Internal error" }, 500);
+        }
+        recordId = inserted.id as number;
+      }
+
+      const demo_token = await signToken(recordId, phone);
+      console.log(`[demo-wa] Session registered for ${phone.slice(0, 6)}***`);
+      return json({ registered: true, demo_token });
+    }
+
     // ─── DEMO OPENED ─────────────────────────────────────────
     if (action === "demo_opened") {
       const { demo_token } = body;
