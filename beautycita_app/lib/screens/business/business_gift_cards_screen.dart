@@ -480,7 +480,7 @@ class _GiftCardTile extends StatelessWidget {
     final msg = 'Tienes una tarjeta de regalo por \$${fmt.format(amount)} MXN.\n'
         'Codigo: $code\n'
         'Canjéala al reservar tu cita en BeautyCita.';
-    Share.share(msg);
+    SharePlus.instance.share(ShareParams(text: msg));
   }
 }
 
@@ -569,7 +569,7 @@ class _GiftCardDetailSheet extends StatelessWidget {
                       'Tienes una tarjeta de regalo por \$${fmt.format(amount)} MXN.\n'
                       'Codigo: $code\n'
                       'Canjéala al reservar tu cita en BeautyCita.';
-                  Share.share(msg);
+                  SharePlus.instance.share(ShareParams(text: msg));
                 },
                 icon: const Icon(Icons.share_rounded),
                 tooltip: 'Compartir',

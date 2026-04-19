@@ -472,7 +472,7 @@ class _BookingConfirmationScreenState
                     onPressed: () {
                       final msg = 'Acabo de reservar ${booking.serviceName} en BeautyCita! '
                           'Reserva tu cita de belleza en segundos: https://beautycita.com';
-                      Share.share(msg);
+                      SharePlus.instance.share(ShareParams(text: msg));
                     },
                     icon: const Icon(Icons.share_rounded, size: 18),
                     label: const Text('Comparte tu cita'),

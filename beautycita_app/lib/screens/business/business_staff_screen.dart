@@ -1829,7 +1829,7 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () {
-                      Share.share('Sube tus fotos antes/despues en: $uploadUrl\nPIN: $pin', subject: 'Portafolio BeautyCita');
+                      SharePlus.instance.share(ShareParams(text: 'Sube tus fotos antes/despues en: $uploadUrl\nPIN: $pin', subject: 'Portafolio BeautyCita'));
                     },
                     icon: const Icon(Icons.share, size: 16),
                     label: Text('Compartir', maxLines: 1, overflow: TextOverflow.ellipsis),

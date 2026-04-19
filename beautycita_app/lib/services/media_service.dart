@@ -219,10 +219,10 @@ class MediaService {
           '${dir.path}/beautycita_share_${DateTime.now().millisecondsSinceEpoch}.jpg');
       await file.writeAsBytes(response.bodyBytes);
 
-      await Share.shareXFiles(
-        [XFile(file.path)],
+      await SharePlus.instance.share(ShareParams(
+        files: [XFile(file.path)],
         text: text,
-      );
+      ));
     } catch (e) {
       if (kDebugMode) debugPrint('MediaService: Failed to share: $e');
       ToastService.showError('Error al compartir');

@@ -48,10 +48,10 @@ class CsvExporter {
       await file.writeAsString(buffer.toString());
 
       // Share
-      await Share.shareXFiles(
-        [XFile(file.path, mimeType: 'text/csv')],
+      await SharePlus.instance.share(ShareParams(
+        files: [XFile(file.path, mimeType: 'text/csv')],
         subject: '$filename - ${items.length} registros',
-      );
+      ));
 
       ToastService.showSuccess('${items.length} registros exportados');
     } catch (e) {

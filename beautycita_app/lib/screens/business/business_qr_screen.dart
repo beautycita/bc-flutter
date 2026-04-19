@@ -247,10 +247,10 @@ class _QrContentState extends State<_QrContent> {
       if (file == null) throw Exception('Could not capture QR');
 
       // Share the image file so the user can save it to gallery or files
-      await Share.shareXFiles(
-        [XFile(file.path)],
+      await SharePlus.instance.share(ShareParams(
+        files: [XFile(file.path)],
         text: 'QR de ${widget.businessName} - BeautyCita',
-      );
+      ));
       ToastService.showInfo('QR listo para guardar');
     } catch (e, stack) {
       ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
@@ -262,7 +262,7 @@ class _QrContentState extends State<_QrContent> {
   Future<void> _shareQr() async {
     setState(() => _saving = true);
     try {
-      await Share.share('Escanea para reservar: ${widget.qrUrl}');
+      await SharePlus.instance.share(ShareParams(text: 'Escanea para reservar: ${widget.qrUrl}'));
     } catch (e, stack) {
       ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     } finally {

@@ -337,13 +337,13 @@ class _CashPaymentScreenState extends ConsumerState<CashPaymentScreen> {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () {
-                    Share.share(
-                      'BeautyCita - Pago en efectivo\n'
-                      'Monto: \$${mxnFormat.format(payment.amountMxn)} MXN\n'
-                      'Referencia: ${payment.referenceNumber}\n'
-                      'Valido hasta: ${DateFormat('dd MMM yyyy, 11:59 PM', 'es').format(payment.createdAt)}\n\n'
-                      'Presenta este codigo en OXXO o 7-Eleven.',
-                    );
+                    SharePlus.instance.share(ShareParams(
+                      text: 'BeautyCita - Pago en efectivo\n'
+                          'Monto: \$${mxnFormat.format(payment.amountMxn)} MXN\n'
+                          'Referencia: ${payment.referenceNumber}\n'
+                          'Valido hasta: ${DateFormat('dd MMM yyyy, 11:59 PM', 'es').format(payment.createdAt)}\n\n'
+                          'Presenta este codigo en OXXO o 7-Eleven.',
+                    ));
                   },
                   icon: const Icon(Icons.share_rounded, size: 18),
                   label: const Text('Compartir'),

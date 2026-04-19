@@ -176,7 +176,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
   Future<void> _openMapsNavigation(LatLng destination) async {
     final url =
         'https://www.google.com/maps/dir/?api=1&destination=${destination.lat},${destination.lng}';
-    Share.share(url);
+    SharePlus.instance.share(ShareParams(text: url));
   }
 
   void _shareRoute(Booking booking, LatLng? destination) {
@@ -188,7 +188,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
       text +=
           '\nComo llegar: https://www.google.com/maps/dir/?api=1&destination=${dest.lat},${dest.lng}';
     }
-    Share.share(text);
+    SharePlus.instance.share(ShareParams(text: text));
   }
 
   Future<void> _openUberToSalon(Booking booking) async {
@@ -1200,10 +1200,10 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
           '${tempDir.path}/recibo_${booking.id.substring(0, 8)}.png');
       await file.writeAsBytes(byteData.buffer.asUint8List());
 
-      await Share.shareXFiles(
-        [XFile(file.path)],
+      await SharePlus.instance.share(ShareParams(
+        files: [XFile(file.path)],
         text: 'Recibo de ${booking.serviceName} - BeautyCita',
-      );
+      ));
     } catch (e, stack) {
       ToastService.showErrorWithDetails(
           'No se pudo generar el recibo', e, stack);
