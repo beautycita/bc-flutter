@@ -11,7 +11,7 @@ import '../../utils/friendly_error.dart';
 
 import '../../config/breakpoints.dart';
 import '../../config/web_theme.dart';
-import '../../data/demo_data.dart';
+import '../../providers/demo_session_store.dart';
 import '../../providers/business_portal_provider.dart';
 import '../../providers/demo_providers.dart';
 import '../../widgets/web_design_system.dart';
@@ -829,12 +829,6 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
     final duration = (appt['duration_minutes'] as num?)?.toInt() ?? 60;
     final newEnd = newStart.add(Duration(minutes: duration));
 
-    // Save original values for revert
-    final oldStartsAt = appt['starts_at'] as String;
-    final oldEndsAt = appt['ends_at'] as String;
-    final oldStaffId = appt['staff_id'] as String;
-
-    // Find the staff member
     final newStaffMember = allStaff.firstWhere(
       (s) => s['id'] == newStaffId,
       orElse: () => <String, dynamic>{},
@@ -842,21 +836,34 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
     final newStaffFirst = newStaffMember['first_name'] as String? ?? '';
     final newStaffLast = newStaffMember['last_name'] as String? ?? '';
 
-    // Locally update appointment in DemoData (in-memory only)
-    final appts = DemoData.appointments;
-    final idx = appts.indexWhere((a) => a['id'] == id);
-    if (idx != -1) {
-      appts[idx] = {
-        ...appts[idx],
-        'starts_at': newStart.toIso8601String(),
-        'ends_at': newEnd.toIso8601String(),
-        'staff_id': newStaffId,
-        'staff': {'first_name': newStaffFirst, 'last_name': newStaffLast},
-      };
+    // If the drag reassigned to a different stylist, capture the old name
+    // so the edge function can fire its 3rd "nueva estilista" message.
+    // Without this, isReassignment is false server-side and the new
+    // stylist never gets told they picked up the appointment.
+    final oldStaffId = appt['staff_id'] as String?;
+    String? oldStaffName;
+    if (oldStaffId != null && oldStaffId != newStaffId) {
+      final oldStaffMember = allStaff.firstWhere(
+        (s) => s['id'] == oldStaffId,
+        orElse: () => <String, dynamic>{},
+      );
+      final oldFirst = oldStaffMember['first_name'] as String? ?? '';
+      final oldLast = oldStaffMember['last_name'] as String? ?? '';
+      final combined = '$oldFirst $oldLast'.trim();
+      if (combined.isNotEmpty) oldStaffName = combined;
     }
 
-    // Refresh calendar UI
-    ref.invalidate(businessAppointmentsProvider);
+    // Apply mutation to the session store. The store auto-notifies the
+    // overrides in demo_providers.dart, so the calendar + dashboard rebuild
+    // automatically — no manual ref.invalidate needed.
+    ref.read(demoSessionStoreProvider.notifier).reschedule(
+          appointmentId: id,
+          newStart: newStart,
+          newEnd: newEnd,
+          newStaffId: newStaffId,
+          newStaffFirstName: newStaffFirst,
+          newStaffLastName: newStaffLast,
+        );
 
     // Dismiss pulsing tooltip
     if (mounted) setState(() => _hasCompletedDemoDrag = true);
@@ -867,7 +874,8 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
         'service_name': appt['service_name'] ?? 'Servicio',
         'client_name': appt['customer_name'] ?? 'Cliente',
         'staff_name': '$newStaffFirst $newStaffLast'.trim(),
-        'salon_name': 'Salon de Vallarta',
+        if (oldStaffName != null) 'old_staff_name': oldStaffName,
+        'salon_name': 'Ejemplo Salon',
         'new_start': newStart.toIso8601String(),
         'salon_phone': '+52 322 142 9800',
       });
@@ -875,7 +883,6 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
       debugPrint('[DemoReschedule] Edge function error: $e');
     }
 
-    // Show success feedback
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -886,20 +893,6 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
         ),
       );
     }
-
-    // Revert after 60 seconds
-    Future.delayed(const Duration(seconds: 60), () {
-      if (!mounted) return;
-      final revertIdx = DemoData.appointments.indexWhere((a) => a['id'] == id);
-      if (revertIdx == -1) return;
-      DemoData.appointments[revertIdx] = {
-        ...DemoData.appointments[revertIdx],
-        'starts_at': oldStartsAt,
-        'ends_at': oldEndsAt,
-        'staff_id': oldStaffId,
-      };
-      ref.invalidate(businessAppointmentsProvider);
-    });
   }
 
   void _showPhoneVerificationGate(BuildContext context) {

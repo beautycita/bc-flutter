@@ -4,7 +4,9 @@ import 'package:beautycita_core/supabase.dart';
 
 import '../../config/breakpoints.dart';
 import '../../config/web_theme.dart';
+import '../../data/demo_data.dart';
 import '../../providers/business_portal_provider.dart';
+import '../../providers/demo_providers.dart';
 
 // ── Data models ───────────────────────────────────────────────────────────────
 
@@ -39,10 +41,81 @@ class _ServiceStat {
   final double revenue;
 }
 
+// ── Demo aggregates ─────────────────────────────────────────────────────────
+
+List<_StaffStat> _demoStaffAnalytics() {
+  // Build staffId → full name map from DemoData.staff.
+  final names = <String, String>{
+    for (final s in DemoData.staff)
+      s['id'] as String:
+          '${s['first_name'] ?? ''} ${s['last_name'] ?? ''}'.trim(),
+  };
+
+  final Map<String, Map<String, dynamic>> byStaff = {};
+  for (final a in DemoData.appointments) {
+    if (a['status'] != 'completed') continue;
+    final sid = a['staff_id'] as String? ?? 'unknown';
+    final price = (a['price'] as num?)?.toDouble() ?? 0;
+    byStaff.putIfAbsent(sid, () => {'revenue': 0.0, 'count': 0});
+    byStaff[sid]!['revenue'] =
+        (byStaff[sid]!['revenue'] as double) + price;
+    byStaff[sid]!['count'] = (byStaff[sid]!['count'] as int) + 1;
+  }
+
+  // Plausible commission spread so the Rendimiento table looks lived-in.
+  const commissionRates = [40.0, 38.0, 35.0, 35.0, 32.0, 30.0, 28.0, 25.0, 20.0];
+
+  final stats = <_StaffStat>[];
+  var i = 0;
+  for (final entry in byStaff.entries) {
+    final revenue = entry.value['revenue'] as double;
+    final rate = commissionRates[i % commissionRates.length];
+    stats.add(_StaffStat(
+      staffId: entry.key,
+      name: names[entry.key] ?? 'Sin nombre',
+      revenue: revenue,
+      bookingCount: entry.value['count'] as int,
+      commission: revenue * rate / 100,
+      commissionRate: rate,
+    ));
+    i++;
+  }
+
+  stats.sort((a, b) => b.revenue.compareTo(a.revenue));
+  return stats;
+}
+
+List<_ServiceStat> _demoServiceAnalytics() {
+  final Map<String, Map<String, dynamic>> bySvc = {};
+  for (final a in DemoData.appointments) {
+    if (a['status'] != 'completed') continue;
+    final name = a['service_name'] as String? ?? 'Sin nombre';
+    final price = (a['price'] as num?)?.toDouble() ?? 0;
+    bySvc.putIfAbsent(name, () => {'count': 0, 'revenue': 0.0});
+    bySvc[name]!['count'] = (bySvc[name]!['count'] as int) + 1;
+    bySvc[name]!['revenue'] =
+        (bySvc[name]!['revenue'] as double) + price;
+  }
+
+  final stats = bySvc.entries
+      .map((e) => _ServiceStat(
+            serviceName: e.key,
+            count: e.value['count'] as int,
+            revenue: e.value['revenue'] as double,
+          ))
+      .toList();
+  stats.sort((a, b) => b.revenue.compareTo(a.revenue));
+  return stats;
+}
+
 // ── Providers ────────────────────────────────────────────────────────────────
 
 final _staffAnalyticsProvider = FutureProvider.autoDispose
     .family<List<_StaffStat>, String>((ref, bizId) async {
+  if (ref.watch(isDemoProvider)) {
+    return _demoStaffAnalytics();
+  }
+
   final client = BCSupabase.client;
 
   // Appointments grouped by staff with revenue sum
@@ -104,6 +177,10 @@ final _staffAnalyticsProvider = FutureProvider.autoDispose
 
 final _serviceAnalyticsProvider = FutureProvider.autoDispose
     .family<List<_ServiceStat>, String>((ref, bizId) async {
+  if (ref.watch(isDemoProvider)) {
+    return _demoServiceAnalytics();
+  }
+
   final rows = await BCSupabase.client
       .from(BCTables.appointments)
       .select('service_name, price')
@@ -419,16 +496,16 @@ class _StaffTable extends StatelessWidget {
                   const SizedBox(width: 28),
                   Expanded(
                       flex: 3,
-                      child: _Th(theme, 'Nombre')),
+                      child: _th(theme, 'Nombre')),
                   Expanded(
                       flex: 2,
-                      child: _Th(theme, 'Ingresos')),
+                      child: _th(theme, 'Ingresos')),
                   Expanded(
                       flex: 1,
-                      child: _Th(theme, 'Citas')),
+                      child: _th(theme, 'Citas')),
                   Expanded(
                       flex: 2,
-                      child: _Th(theme, 'Ticket Prom.')),
+                      child: _th(theme, 'Ticket Prom.')),
                 ],
               ),
             ),
@@ -442,7 +519,7 @@ class _StaffTable extends StatelessWidget {
     );
   }
 
-  Widget _Th(ThemeData theme, String label) {
+  Widget _th(ThemeData theme, String label) {
     return Text(
       label,
       style: theme.textTheme.labelSmall?.copyWith(
@@ -703,10 +780,10 @@ class _CommissionSummary extends StatelessWidget {
               color: kWebBackground,
               child: Row(
                 children: [
-                  Expanded(flex: 3, child: _Th(theme, 'Staff')),
-                  Expanded(flex: 2, child: _Th(theme, 'Ingresos')),
-                  Expanded(flex: 1, child: _Th(theme, 'Tasa %')),
-                  Expanded(flex: 2, child: _Th(theme, 'Comision')),
+                  Expanded(flex: 3, child: _th(theme, 'Staff')),
+                  Expanded(flex: 2, child: _th(theme, 'Ingresos')),
+                  Expanded(flex: 1, child: _th(theme, 'Tasa %')),
+                  Expanded(flex: 2, child: _th(theme, 'Comision')),
                 ],
               ),
             ),
@@ -790,7 +867,7 @@ class _CommissionSummary extends StatelessWidget {
     );
   }
 
-  Widget _Th(ThemeData theme, String label) {
+  Widget _th(ThemeData theme, String label) {
     return Text(
       label,
       style: theme.textTheme.labelSmall?.copyWith(

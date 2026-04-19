@@ -131,9 +131,13 @@ class _PosOptInState extends ConsumerState<_PosOptIn> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Vende productos de belleza directamente desde tu perfil. '
-                'Agrega tu catalogo, administra inventario y publica '
-                'productos en el feed de inspiracion de BeautyCita.',
+                isDemo
+                    ? 'Vende productos de belleza directamente desde tu perfil. '
+                        'Administra tu catalogo, publica productos en el feed '
+                        'de inspiracion y recibe ordenes de todo Mexico.'
+                    : 'Vende productos de belleza directamente desde tu perfil. '
+                        'Agrega tu catalogo, administra inventario y publica '
+                        'productos en el feed de inspiracion de BeautyCita.',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: kWebTextSecondary,
@@ -144,7 +148,7 @@ class _PosOptInState extends ConsumerState<_PosOptIn> {
               ShaderMask(
                 shaderCallback: (bounds) => kWebBrandGradient.createShader(bounds),
                 child: Text(
-                  'Sin comisiones adicionales.',
+                  'Solo 10% de comision por venta.',
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: Colors.white,

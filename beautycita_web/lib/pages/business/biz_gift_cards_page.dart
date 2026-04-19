@@ -6,12 +6,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita_core/supabase.dart';
 
 import '../../config/web_theme.dart';
+import '../../data/demo_data.dart';
 import '../../providers/business_portal_provider.dart';
+import '../../providers/demo_providers.dart';
 
 // ── Providers ────────────────────────────────────────────────────────────────
 
 final _giftCardsProvider = FutureProvider.autoDispose
     .family<List<Map<String, dynamic>>, String>((ref, bizId) async {
+  if (ref.watch(isDemoProvider)) {
+    return DemoData.giftCards;
+  }
   final rows = await BCSupabase.client
       .from(BCTables.giftCards)
       .select()
@@ -645,7 +650,7 @@ class _CreateGiftCardDialogState extends ConsumerState<_CreateGiftCardDialog> {
               const SizedBox(height: 12),
 
               // Amount
-              _Label(theme, 'Monto (\$)'),
+              _lbl(theme, 'Monto (\$)'),
               const SizedBox(height: 6),
               TextFormField(
                 controller: _amountCtrl,
@@ -671,7 +676,7 @@ class _CreateGiftCardDialogState extends ConsumerState<_CreateGiftCardDialog> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _Label(theme, 'Comprador'),
+                        _lbl(theme, 'Comprador'),
                         const SizedBox(height: 6),
                         TextFormField(
                           controller: _buyerCtrl,
@@ -687,7 +692,7 @@ class _CreateGiftCardDialogState extends ConsumerState<_CreateGiftCardDialog> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _Label(theme, 'Destinatario'),
+                        _lbl(theme, 'Destinatario'),
                         const SizedBox(height: 6),
                         TextFormField(
                           controller: _recipientCtrl,
@@ -703,7 +708,7 @@ class _CreateGiftCardDialogState extends ConsumerState<_CreateGiftCardDialog> {
               const SizedBox(height: 12),
 
               // Message
-              _Label(theme, 'Mensaje (opcional)'),
+              _lbl(theme, 'Mensaje (opcional)'),
               const SizedBox(height: 6),
               TextFormField(
                 controller: _messageCtrl,
@@ -716,7 +721,7 @@ class _CreateGiftCardDialogState extends ConsumerState<_CreateGiftCardDialog> {
               const SizedBox(height: 12),
 
               // Expiry
-              _Label(theme, 'Fecha de vencimiento (opcional)'),
+              _lbl(theme, 'Fecha de vencimiento (opcional)'),
               const SizedBox(height: 6),
               InkWell(
                 onTap: _pickExpiry,
@@ -788,7 +793,7 @@ class _CreateGiftCardDialogState extends ConsumerState<_CreateGiftCardDialog> {
     );
   }
 
-  Widget _Label(ThemeData theme, String text) {
+  Widget _lbl(ThemeData theme, String text) {
     return Text(
       text,
       style: theme.textTheme.labelSmall?.copyWith(

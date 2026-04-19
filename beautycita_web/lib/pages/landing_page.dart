@@ -3,8 +3,10 @@ import 'package:go_router/go_router.dart';
 import 'package:qr/qr.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:web/web.dart' as web;
 
 import '../config/breakpoints.dart';
+import '../providers/demo_session_store.dart' show demoTokenKey;
 
 // ── Design Tokens ────────────────────────────────────────────────────────────
 
@@ -1517,11 +1519,19 @@ class _LandingPageState extends State<LandingPage>
     });
 
     try {
-      final phone = raw.startsWith('52') ? raw : '52$raw';
+      // Sign in anonymously so phone-verify (which requires an authenticated
+      // user) can bind the verified phone to a real profiles row. Without
+      // this, the /demo calendar's verify gate would prompt a second time.
+      if (Supabase.instance.client.auth.currentUser == null) {
+        await Supabase.instance.client.auth.signInAnonymously();
+      }
+
+      final rawLocal = raw.startsWith('52') ? raw.substring(2) : raw;
+      final phone = '+52$rawLocal';
       _demoPhone = phone;
       final response = await Supabase.instance.client.functions.invoke(
-        'demo-wa-funnel',
-        body: {'action': 'send_code', 'phone': phone},
+        'phone-verify',
+        body: {'action': 'send-code', 'phone': phone},
       );
       final data = response.data as Map<String, dynamic>?;
       if (data?['sent'] == true) {
@@ -1554,19 +1564,23 @@ class _LandingPageState extends State<LandingPage>
 
     try {
       final response = await Supabase.instance.client.functions.invoke(
-        'demo-wa-funnel',
-        body: {'action': 'verify', 'phone': _demoPhone, 'code': code},
+        'phone-verify',
+        body: {
+          'action': 'verify-code',
+          'phone': _demoPhone,
+          'code': code,
+        },
       );
       final data = response.data as Map<String, dynamic>?;
       if (data?['verified'] == true) {
-        final token = data?['demo_token'] as String?;
         setState(() { _codeVerified = true; _verifyingCode = false; });
-        // Notify the edge function that demo was opened
-        if (token != null) {
-          Supabase.instance.client.functions.invoke(
-            'demo-wa-funnel',
-            body: {'action': 'demo_opened', 'demo_token': token},
-          );
+        // Session-store key = the anon user's auth.uid. Reset any prior
+        // state so a fresh verify gives a fresh playground.
+        final uid = Supabase.instance.client.auth.currentUser?.id;
+        if (uid != null) {
+          try {
+            web.window.localStorage.setItem(demoTokenKey, uid);
+          } catch (_) {/* storage unavailable — continue anyway */}
         }
         // Navigate to demo after brief success animation
         Future.delayed(const Duration(milliseconds: 800), () {

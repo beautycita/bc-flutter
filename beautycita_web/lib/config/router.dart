@@ -541,6 +541,34 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: 'pos',
                 builder: (context, state) => const BizPosPage(),
               ),
+              GoRoute(
+                path: 'clients',
+                builder: (context, state) => const BizClientsPage(),
+              ),
+              GoRoute(
+                path: 'marketing',
+                builder: (context, state) => const BizMarketingPage(),
+              ),
+              GoRoute(
+                path: 'gift-cards',
+                builder: (context, state) => const BizGiftCardsPage(),
+              ),
+              GoRoute(
+                path: 'analytics',
+                builder: (context, state) => const BizAnalyticsPage(),
+              ),
+              GoRoute(
+                path: 'orders',
+                builder: (context, state) => const BizOrdersPage(),
+              ),
+              GoRoute(
+                path: 'banking',
+                builder: (context, state) => const BizBankingPage(),
+              ),
+              GoRoute(
+                path: 'portfolio',
+                builder: (context, state) => const BizPortfolioPage(),
+              ),
             ],
           ),
         ],

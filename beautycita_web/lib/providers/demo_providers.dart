@@ -4,6 +4,7 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'business_portal_provider.dart';
+import 'demo_session_store.dart';
 import '../data/demo_data.dart';
 import 'package:beautycita_core/beautycita_core.dart';
 
@@ -26,19 +27,36 @@ final demoPhoneVerifiedProvider = FutureProvider<bool>((ref) async {
 });
 
 /// All provider overrides needed for demo mode.
+///
+/// Reads that depend on appointments (stats, trends, payments, the calendar
+/// list itself) all watch [demoSessionStoreProvider] so the dashboard and
+/// calendar both update in lock-step when a session mutation lands.
 List<Override> get demoProviderOverrides => [
       isDemoProvider.overrideWith((ref) => true),
       currentBusinessProvider.overrideWith((ref) async => DemoData.business),
-      businessStatsProvider.overrideWith((ref) async => _demoStats()),
-      businessWeeklyTrendProvider.overrideWith((ref) async => _demoWeeklyTrend()),
-      businessMonthlyDailyProvider.overrideWith((ref) async => _demoMonthlyDaily()),
+      businessStatsProvider.overrideWith((ref) async {
+        final session = ref.watch(demoSessionStoreProvider);
+        return _demoStats(session.appointments);
+      }),
+      businessWeeklyTrendProvider.overrideWith((ref) async {
+        final session = ref.watch(demoSessionStoreProvider);
+        return _demoWeeklyTrend(session.appointments);
+      }),
+      businessMonthlyDailyProvider.overrideWith((ref) async {
+        final session = ref.watch(demoSessionStoreProvider);
+        return _demoMonthlyDaily(session.appointments);
+      }),
       businessServicesProvider.overrideWith((ref) async => DemoData.services),
       businessStaffProvider.overrideWith((ref) async => DemoData.staff),
       businessReviewsProvider.overrideWith((ref) async => DemoData.reviews),
       businessDisputesProvider.overrideWith((ref) async => DemoData.disputes),
-      businessPaymentsProvider.overrideWith((ref) async => DemoData.payments),
+      businessPaymentsProvider.overrideWith((ref) async {
+        final session = ref.watch(demoSessionStoreProvider);
+        return _demoPayments(session.appointments);
+      }),
       businessAppointmentsProvider.overrideWith((ref, range) async {
-        return DemoData.appointments.where((a) {
+        final session = ref.watch(demoSessionStoreProvider);
+        return session.appointments.where((a) {
           final startsAt = a['starts_at'] as String;
           return startsAt.compareTo(range.start) >= 0 &&
               startsAt.compareTo(range.end) <= 0;
@@ -50,8 +68,7 @@ List<Override> get demoProviderOverrides => [
 
 // ── Computed demo stats ─────────────────────────────────────────────────────
 
-BusinessStats _demoStats() {
-  final appts = DemoData.appointments;
+BusinessStats _demoStats(List<Map<String, dynamic>> appts) {
   final now = DateTime.now();
   final todayStr = DateTime(now.year, now.month, now.day)
       .toIso8601String()
@@ -94,9 +111,8 @@ BusinessStats _demoStats() {
   );
 }
 
-WeeklyTrend _demoWeeklyTrend() {
+WeeklyTrend _demoWeeklyTrend(List<Map<String, dynamic>> appts) {
   final now = DateTime.now();
-  final appts = DemoData.appointments;
   final counts = <double>[];
   final revenue = <double>[];
   final pendingList = <double>[];
@@ -131,6 +147,8 @@ WeeklyTrend _demoWeeklyTrend() {
 }
 
 Map<String, Set<String>> _demoStaffServices() {
+  // Built from the immutable baseline — staff↔service pairings don't change
+  // on reschedule, so no need to read the session store here.
   final result = <String, Set<String>>{};
   for (final a in DemoData.appointments) {
     final staffId = a['staff_id'] as String?;
@@ -142,9 +160,28 @@ Map<String, Set<String>> _demoStaffServices() {
   return result;
 }
 
-List<Map<String, dynamic>> _demoMonthlyDaily() {
+List<Map<String, dynamic>> _demoPayments(List<Map<String, dynamic>> appts) {
+  return appts
+      .where((a) =>
+          a['payment_status'] == 'paid' || a['payment_status'] == 'refunded')
+      .map((a) => {
+            'id': 'pay-${a['id']}',
+            'appointment_id': a['id'],
+            // Payments table exposes `amount` (pesos) — the table/row widgets
+            // read that field. Without it they all render $0.
+            'amount': (a['price'] as num?)?.toDouble() ?? 0,
+            'amount_centavos': a['payment_amount_centavos'],
+            'beautycita_fee_centavos': a['beautycita_fee_centavos'],
+            'method': a['payment_method'] ?? 'card',
+            'status':
+                a['payment_status'] == 'refunded' ? 'refunded' : 'completed',
+            'created_at': a['starts_at'],
+          })
+      .toList();
+}
+
+List<Map<String, dynamic>> _demoMonthlyDaily(List<Map<String, dynamic>> appts) {
   final now = DateTime.now();
-  final appts = DemoData.appointments;
   final Map<String, Map<String, dynamic>> daily = {};
 
   for (final a in appts) {

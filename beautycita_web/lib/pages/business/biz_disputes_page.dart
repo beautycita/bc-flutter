@@ -47,39 +47,97 @@ class _DisputesContent extends ConsumerWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isDesktop = WebBreakpoints.isDesktop(constraints.maxWidth);
-        final showPanel = selected != null && isDesktop;
 
+        // Non-desktop: full-screen detail view when a dispute is selected.
+        // The detail panel's close button resets [selectedDisputeProvider]
+        // and the user lands back on the list.
+        if (!isDesktop && selected != null) {
+          return _DisputeDetailPanel(dispute: selected);
+        }
+
+        final listWidget = disputesAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (_, __) =>
+              const Center(child: Text('Error al cargar disputas')),
+          data: (disputes) {
+            var filtered = disputes;
+            if (statusFilter != null) {
+              filtered = disputes
+                  .where((d) => d['status'] == statusFilter)
+                  .toList();
+            }
+            return _DisputesList(
+                disputes: filtered, allCount: disputes.length);
+          },
+        );
+
+        if (!isDesktop) {
+          // Non-desktop with nothing selected → just the list.
+          return listWidget;
+        }
+
+        // Desktop: split view. Always reserve the panel slot so tapping a
+        // row is discoverable even before anything is selected.
         return Row(
           children: [
-            Expanded(
-              child: disputesAsync.when(
-                loading: () =>
-                    const Center(child: CircularProgressIndicator()),
-                error: (_, __) =>
-                    const Center(child: Text('Error al cargar disputas')),
-                data: (disputes) {
-                  var filtered = disputes;
-                  if (statusFilter != null) {
-                    filtered = disputes
-                        .where((d) => d['status'] == statusFilter)
-                        .toList();
-                  }
-                  return _DisputesList(
-                      disputes: filtered, allCount: disputes.length);
-                },
-              ),
+            Expanded(child: listWidget),
+            VerticalDivider(
+                width: 1,
+                color: Theme.of(context).colorScheme.outlineVariant),
+            SizedBox(
+              width: 420,
+              child: selected != null
+                  ? _DisputeDetailPanel(dispute: selected)
+                  : const _DisputeDetailEmpty(),
             ),
-            if (showPanel) ...[
-              VerticalDivider(
-                  width: 1,
-                  color: Theme.of(context).colorScheme.outlineVariant),
-              SizedBox(
-                  width: 420,
-                  child: _DisputeDetailPanel(dispute: selected)),
-            ],
           ],
         );
       },
+    );
+  }
+}
+
+class _DisputeDetailEmpty extends StatelessWidget {
+  const _DisputeDetailEmpty();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return Container(
+      color: colors.surface,
+      alignment: Alignment.center,
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: kWebPrimary.withValues(alpha: 0.06),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.touch_app_outlined,
+                size: 30, color: kWebTextHint),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Selecciona una disputa',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: kWebTextHint,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Toca una fila para ver el detalle.',
+            style: theme.textTheme.labelSmall
+                ?.copyWith(color: kWebTextHint),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 }

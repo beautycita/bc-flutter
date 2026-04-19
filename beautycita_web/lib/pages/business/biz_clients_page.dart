@@ -9,7 +9,9 @@ import 'package:web/web.dart' as web;
 
 import '../../config/breakpoints.dart';
 import '../../config/web_theme.dart';
+import '../../data/demo_data.dart';
 import '../../providers/business_portal_provider.dart';
+import '../../providers/demo_providers.dart';
 
 // ── Providers ────────────────────────────────────────────────────────────────
 
@@ -19,6 +21,9 @@ final _selectedClientProvider =
 
 final _bizClientsProvider = FutureProvider.autoDispose
     .family<List<Map<String, dynamic>>, String>((ref, bizId) async {
+  if (ref.watch(isDemoProvider)) {
+    return DemoData.clients;
+  }
   final rows = await BCSupabase.client
       .from(BCTables.businessClients)
       .select()

@@ -537,58 +537,292 @@ abstract final class DemoData {
 
   // ── Disputes ───────────────────────────────────────────────────────────
 
-  static const List<Map<String, dynamic>> disputes = [
-    {
-      'id': '112b4bea-55f6-41e2-ba20-8b8f8e72752b',
-      'appointment_id': 'f0000001-0001-4000-8000-000000000025',
-      'business_id': businessId,
-      'reason': 'El color del tinte no quedo como lo pedi.',
-      'status': 'resolved',
-      'resolution': 'favor_both',
-      'resolution_notes': 'Cliente acepto correccion gratuita del tono.',
-      'refund_amount': 0.0,
-      'salon_offer': 'denied',
-      'salon_offer_amount': 0.0,
-      'salon_response': 'Ofrecemos correccion de tono sin costo.',
-      'client_accepted': true,
-      'created_at': '2026-03-01T16:07:21Z',
-      'resolved_at': '2026-03-02T16:07:21Z',
-    },
-    {
-      'id': 'abcb8de9-6e0e-4d13-9130-a233f6005608',
-      'appointment_id': 'f0000001-0001-4000-8000-000000000019',
-      'business_id': businessId,
-      'reason': 'Me marcaron como no-show pero si llegue 20 min tarde.',
-      'status': 'resolved',
-      'resolution': 'favor_client',
-      'resolution_notes': 'Reembolso parcial del deposito.',
-      'refund_amount': 270.0,
-      'refund_status': 'processed',
-      'salon_offer': 'partial_refund',
-      'salon_offer_amount': 270.0,
-      'salon_response': 'Reembolso del 50% del deposito y reagendamos.',
-      'client_accepted': true,
-      'created_at': '2026-02-22T04:07:21Z',
-      'resolved_at': '2026-02-23T16:07:21Z',
-    },
-    {
-      'id': '8e747dd5-ea4a-469a-b964-64da6b889f21',
-      'appointment_id': 'f0000001-0001-4000-8000-000000000014',
-      'business_id': businessId,
-      'reason': 'Cancele mi cita y no me devolvieron el deposito.',
-      'status': 'resolved',
-      'resolution': 'favor_client',
-      'resolution_notes': 'Reembolso completo. Cancelacion dentro del plazo permitido.',
-      'refund_amount': 150.0,
-      'refund_status': 'processed',
-      'salon_offer': 'full_refund',
-      'salon_offer_amount': 150.0,
-      'salon_response': 'Procesamos reembolso completo del deposito.',
-      'client_accepted': true,
-      'created_at': '2026-02-14T10:07:21Z',
-      'resolved_at': '2026-02-15T16:07:21Z',
-    },
-  ];
+  // Field names mirror the real `disputes` table so the portal's detail
+  // panel renders every card (resolution, refund, business response, etc).
+  static List<Map<String, dynamic>> get disputes {
+    final now = DateTime.now();
+    String iso(DateTime d) => d.toUtc().toIso8601String();
+    return [
+      // One OPEN dispute so the "Responder" flow is visible in the demo
+      // (CTA is still suppressed in demo mode, but the layout is shown).
+      {
+        'id': 'd0ffe0c1-0000-4000-8000-000000000001',
+        'appointment_id': 'f0000001-0001-4000-8000-000000000026',
+        'business_id': businessId,
+        'reason': 'Servicio incompleto',
+        'description':
+            'La estilista no termino el peinado porque se acabo el tiempo. '
+                'Pague completo y sali con medio estilo. Pido reembolso parcial.',
+        'status': 'open',
+        'amount': 700.0,
+        'created_at': iso(now.subtract(const Duration(hours: 30))),
+      },
+      // One dispute awaiting client acceptance of salon's offer.
+      {
+        'id': 'd0ffe0c1-0000-4000-8000-000000000002',
+        'appointment_id': 'f0000001-0001-4000-8000-000000000025',
+        'business_id': businessId,
+        'reason': 'Color de tinte incorrecto',
+        'description':
+            'Pedi un tono miel dorado y quedo naranja. Llevo fotos de referencia, '
+                'pero el resultado no coincide.',
+        'status': 'salon_responded',
+        'amount': 1800.0,
+        'salon_offer': 'partial_refund',
+        'salon_offer_amount': 900.0,
+        'business_response':
+            'Ofrecemos correccion de tono sin costo + 50% del servicio de regreso.',
+        'salon_responded_at': iso(now.subtract(const Duration(days: 2, hours: 1))),
+        'created_at': iso(now.subtract(const Duration(days: 3))),
+      },
+      // Resolved in favor of client — full refund issued.
+      {
+        'id': 'd0ffe0c1-0000-4000-8000-000000000003',
+        'appointment_id': 'f0000001-0001-4000-8000-000000000019',
+        'business_id': businessId,
+        'reason': 'No-show disputado',
+        'description':
+            'Me marcaron como no-show pero si llegue 20 min tarde y la estilista '
+                'ya no me atendio. Pido que me devuelvan el deposito.',
+        'status': 'resolved',
+        'amount': 270.0,
+        'resolution': 'favor_client',
+        'admin_notes':
+            'Politica del salon: 15 min de tolerancia. Cliente llego a los 20, '
+                'pero el log muestra que la estilista estaba libre. Reembolso parcial.',
+        'refund_amount': 270.0,
+        'refund_status': 'processed',
+        'salon_offer': 'partial_refund',
+        'salon_offer_amount': 270.0,
+        'business_response': 'Reembolso del 50% del deposito y reagendamos.',
+        'salon_responded_at': iso(now.subtract(const Duration(days: 11))),
+        'client_accepted': true,
+        'client_responded_at': iso(now.subtract(const Duration(days: 10, hours: 4))),
+        'created_at': iso(now.subtract(const Duration(days: 12))),
+        'resolved_at': iso(now.subtract(const Duration(days: 10))),
+      },
+      // Resolved favor_both — cliente acepto servicio de correccion.
+      {
+        'id': 'd0ffe0c1-0000-4000-8000-000000000004',
+        'appointment_id': 'f0000001-0001-4000-8000-000000000014',
+        'business_id': businessId,
+        'reason': 'Cancelacion y deposito no devuelto',
+        'description':
+            'Cancele mi cita con 48h de anticipacion y no me devolvieron el deposito. '
+                'Segun la politica debia ser reembolsable.',
+        'status': 'resolved',
+        'amount': 150.0,
+        'resolution': 'favor_client',
+        'admin_notes':
+            'Cancelacion dentro del plazo permitido (>24h). Reembolso completo aprobado.',
+        'refund_amount': 150.0,
+        'refund_status': 'processed',
+        'salon_offer': 'full_refund',
+        'salon_offer_amount': 150.0,
+        'business_response': 'Procesamos reembolso completo del deposito.',
+        'salon_responded_at': iso(now.subtract(const Duration(days: 20))),
+        'client_accepted': true,
+        'client_responded_at': iso(now.subtract(const Duration(days: 19, hours: 2))),
+        'created_at': iso(now.subtract(const Duration(days: 21))),
+        'resolved_at': iso(now.subtract(const Duration(days: 19))),
+      },
+    ];
+  }
+
+  // ── Clients (CRM) ──────────────────────────────────────────────────────
+  // Derived from the repeat customers in DemoData.appointments so the CRM
+  // reflects the calendar and a savvy BC can't spot drift. One-shot spent
+  // totals are computed from completed appointments.
+
+  static List<Map<String, dynamic>>? _cachedClients;
+  static int? _cachedClientsDay;
+
+  static List<Map<String, dynamic>> get clients {
+    final now = DateTime.now();
+    final dayKey = DateTime(now.year, now.month, now.day)
+            .millisecondsSinceEpoch ~/
+        86400000;
+    if (_cachedClients != null && _cachedClientsDay == dayKey) {
+      return _cachedClients!;
+    }
+
+    // Pool of "clients" — 12 realistic Mexican names.
+    const names = [
+      'Maria Lopez',
+      'Sofia Rodriguez',
+      'Isabella Martinez',
+      'Camila Hernandez',
+      'Valeria Garcia',
+      'Lucia Sanchez',
+      'Renata Flores',
+      'Ximena Torres',
+      'Mariana Diaz',
+      'Fernanda Ruiz',
+      'Ana Rivera',
+      'Daniela Cruz',
+    ];
+
+    // Aggregate appointment data per client name. The generator in
+    // appointments assigns customer_name from the same name pool, so
+    // joining by name is deterministic enough for the demo.
+    final Map<String, Map<String, dynamic>> agg = {};
+    for (final a in appointments) {
+      final name = a['customer_name'] as String?;
+      if (name == null) continue;
+      agg.putIfAbsent(
+        name,
+        () => {
+          'visit_count': 0,
+          'total_spent': 0.0,
+          'no_show_count': 0,
+          'last_visit': null as String?,
+          'phone': a['customer_phone'] as String?,
+        },
+      );
+      final status = a['status'] as String?;
+      if (status == 'completed') {
+        agg[name]!['visit_count'] = (agg[name]!['visit_count'] as int) + 1;
+        agg[name]!['total_spent'] = (agg[name]!['total_spent'] as double) +
+            ((a['price'] as num?)?.toDouble() ?? 0);
+        final starts = a['starts_at'] as String;
+        final cur = agg[name]!['last_visit'] as String?;
+        if (cur == null || starts.compareTo(cur) > 0) {
+          agg[name]!['last_visit'] = starts;
+        }
+      } else if (status == 'no_show') {
+        agg[name]!['no_show_count'] =
+            (agg[name]!['no_show_count'] as int) + 1;
+      }
+    }
+
+    final result = <Map<String, dynamic>>[];
+    for (var i = 0; i < names.length; i++) {
+      final name = names[i];
+      final a = agg[name];
+      if (a == null) continue;
+      // Loyalty points: 1pt per $10 spent (business rule from policies.md).
+      final spent = a['total_spent'] as double;
+      final loyalty = (spent / 10).floor();
+      // A couple of tags so the CRM badges render.
+      final tags = switch (i % 4) {
+        0 => ['VIP'],
+        1 => ['Nuevo'],
+        2 => <String>[],
+        _ => ['Frecuente'],
+      };
+      result.add({
+        'id': 'demo-client-$i',
+        'business_id': businessId,
+        'client_name': name,
+        'phone': a['phone'] ??
+            '+5233${(1000000 + name.hashCode.abs() % 9000000)}',
+        'visit_count': a['visit_count'],
+        'total_spent': spent,
+        'last_visit': a['last_visit'],
+        'no_show_count': a['no_show_count'],
+        'loyalty_points': loyalty,
+        'tags': tags,
+        'notes': i == 0
+            ? 'Prefiere citas matutinas. Alergia al amoniaco.'
+            : null,
+        'created_at': DateTime.now()
+            .subtract(Duration(days: 60 + i * 5))
+            .toIso8601String(),
+      });
+    }
+
+    // Sort by last_visit desc (matches the real query's default).
+    result.sort((a, b) {
+      final av = a['last_visit'] as String? ?? '';
+      final bv = b['last_visit'] as String? ?? '';
+      return bv.compareTo(av);
+    });
+
+    _cachedClients = result;
+    _cachedClientsDay = dayKey;
+    return result;
+  }
+
+  // ── Gift cards ─────────────────────────────────────────────────────────
+  // Standard denomination mix so a BC pitching the salon can walk a
+  // prospect through "active / redeemed / expired" states at a glance.
+  static List<Map<String, dynamic>> get giftCards {
+    final now = DateTime.now();
+    String iso(DateTime d) => d.toUtc().toIso8601String();
+    return [
+      {
+        'id': 'gc-demo-001',
+        'business_id': businessId,
+        'code': 'BC-250-MDNP',
+        'amount': 250.0,
+        'balance': 250.0,
+        'status': 'active',
+        'sender_name': 'Amber Elizabeth',
+        'recipient_name': 'Maria Lopez',
+        'recipient_phone': '+523223345678',
+        'message': 'Feliz cumpleanos!',
+        'expires_at': iso(now.add(const Duration(days: 330))),
+        'created_at': iso(now.subtract(const Duration(days: 35))),
+      },
+      {
+        'id': 'gc-demo-002',
+        'business_id': businessId,
+        'code': 'BC-500-QZXW',
+        'amount': 500.0,
+        'balance': 500.0,
+        'status': 'active',
+        'sender_name': 'Valentina Rios',
+        'recipient_name': 'Sofia Rodriguez',
+        'recipient_phone': '+523221112233',
+        'message': 'Para tu proximo balayage — te lo mereces.',
+        'expires_at': iso(now.add(const Duration(days: 350))),
+        'created_at': iso(now.subtract(const Duration(days: 15))),
+      },
+      {
+        'id': 'gc-demo-003',
+        'business_id': businessId,
+        'code': 'BC-1000-KPRT',
+        'amount': 1000.0,
+        'balance': 350.0,
+        'status': 'active',
+        'sender_name': 'Fernanda Ruiz',
+        'recipient_name': 'Camila Hernandez',
+        'recipient_phone': '+523227654321',
+        'message': 'Regalo de graduacion.',
+        'expires_at': iso(now.add(const Duration(days: 310))),
+        'created_at': iso(now.subtract(const Duration(days: 55))),
+      },
+      {
+        'id': 'gc-demo-004',
+        'business_id': businessId,
+        'code': 'BC-2000-VHBG',
+        'amount': 2000.0,
+        'balance': 0.0,
+        'status': 'redeemed',
+        'sender_name': 'Ricardo Vega',
+        'recipient_name': 'Lucia Sanchez',
+        'recipient_phone': '+523224445566',
+        'message': 'Paquete completo — alisado + color.',
+        'redeemed_at': iso(now.subtract(const Duration(days: 3))),
+        'expires_at': iso(now.add(const Duration(days: 270))),
+        'created_at': iso(now.subtract(const Duration(days: 40))),
+      },
+      {
+        'id': 'gc-demo-005',
+        'business_id': businessId,
+        'code': 'BC-500-DEMO',
+        'amount': 500.0,
+        'balance': 500.0,
+        'status': 'expired',
+        'sender_name': 'Andrea Munoz',
+        'recipient_name': 'Daniela Cruz',
+        'recipient_phone': '+523228889900',
+        'message': 'Gracias por la recomendacion!',
+        'expires_at': iso(now.subtract(const Duration(days: 15))),
+        'created_at': iso(now.subtract(const Duration(days: 400))),
+      },
+    ];
+  }
 
   // ── Payments (derived from completed/no-show appointments) ─────────────
 

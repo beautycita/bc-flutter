@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:beautycita_core/supabase.dart';
+import 'package:web/web.dart' as web;
 
 import '../config/breakpoints.dart';
 import '../config/router.dart';
 import '../providers/demo_providers.dart';
+import '../providers/demo_session_store.dart' show demoTokenKey;
 import '../widgets/business_sidebar.dart';
 import 'business_shell.dart' show businessSidebarExpandedProvider;
 
@@ -71,7 +74,35 @@ class _DemoShellInnerState extends ConsumerState<_DemoShellInner> {
   }
 
   void _exitDemo() {
-    context.go(WebRoutes.auth);
+    // Sign out the anonymous session created during the demo phone verify
+    // so the router doesn't bounce us into /reservar on the way home,
+    // then navigate. Sign-out is fire-and-forget — the redirect doesn't
+    // need to wait for the token revoke to round-trip.
+    try {
+      if (BCSupabase.isInitialized &&
+          BCSupabase.client.auth.currentUser != null) {
+        BCSupabase.client.auth.signOut();
+      }
+    } catch (_) {/* best-effort */}
+    try {
+      web.window.localStorage.removeItem(demoTokenKey);
+    } catch (_) {/* storage unavailable */}
+    context.go(WebRoutes.home);
+  }
+
+  /// Banner CTA path — same teardown, but land on the register flow so the
+  /// user actually signs up instead of getting router-bounced to /reservar.
+  void _signUpFromDemo() {
+    try {
+      if (BCSupabase.isInitialized &&
+          BCSupabase.client.auth.currentUser != null) {
+        BCSupabase.client.auth.signOut();
+      }
+    } catch (_) {/* best-effort */}
+    try {
+      web.window.localStorage.removeItem(demoTokenKey);
+    } catch (_) {/* storage unavailable */}
+    context.go(WebRoutes.register);
   }
 
   @override
@@ -94,7 +125,7 @@ class _DemoShellInnerState extends ConsumerState<_DemoShellInner> {
 
           final content = Column(
             children: [
-              _DemoBanner(isMobile: isMobile),
+              _DemoBanner(isMobile: isMobile, onSignUp: _signUpFromDemo),
               Expanded(child: widget.child),
             ],
           );
@@ -191,8 +222,9 @@ class _DemoShellInnerState extends ConsumerState<_DemoShellInner> {
 // ── Demo banner ─────────────────────────────────────────────────────────────
 
 class _DemoBanner extends StatelessWidget {
-  const _DemoBanner({required this.isMobile});
+  const _DemoBanner({required this.isMobile, required this.onSignUp});
   final bool isMobile;
+  final VoidCallback onSignUp;
 
   @override
   Widget build(BuildContext context) {
@@ -238,7 +270,7 @@ class _DemoBanner extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           FilledButton.tonal(
-            onPressed: () => context.go(WebRoutes.auth),
+            onPressed: onSignUp,
             style: FilledButton.styleFrom(
               padding: EdgeInsets.symmetric(
                 horizontal: isMobile ? 12 : 20,
