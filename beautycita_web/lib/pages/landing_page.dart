@@ -1117,8 +1117,14 @@ class _LandingPageState extends State<LandingPage>
                         final cardWidth = crossCount == 1
                             ? double.infinity
                             : (_maxWidth - (crossCount - 1) * 24) / crossCount;
+                        // Fixed height — Wrap gives each card its natural
+                        // height from content, which produces visibly uneven
+                        // rows when descriptions vary in length. Pinning
+                        // every card to the same height keeps the 12-cell
+                        // grid rectangular at every breakpoint.
                         return SizedBox(
                           width: crossCount == 1 ? null : cardWidth,
+                          height: 230,
                           child: _FeatureCard(
                             feature: f,
                             onTapUp: (pos) => _showFeatureDetail(context, f, pos),
@@ -2604,9 +2610,24 @@ class _FeatureCardState extends State<_FeatureCard> {
                 child: Center(child: Icon(widget.feature.icon, color: _brandPurple, size: 24)),
               ),
               const SizedBox(height: 16),
-              Text(widget.feature.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _textPrimary)),
+              Text(
+                widget.feature.title,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _textPrimary),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
               const SizedBox(height: 8),
-              Text(widget.feature.description, style: const TextStyle(fontSize: 14, color: _textSecondary, height: 1.6)),
+              // Expanded + maxLines keeps each card rectangle identical.
+              // Short descriptions leave bottom whitespace; long ones
+              // truncate with ellipsis. Tap opens the full detail popup.
+              Expanded(
+                child: Text(
+                  widget.feature.description,
+                  style: const TextStyle(fontSize: 14, color: _textSecondary, height: 1.6),
+                  maxLines: 4,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
         ),
