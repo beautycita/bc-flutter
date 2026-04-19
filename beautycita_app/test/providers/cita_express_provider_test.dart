@@ -103,10 +103,6 @@ void main() {
       ));
     }
 
-    CurateResponse makeCurateResponse() {
-      return CurateResponse.fromJson(curateResponseJson());
-    }
-
     group('selectResult', () {
       test('transitions to confirming step', () {
         final result = makeResult();

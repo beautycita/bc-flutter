@@ -12,7 +12,6 @@ import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/config/theme_extension.dart';
 import 'package:beautycita/providers/auth_provider.dart';
 import 'package:beautycita/providers/profile_provider.dart';
-import 'package:beautycita/providers/theme_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:beautycita/services/lightx_service.dart';
@@ -125,7 +124,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   String? _usernameError;
   List<String> _usernameSuggestions = [];
   Timer? _usernameDebounce;
-  String _selectedAvatarStyle = 'glam';
 
   @override
   void dispose() {
@@ -419,83 +417,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ],
       ),
     );
-  }
-
-  // ── AI Avatar Styles (compact row) ──
-
-  Widget _buildAvatarStylesSection(
-    BuildContext context, TextTheme textTheme, ColorScheme cs, BCThemeExtension ext,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SectionHeader(label: 'Estilo de avatar'),
-        const SizedBox(height: AppConstants.paddingSM),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: _aiAvatarStyles.map((style) {
-            final isActive = _selectedAvatarStyle == style.id;
-            return GestureDetector(
-              onTap: () => _onAvatarStyleSelected(style),
-              child: Column(
-                children: [
-                  AnimatedContainer(
-                    duration: AppConstants.mediumAnimation,
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      gradient: isActive
-                          ? LinearGradient(
-                              colors: style.gradientColors,
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            )
-                          : null,
-                      color: isActive ? null : cs.surface,
-                      borderRadius: BorderRadius.circular(AppConstants.radiusSM),
-                      border: isActive
-                          ? null
-                          : Border.all(color: ext.cardBorderColor),
-                      boxShadow: isActive
-                          ? [
-                              BoxShadow(
-                                color: style.gradientColors.first.withValues(alpha: 0.35),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ]
-                          : null,
-                    ),
-                    child: Icon(
-                      style.icon,
-                      size: AppConstants.iconSizeMD,
-                      color: isActive ? cs.onPrimary : cs.onSurface.withValues(alpha: 0.6),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    style.name,
-                    style: textTheme.bodySmall?.copyWith(
-                      fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-                      color: isActive ? cs.primary : cs.onSurface.withValues(alpha: 0.6),
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-
-  void _onAvatarStyleSelected(_AIAvatarStyle style) {
-    setState(() => _selectedAvatarStyle = style.id);
-
-    // Apply the full multi-color gradient to the app theme
-    ref.read(themeProvider.notifier).setCustomGradient(style.gradientColors);
-    ref.read(themeProvider.notifier).saveCustomColor();
   }
 
   // ── Personal Info Card ──
@@ -1206,150 +1127,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       Navigator.of(context).pop(); // dismiss loading
       ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, st);
     }
-  }
-
-  // ── Phone ──
-
-  void _showPhoneSheet(BuildContext context) {
-    final controller = TextEditingController(
-      text: ref.read(profileProvider).phone ?? '+52 ',
-    );
-
-    showBurstBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.fromLTRB(
-            24, 16, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              buildSheetHeader(context, 'Telefono'),
-              Text(
-                'Necesario para confirmar reservas y recibir alertas por SMS.',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: controller,
-                keyboardType: TextInputType.phone,
-                autofocus: true,
-                decoration: const InputDecoration(
-                  hintText: '+52 33 1234 5678',
-                  prefixIcon: Icon(Icons.phone_outlined),
-                ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    final phone = controller.text.trim().replaceAll(' ', '');
-                    if (phone.length < 12) {
-                      ToastService.showError('Numero invalido');
-                      return;
-                    }
-                    Navigator.pop(ctx);
-                    final success = await ref.read(profileProvider.notifier).updatePhone(phone);
-                    if (success && context.mounted) {
-                      _showOtpSheet(context);
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppConstants.radiusSM)),
-                  ),
-                  child: const Text('Guardar y verificar'),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _showOtpSheet(BuildContext context) async {
-    final sent = await ref.read(profileProvider.notifier).sendPhoneOtp();
-    if (!sent || !context.mounted) {
-      if (!sent) {
-        ToastService.showError('No se pudo enviar el codigo');
-      }
-      return;
-    }
-
-    if (!context.mounted) return;
-    final otpController = TextEditingController();
-
-    showBurstBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.fromLTRB(
-            24, 16, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              buildSheetHeader(context, 'Verificar telefono'),
-              Text(
-                'Ingresa el codigo de 6 digitos que enviamos a ${ref.read(profileProvider).phone}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: otpController,
-                keyboardType: TextInputType.number,
-                autofocus: true,
-                maxLength: 6,
-                decoration: const InputDecoration(
-                  hintText: '000000',
-                  prefixIcon: Icon(Icons.sms_outlined),
-                  counterText: '',
-                ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    final otp = otpController.text.trim();
-                    if (otp.length != 6) return;
-                    Navigator.pop(ctx);
-                    final ok = await ref.read(profileProvider.notifier).verifyPhoneOtp(otp);
-                    if (ok) {
-                      ToastService.showSuccess('Telefono verificado');
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppConstants.radiusSM)),
-                  ),
-                  child: const Text('Verificar'),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
   }
 
   // ── Birthday ──

@@ -107,41 +107,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const Spacer(flex: 2),
-                        // Illustration or icon
-                        if (slide.imagePath != null)
-                          Container(
-                            width: 220,
-                            height: 220,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(24),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 8),
-                                ),
-                              ],
-                            ),
-                            clipBehavior: Clip.antiAlias,
-                            child: Image.asset(
-                              slide.imagePath!,
-                              fit: BoxFit.cover,
-                            ),
-                          )
-                        else
-                          Container(
-                            width: 140,
-                            height: 140,
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.15),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              slide.icon,
-                              size: 72,
-                              color: Theme.of(context).colorScheme.onPrimary,
-                            ),
+                        Container(
+                          width: 140,
+                          height: 140,
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
                           ),
+                          child: Icon(
+                            slide.icon,
+                            size: 72,
+                            color: Theme.of(context).colorScheme.onPrimary,
+                          ),
+                        ),
                         const SizedBox(height: AppConstants.paddingXL),
                         // Title
                         Text(
@@ -263,7 +241,6 @@ class _SlideData {
   final IconData icon;
   final String title;
   final String body;
-  final String? imagePath;
 
   const _SlideData({
     required this.icon,

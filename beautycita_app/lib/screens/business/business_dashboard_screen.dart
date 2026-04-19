@@ -1574,6 +1574,7 @@ class _CfdiSectionState extends ConsumerState<_CfdiSection> {
     );
   }
 
+  // ignore: unused_element — CFDI drill-down drawer; call site pending SAT flow wiring
   void _showCfdiDetail(BuildContext context, Map<String, dynamic> cfdi) {
     final colors = Theme.of(context).colorScheme;
     final folio = cfdi['folio'] as String?;

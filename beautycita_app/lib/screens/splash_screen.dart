@@ -1,20 +1,13 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:beautycita/config/fonts.dart';
-import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:video_player/video_player.dart';
 import '../config/constants.dart';
 import '../main.dart' show supabaseReady;
 import '../providers/auth_provider.dart';
 import '../services/updater_service.dart';
-
-/// Splash video hosted on Cloudflare R2 CDN.
-const _splashVideoUrl = 'https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/video/splash_reveal.mp4';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -25,13 +18,10 @@ class SplashScreen extends ConsumerStatefulWidget {
 
 class _SplashScreenState extends ConsumerState<SplashScreen>
     with TickerProviderStateMixin {
-  VideoPlayerController? _videoController;
-  bool _videoReady = false;
   bool _authCheckDone = false;
   bool _splashDone = false;
   bool _navigated = false;
 
-  // Fallback animation — always runs, hidden behind video if video loads
   late AnimationController _fadeController;
   late AnimationController _shimmerController;
   late Animation<double> _fadeAnimation;
@@ -58,7 +48,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     _fadeController.forward();
 
-    // No video — use fallback animation only
     _startFallbackTimer();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -66,69 +55,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     });
   }
 
-  Future<void> _initVideo() async {
-    try {
-      // Check for cached video first
-      final cacheDir = await getApplicationCacheDirectory();
-      final cachedFile = File('${cacheDir.path}/splash_reveal_v2.mp4');
-
-      VideoPlayerController controller;
-
-      if (cachedFile.existsSync() && cachedFile.lengthSync() > 100000) {
-        controller = VideoPlayerController.file(cachedFile);
-      } else {
-        controller = VideoPlayerController.networkUrl(
-          Uri.parse(_splashVideoUrl),
-        );
-        // Cache for next time (non-blocking)
-        _cacheVideo(cachedFile);
-      }
-
-      _videoController = controller;
-
-      await controller.initialize().timeout(
-        const Duration(seconds: 4),
-        onTimeout: () => throw Exception('timeout'),
-      );
-
-      if (!mounted) return;
-
-      controller.addListener(_onVideoProgress);
-      controller.play();
-      setState(() => _videoReady = true);
-    } catch (e) {
-      if (kDebugMode) debugPrint('[Splash] Video failed: $e — using fallback');
-      _startFallbackTimer();
-    }
-  }
-
-  Future<void> _cacheVideo(File target) async {
-    try {
-      final response = await http.get(Uri.parse(_splashVideoUrl))
-          .timeout(const Duration(seconds: 10));
-      if (response.statusCode == 200) {
-        await target.writeAsBytes(response.bodyBytes);
-        if (kDebugMode) debugPrint('[Splash] Video cached for next launch');
-      }
-    } catch (e) {
-      if (kDebugMode) debugPrint('[Splash] Cache failed: $e');
-    }
-  }
-
   void _startFallbackTimer() {
     Future.delayed(const Duration(milliseconds: 3000), () {
       _splashDone = true;
       _tryNavigate();
     });
-  }
-
-  void _onVideoProgress() {
-    final controller = _videoController;
-    if (controller == null) return;
-    if (controller.value.isCompleted) {
-      _splashDone = true;
-      _tryNavigate();
-    }
   }
 
   Future<void> _checkAuthAndNavigate() async {
@@ -168,8 +99,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   @override
   void dispose() {
-    _videoController?.removeListener(_onVideoProgress);
-    _videoController?.dispose();
     _fadeController.dispose();
     _shimmerController.dispose();
     super.dispose();
@@ -184,29 +113,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Animated splash (logo + shimmer)
           _buildFallbackSplash(isDark),
         ],
-      ),
-    );
-  }
-
-  Widget _buildVideoSplash(VideoPlayerController controller) {
-    return Center(
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: SizedBox(
-          width: 150,
-          height: 150,
-          child: FittedBox(
-            fit: BoxFit.cover,
-            child: SizedBox(
-              width: controller.value.size.width,
-              height: controller.value.size.height,
-              child: VideoPlayer(controller),
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -230,7 +138,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Brand icon
                 Container(
                   width: 100,
                   height: 100,
@@ -256,7 +163,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 ),
                 const SizedBox(height: 28),
 
-                // Brand name with shimmer
                 AnimatedBuilder(
                   animation: _shimmerController,
                   builder: (context, child) {
@@ -292,7 +198,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 ),
                 const SizedBox(height: 10),
 
-                // Tagline
                 Text(
                   AppConstants.tagline,
                   style: GoogleFonts.cormorantGaramond(
