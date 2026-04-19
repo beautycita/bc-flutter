@@ -1,0 +1,206 @@
+Resolving dependencies...
+Downloading packages...
+  _flutterfire_internals 1.3.68 (1.3.69 available)
+  firebase_core 4.6.0 (4.7.0 available)
+  firebase_core_web 3.5.1 (3.6.0 available)
+  firebase_messaging 16.1.3 (16.2.0 available)
+  firebase_messaging_platform_interface 4.7.8 (4.7.9 available)
+  firebase_messaging_web 4.1.4 (4.1.5 available)
+  flutter_dotenv 5.2.1 (6.0.0 available)
+  flutter_map 8.2.2 (8.3.0 available)
+  flutter_riverpod 2.6.1 (3.3.1 available)
+  flutter_stripe 12.5.0 (12.6.0 available)
+  go_router 17.2.0 (17.2.1 available)
+  gotrue 2.19.0 (2.20.0 available)
+  image_cropper 12.2.0 (12.2.1 available)
+  jni 0.14.2 (1.0.0 available)
+  local_auth_android 2.0.7 (2.0.8 available)
+  meta 1.17.0 (1.18.2 available)
+  mgrs_dart 2.0.0 (3.0.0 available)
+  mocktail 1.0.4 (1.0.5 available)
+  package_info_plus 9.0.1 (10.0.0 available)
+  package_info_plus_platform_interface 3.2.1 (4.0.0 available)
+  path_provider_android 2.2.23 (2.3.1 available)
+  postgrest 2.6.0 (2.7.0 available)
+  proj4dart 2.1.0 (3.0.0 available)
+  realtime_client 2.7.1 (2.7.3 available)
+  riverpod 2.6.1 (3.2.1 available)
+  sentry 9.16.1 (9.18.0 available)
+  sentry_flutter 9.16.1 (9.18.0 available)
+  share_plus 12.0.2 (13.0.0 available)
+  share_plus_platform_interface 6.1.0 (7.0.0 available)
+  storage_client 2.5.1 (2.5.2 available)
+  stripe_android 12.5.0 (12.6.0 available)
+  stripe_ios 12.5.0 (12.6.0 available)
+  stripe_platform_interface 12.5.0 (12.6.0 available)
+  supabase 2.10.4 (2.10.6 available)
+  supabase_flutter 2.12.2 (2.12.4 available)
+  syncfusion_flutter_core 33.1.47 (33.1.49 available)
+  syncfusion_flutter_xlsio 33.1.47 (33.1.49 available)
+  syncfusion_officecore 33.1.47 (33.1.49 available)
+  test_api 0.7.10 (0.7.11 available)
+  unicode 0.3.1 (1.1.9 available)
+  vector_math 2.2.0 (2.3.0 available)
+  vm_service 15.0.2 (15.1.0 available)
+  webview_flutter_android 4.10.15 (4.11.0 available)
+  webview_flutter_wkwebview 3.24.2 (3.24.3 available)
+  win32 5.15.0 (6.0.1 available)
+Got dependencies!
+45 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+Analyzing beautycita_app...                                     
+
+   info • 'copyWith' is deprecated and shouldn't be used. Assign values directly to the instance • lib/main.dart:128:24 • deprecated_member_use
+warning • The value of the field '_bookingRepo' isn't used • lib/providers/cita_express_provider.dart:111:27 • unused_field
+warning • The value of the field '_dayKeys' isn't used • lib/providers/cita_express_provider.dart:393:16 • unused_field
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/providers/rp_provider.dart:180:7 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/providers/rp_provider.dart:264:7 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/providers/rp_provider.dart:290:5 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/providers/rp_provider.dart:291:5 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/providers/rp_provider.dart:312:5 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/repositories/booking_repository.dart:66:7 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/repositories/booking_repository.dart:67:7 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/repositories/booking_repository.dart:68:7 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/repositories/booking_repository.dart:69:7 • use_null_aware_elements
+   info • The variable name '_FinDetailRow' isn't a lowerCamelCase identifier • lib/screens/admin/admin_finance_dashboard_screen.dart:1375:8 • non_constant_identifier_names
+warning • A value for optional parameter 'ctx' isn't ever given • lib/screens/admin/admin_finance_dashboard_screen.dart:1375:66 • unused_element_parameter
+   info • Unnecessary use of multiple underscores • lib/screens/admin/admin_salon_detail_screen.dart:1071:18 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/admin/admin_salon_detail_screen.dart:1208:18 • unnecessary_underscores
+   info • Unnecessary 'const' keyword • lib/screens/admin/admin_salones_screen.dart:1241:38 • unnecessary_const
+   info • Unnecessary 'const' keyword • lib/screens/admin/admin_salones_screen.dart:1246:35 • unnecessary_const
+   info • Unnecessary 'const' keyword • lib/screens/admin/admin_salones_screen.dart:1247:35 • unnecessary_const
+   info • Unnecessary 'const' keyword • lib/screens/admin/admin_salones_screen.dart:1248:35 • unnecessary_const
+   info • The variable name '_ReviewDetailRow' isn't a lowerCamelCase identifier • lib/screens/admin/reviews_screen.dart:361:10 • non_constant_identifier_names
+   info • 'Share' is deprecated and shouldn't be used. Use SharePlus instead • lib/screens/booking_confirmation_screen.dart:475:23 • deprecated_member_use
+   info • 'share' is deprecated and shouldn't be used. Use SharePlus.instance.share() instead • lib/screens/booking_confirmation_screen.dart:475:29 • deprecated_member_use
+warning • The declaration '_solidButton' isn't referenced • lib/screens/booking_confirmation_screen.dart:642:10 • unused_element
+   info • 'Share' is deprecated and shouldn't be used. Use SharePlus instead • lib/screens/booking_detail_screen.dart:179:5 • deprecated_member_use
+   info • 'share' is deprecated and shouldn't be used. Use SharePlus.instance.share() instead • lib/screens/booking_detail_screen.dart:179:11 • deprecated_member_use
+   info • 'Share' is deprecated and shouldn't be used. Use SharePlus instead • lib/screens/booking_detail_screen.dart:191:5 • deprecated_member_use
+   info • 'share' is deprecated and shouldn't be used. Use SharePlus.instance.share() instead • lib/screens/booking_detail_screen.dart:191:11 • deprecated_member_use
+   info • 'Share' is deprecated and shouldn't be used. Use SharePlus instead • lib/screens/booking_detail_screen.dart:1203:13 • deprecated_member_use
+   info • 'shareXFiles' is deprecated and shouldn't be used. Use SharePlus.instance.share() instead • lib/screens/booking_detail_screen.dart:1203:19 • deprecated_member_use
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/screens/business/business_calendar_screen.dart:1171:11 • use_null_aware_elements
+   info • The variable name '_DetailRow' isn't a lowerCamelCase identifier • lib/screens/business/business_clients_screen.dart:742:8 • non_constant_identifier_names
+   info • Unnecessary use of multiple underscores • lib/screens/business/business_closures_screen.dart:487:18 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/business/business_dashboard_screen.dart:265:18 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/business/business_dashboard_screen.dart:1187:49 • unnecessary_underscores
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/screens/business/business_dashboard_screen.dart:1331:13 • use_null_aware_elements
+warning • The declaration '_showCfdiDetail' isn't referenced • lib/screens/business/business_dashboard_screen.dart:1577:8 • unused_element
+   info • Unnecessary use of multiple underscores • lib/screens/business/business_dashboard_screen.dart:1731:18 • unnecessary_underscores
+   info • 'Share' is deprecated and shouldn't be used. Use SharePlus instead • lib/screens/business/business_gift_cards_screen.dart:483:5 • deprecated_member_use
+   info • 'share' is deprecated and shouldn't be used. Use SharePlus.instance.share() instead • lib/screens/business/business_gift_cards_screen.dart:483:11 • deprecated_member_use
+   info • 'Share' is deprecated and shouldn't be used. Use SharePlus instead • lib/screens/business/business_gift_cards_screen.dart:572:19 • deprecated_member_use
+   info • 'share' is deprecated and shouldn't be used. Use SharePlus.instance.share() instead • lib/screens/business/business_gift_cards_screen.dart:572:25 • deprecated_member_use
+   info • The variable name '_Row' isn't a lowerCamelCase identifier • lib/screens/business/business_gift_cards_screen.dart:663:8 • non_constant_identifier_names
+   info • 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre • lib/screens/business/business_marketing_screen.dart:394:21 • deprecated_member_use
+   info • Unnecessary use of multiple underscores • lib/screens/business/business_payments_screen.dart:309:28 • unnecessary_underscores
+   info • The variable name '_PaymentsDetailRow' isn't a lowerCamelCase identifier • lib/screens/business/business_payments_screen.dart:444:8 • non_constant_identifier_names
+   info • 'Share' is deprecated and shouldn't be used. Use SharePlus instead • lib/screens/business/business_qr_screen.dart:250:13 • deprecated_member_use
+   info • 'shareXFiles' is deprecated and shouldn't be used. Use SharePlus.instance.share() instead • lib/screens/business/business_qr_screen.dart:250:19 • deprecated_member_use
+   info • 'Share' is deprecated and shouldn't be used. Use SharePlus instead • lib/screens/business/business_qr_screen.dart:265:13 • deprecated_member_use
+   info • 'share' is deprecated and shouldn't be used. Use SharePlus.instance.share() instead • lib/screens/business/business_qr_screen.dart:265:19 • deprecated_member_use
+warning • Unnecessary cast • lib/screens/business/business_settings_screen.dart:1088:29 • unnecessary_cast
+   info • 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre • lib/screens/business/business_staff_screen.dart:832:29 • deprecated_member_use
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre • lib/screens/business/business_staff_screen.dart:851:17 • deprecated_member_use
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre • lib/screens/business/business_staff_screen.dart:1443:15 • deprecated_member_use
+   info • 'foregroundColor' is deprecated and shouldn't be used. use colors in eyeStyle and dataModuleStyle instead • lib/screens/business/business_staff_screen.dart:1776:19 • deprecated_member_use
+   info • 'Share' is deprecated and shouldn't be used. Use SharePlus instead • lib/screens/business/business_staff_screen.dart:1832:23 • deprecated_member_use
+   info • 'share' is deprecated and shouldn't be used. Use SharePlus.instance.share() instead • lib/screens/business/business_staff_screen.dart:1832:29 • deprecated_member_use
+   info • The variable name '_OrderDetailRow' isn't a lowerCamelCase identifier • lib/screens/business/orders_screen.dart:342:8 • non_constant_identifier_names
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre • lib/screens/business/portfolio_capture_screen.dart:307:19 • deprecated_member_use
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre • lib/screens/business/portfolio_capture_screen.dart:334:19 • deprecated_member_use
+   info • 'Share' is deprecated and shouldn't be used. Use SharePlus instead • lib/screens/cash_payment_screen.dart:340:21 • deprecated_member_use
+   info • 'share' is deprecated and shouldn't be used. Use SharePlus.instance.share() instead • lib/screens/cash_payment_screen.dart:340:27 • deprecated_member_use
+   info • Statements in an if should be enclosed in a block • lib/screens/chat_conversation_screen.dart:85:61 • curly_braces_in_flow_control_structures
+warning • The value of the local variable 'bcTheme' isn't used • lib/screens/discovered_salon_confirm_screen.dart:101:11 • unused_local_variable
+warning • The value of the local variable 'bcTheme' isn't used • lib/screens/email_verification_screen.dart:107:11 • unused_local_variable
+   info • Unnecessary use of multiple underscores • lib/screens/feed/feed_card.dart:215:38 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/feed/feed_card.dart:221:38 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/feed/feed_card.dart:221:42 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/feed/feed_card.dart:577:32 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/feed/feed_card.dart:586:32 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/feed/feed_card.dart:586:36 • unnecessary_underscores
+warning • Unused import: 'package:beautycita/widgets/parallax_tilt.dart' • lib/screens/home_screen.dart:3:8 • unused_import
+warning • The declaration '_saldoProvider' isn't referenced • lib/screens/home_screen.dart:45:7 • unused_element
+   info • Unnecessary use of multiple underscores • lib/screens/home_screen.dart:116:28 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/home_screen.dart:116:32 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/home_screen.dart:117:41 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/my_bookings_screen.dart:1172:35 • unnecessary_underscores
+   info • 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre • lib/screens/my_bookings_screen.dart:1370:21 • deprecated_member_use
+   info • 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre • lib/screens/my_bookings_screen.dart:1371:21 • deprecated_member_use
+warning • A value for optional parameter 'imagePath' isn't ever given • lib/screens/onboarding_screen.dart:272:10 • unused_element_parameter
+warning • The value of the local variable 'bcTheme' isn't used • lib/screens/post_registration_screen.dart:15:11 • unused_local_variable
+   info • 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre • lib/screens/preferences_screen.dart:792:23 • deprecated_member_use
+   info • 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre • lib/screens/preferences_screen.dart:871:17 • deprecated_member_use
+warning • The declaration '_buildAvatarStylesSection' isn't referenced • lib/screens/profile_screen.dart:426:10 • unused_element
+warning • The declaration '_showPhoneSheet' isn't referenced • lib/screens/profile_screen.dart:1213:8 • unused_element
+   info • Unnecessary use of multiple underscores • lib/screens/provider_detail_screen.dart:955:18 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/provider_detail_screen.dart:985:22 • unnecessary_underscores
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre • lib/screens/report_problem_screen.dart:136:23 • deprecated_member_use
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/screens/rp/rp_chat_screen.dart:148:11 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/screens/rp/rp_chat_screen.dart:157:9 • use_null_aware_elements
+   info • Unnecessary use of multiple underscores • lib/screens/salon_onboarding_screen.dart:1529:41 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/salon_onboarding_screen.dart:1529:45 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/salon_onboarding_screen.dart:1858:55 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/salon_onboarding_screen.dart:1858:59 • unnecessary_underscores
+warning • The value of the field '_videoReady' isn't used • lib/screens/splash_screen.dart:29:8 • unused_field
+warning • The declaration '_initVideo' isn't referenced • lib/screens/splash_screen.dart:69:16 • unused_element
+warning • The declaration '_buildVideoSplash' isn't referenced • lib/screens/splash_screen.dart:194:10 • unused_element
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/screens/subcategory_sheet.dart:174:25 • use_null_aware_elements
+warning • A value for optional parameter 'key' isn't ever given • lib/screens/system_status_screen.dart:1064:54 • unused_element_parameter
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/services/behavior_event_service.dart:72:7 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/services/behavior_event_service.dart:73:7 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/services/behavior_event_service.dart:74:7 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/services/behavior_event_service.dart:75:7 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/services/behavior_event_service.dart:86:16 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/services/behavior_event_service.dart:99:7 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/services/behavior_event_service.dart:113:7 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/services/behavior_event_service.dart:114:7 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/services/behavior_event_service.dart:115:7 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/services/behavior_event_service.dart:128:7 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/services/behavior_event_service.dart:129:7 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/services/behavior_event_service.dart:143:7 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/services/behavior_event_service.dart:144:7 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/services/behavior_event_service.dart:145:7 • use_null_aware_elements
+   info • 'Share' is deprecated and shouldn't be used. Use SharePlus instead • lib/services/export_service.dart:52:11 • deprecated_member_use
+   info • 'shareXFiles' is deprecated and shouldn't be used. Use SharePlus.instance.share() instead • lib/services/export_service.dart:52:17 • deprecated_member_use
+   info • 'Share' is deprecated and shouldn't be used. Use SharePlus instead • lib/services/media_service.dart:222:13 • deprecated_member_use
+   info • 'shareXFiles' is deprecated and shouldn't be used. Use SharePlus.instance.share() instead • lib/services/media_service.dart:222:19 • deprecated_member_use
+   info • Statements in an if should be enclosed in a block • lib/services/user_session.dart:140:23 • curly_braces_in_flow_control_structures
+   info • Dangling library doc comment • lib/widgets/admin/admin_widgets.dart:1:1 • dangling_library_doc_comments
+   info • 'Share' is deprecated and shouldn't be used. Use SharePlus instead • lib/widgets/admin/csv_exporter.dart:51:13 • deprecated_member_use
+   info • 'shareXFiles' is deprecated and shouldn't be used. Use SharePlus.instance.share() instead • lib/widgets/admin/csv_exporter.dart:51:19 • deprecated_member_use
+   info • Angle brackets will be interpreted as HTML • lib/widgets/admin/csv_exporter.dart:62:54 • unintended_html_in_doc_comment
+   info • 'translate' is deprecated and shouldn't be used. Use translateByVector3, translateByVector4, or translateByDouble instead • lib/widgets/parallax_tilt.dart:63:11 • deprecated_member_use
+   info • 'scale' is deprecated and shouldn't be used. Use scaleByVector3, scaleByVector4, or scaleByDouble instead • lib/widgets/parallax_tilt.dart:64:11 • deprecated_member_use
+   info • Unnecessary 'const' keyword • lib/widgets/save_contact_prompt.dart:89:67 • unnecessary_const
+   info • Angle brackets will be interpreted as HTML • test/helpers/test_helpers.dart:68:55 • unintended_html_in_doc_comment
+warning • Unused import: 'package:beautycita/providers/admin_finance_dashboard_provider.dart' • test/providers/admin_finance_dashboard_provider_test.dart:11:8 • unused_import
+warning • Unused import: 'package:beautycita/providers/admin_operations_provider.dart' • test/providers/admin_operations_provider_test.dart:11:8 • unused_import
+warning • Unused import: 'package:beautycita/providers/admin_provider.dart' • test/providers/admin_provider_test.dart:11:8 • unused_import
+warning • Unused import: 'package:beautycita/services/supabase_client.dart' • test/providers/auth_provider_test.dart:4:8 • unused_import
+warning • Unused import: 'package:beautycita/providers/booking_provider.dart' • test/providers/booking_provider_test.dart:11:8 • unused_import
+warning • Unused import: 'package:beautycita/providers/business_provider.dart' • test/providers/business_provider_test.dart:11:8 • unused_import
+warning • Unused import: 'package:beautycita/providers/chat_provider.dart' • test/providers/chat_provider_test.dart:11:8 • unused_import
+   info • The local variable '_makeResult' starts with an underscore • test/providers/cita_express_provider_test.dart:99:16 • no_leading_underscores_for_local_identifiers
+   info • The local variable '_makeCurateResponse' starts with an underscore • test/providers/cita_express_provider_test.dart:106:20 • no_leading_underscores_for_local_identifiers
+warning • The declaration '_makeCurateResponse' isn't referenced • test/providers/cita_express_provider_test.dart:106:20 • unused_element
+warning • Unused import: 'package:beautycita/providers/contact_match_provider.dart' • test/providers/contact_match_provider_test.dart:11:8 • unused_import
+warning • Unused import: 'package:beautycita/providers/favorites_provider.dart' • test/providers/favorites_provider_test.dart:11:8 • unused_import
+warning • Unused import: 'package:beautycita/providers/feed_provider.dart' • test/providers/feed_provider_test.dart:11:8 • unused_import
+warning • Unused import: 'package:beautycita/providers/outreach_contact_provider.dart' • test/providers/outreach_contact_provider_test.dart:11:8 • unused_import
+warning • Unused import: 'package:beautycita/providers/payment_methods_provider.dart' • test/providers/payment_methods_provider_test.dart:11:8 • unused_import
+warning • Unused import: 'package:beautycita/providers/profile_provider.dart' • test/providers/profile_provider_test.dart:11:8 • unused_import
+warning • Unused import: 'package:beautycita/providers/route_provider.dart' • test/providers/route_provider_test.dart:11:8 • unused_import
+warning • Unused import: 'package:beautycita/providers/rp_provider.dart' • test/providers/rp_provider_test.dart:11:8 • unused_import
+warning • Unused import: 'package:beautycita/providers/search_history_provider.dart' • test/providers/search_history_provider_test.dart:11:8 • unused_import
+warning • Unused import: 'package:beautycita/providers/security_provider.dart' • test/providers/security_provider_test.dart:11:8 • unused_import
+warning • Unused import: 'package:beautycita/providers/service_modifiers_provider.dart' • test/providers/service_modifiers_provider_test.dart:11:8 • unused_import
+warning • Unused import: 'package:beautycita/repositories/error_report_repository.dart' • test/repositories/error_report_repository_test.dart:10:8 • unused_import
+warning • Unused import: 'package:beautycita/repositories/provider_repository.dart' • test/repositories/provider_repository_test.dart:11:8 • unused_import
+warning • Unused import: 'package:beautycita/repositories/staff_repository.dart' • test/repositories/staff_repository_test.dart:10:8 • unused_import
+warning • Unused import: 'package:beautycita/screens/legal_screens.dart' • test/screens/legal_screens_test.dart:11:8 • unused_import
+warning • Dead code • test/services/updater_service_test.dart:175:35 • dead_code
+warning • Dead code • test/services/updater_service_test.dart:176:30 • dead_code
+
