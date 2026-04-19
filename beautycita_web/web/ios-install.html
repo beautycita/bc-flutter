@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <meta name="description" content="Instala BeautyCita en tu iPhone via AltStore — paso a paso.">
+  <meta name="theme-color" content="#C8A2C8">
+  <title>Instalar en iPhone — BeautyCita</title>
+  <link rel="canonical" href="https://beautycita.com/ios-install.html">
+  <link rel="icon" type="image/png" href="/icons/Icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --lila: #C8A2C8;
+      --lila-dark: #AA7EAA;
+      --gold: #FFB300;
+      --text: #1a1a2e;
+      --text-light: rgba(26, 26, 46, 0.65);
+      --text-muted: rgba(26, 26, 46, 0.45);
+      --bg: #faf9fe;
+      --card-bg: #ffffff;
+      --border: rgba(200, 162, 200, 0.14);
+      --warn-bg: #fff8e6;
+      --warn-border: #ffdd88;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Nunito', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .header {
+      background: linear-gradient(135deg, var(--lila), var(--lila-dark), var(--gold));
+      color: #fff;
+      padding: 3rem 1.5rem 2.5rem;
+      text-align: center;
+    }
+    .header-content { max-width: 720px; margin: 0 auto; }
+    .header-icon {
+      width: 72px; height: 72px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 1rem; font-size: 2rem;
+    }
+    .header h1 {
+      font-family: 'Poppins', sans-serif;
+      font-size: clamp(1.5rem, 5vw, 2.25rem);
+      font-weight: 700; margin-bottom: 0.5rem;
+    }
+    .header p { opacity: 0.95; font-size: 0.95rem; }
+
+    .container {
+      max-width: 720px;
+      margin: -1.5rem auto 0;
+      padding: 0 1.25rem 3rem;
+      position: relative;
+    }
+
+    .section {
+      background: var(--card-bg);
+      border-radius: 18px;
+      padding: 1.75rem 1.5rem;
+      margin-bottom: 1.25rem;
+      border: 1px solid var(--border);
+      box-shadow: 0 2px 18px rgba(170, 126, 170, 0.06);
+    }
+    .section h2 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--lila-dark);
+      margin-bottom: 1rem;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .badge {
+      display: inline-block;
+      background: var(--lila);
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 2px 10px;
+      border-radius: 999px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    ol.steps {
+      counter-reset: step;
+      list-style: none;
+      padding: 0;
+    }
+    ol.steps > li {
+      counter-increment: step;
+      position: relative;
+      padding: 0.5rem 0 0.9rem 2.75rem;
+      border-bottom: 1px dashed var(--border);
+    }
+    ol.steps > li:last-child { border-bottom: 0; padding-bottom: 0; }
+    ol.steps > li::before {
+      content: counter(step);
+      position: absolute;
+      left: 0; top: 0.5rem;
+      width: 2rem; height: 2rem;
+      background: linear-gradient(135deg, var(--lila), var(--lila-dark));
+      color: #fff;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 0.9rem;
+      font-family: 'Poppins', sans-serif;
+    }
+    ol.steps strong { color: var(--text); font-weight: 700; }
+    ol.steps code {
+      font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, monospace;
+      background: #f3eef6;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.85em;
+      color: var(--lila-dark);
+      word-break: break-all;
+    }
+    ol.steps a { color: var(--lila-dark); font-weight: 600; }
+    ol.steps .sub { color: var(--text-light); font-size: 0.9rem; margin-top: 0.35rem; display: block; }
+
+    .copy-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      margin-top: 0.5rem;
+      background: #f3eef6;
+      color: var(--lila-dark);
+      border: 1px solid var(--border);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+    .copy-btn:hover { background: var(--lila); color: #fff; border-color: var(--lila); }
+    .copy-btn.copied { background: #d4f5d4; color: #2d7a2d; border-color: #2d7a2d; }
+
+    .callout {
+      background: var(--warn-bg);
+      border: 1px solid var(--warn-border);
+      border-radius: 12px;
+      padding: 1rem 1.1rem;
+      margin-top: 1rem;
+      font-size: 0.92rem;
+    }
+    .callout strong { color: #8a5a00; }
+
+    ul.compact { padding-left: 1.25rem; }
+    ul.compact li { margin-bottom: 0.4rem; color: var(--text-light); font-size: 0.93rem; }
+    ul.compact li strong { color: var(--text); }
+
+    footer {
+      text-align: center;
+      padding: 1.5rem 1rem;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    footer a { color: var(--lila-dark); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-content">
+    <div class="header-icon">📱</div>
+    <h1>Instala BeautyCita en iPhone</h1>
+    <p>AltStore firma la app con tu Apple ID para que iOS la acepte. Gratis, sin jailbreak.</p>
+  </div>
+</header>
+
+<main class="container">
+
+  <section class="section">
+    <h2><span class="badge">1a vez</span> Configura AltStore en tu computadora</h2>
+    <ol class="steps">
+      <li>
+        Descarga <strong>AltServer</strong> para Mac o Windows desde <a href="https://altstore.io" target="_blank" rel="noopener">altstore.io</a>.
+        <span class="sub">Instala iTunes + iCloud tambien si estas en Windows — AltServer los necesita.</span>
+      </li>
+      <li>
+        Abre <strong>AltServer</strong>. Aparece como un icono de diamante en la barra de menu (Mac) o en la bandeja (Windows). Dejalo corriendo.
+      </li>
+      <li>
+        Conecta tu iPhone a la computadora con cable USB. Desbloquea el iPhone y toca <strong>"Confiar"</strong> cuando lo pida.
+      </li>
+      <li>
+        En AltServer: <strong>Install AltStore → [tu iPhone]</strong>. Ingresa tu Apple ID (sirve una cuenta gratis). Espera ~30 seg.
+      </li>
+      <li>
+        En iPhone: <strong>Ajustes → General → VPN y administracion de dispositivos → tu Apple ID → Confiar</strong>. Ya puedes abrir AltStore.
+      </li>
+    </ol>
+  </section>
+
+  <section class="section">
+    <h2><span class="badge">Instalar</span> Agrega BeautyCita</h2>
+    <ol class="steps">
+      <li>
+        Abre <strong>AltStore</strong> en tu iPhone. Ve a la pestaña <strong>Browse</strong>.
+      </li>
+      <li>
+        Toca el <strong>+</strong> arriba a la izquierda para agregar una nueva fuente. Pega la siguiente URL:
+        <span class="sub"><code id="source-url">https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/ipa/altstore-source.json</code></span>
+        <button class="copy-btn" onclick="copySource()">📋 Copiar URL</button>
+      </li>
+      <li>
+        Busca <strong>BeautyCita</strong> en la lista. Toca <strong>FREE</strong> → ingresa tu Apple ID de nuevo → espera ~1 min.
+      </li>
+      <li>
+        Listo. BeautyCita aparece en tu pantalla de inicio como una app normal. Abrila con biometria.
+      </li>
+    </ol>
+  </section>
+
+  <section class="section">
+    <h2><span class="badge">Cada 7 dias</span> Refresca la firma</h2>
+    <p style="color: var(--text-light); margin-bottom: 0.9rem;">
+      Los Apple IDs gratuitos caducan la firma cada 7 dias. Si no refrescas, la app deja de abrirse.
+    </p>
+    <ol class="steps">
+      <li>
+        Conecta tu iPhone a la misma Wi-Fi que tu computadora (o por cable USB). AltServer tiene que estar corriendo.
+      </li>
+      <li>
+        Abre AltStore → <strong>My Apps</strong> → toca el icono de refrescar al lado de BeautyCita.
+      </li>
+      <li>
+        Si no abre AltStore al ver el cartel "App Expired", repite el <strong>paso 5</strong> de la configuracion inicial (confiar en el certificado).
+      </li>
+    </ol>
+    <div class="callout">
+      <strong>Tip:</strong> Pon un recordatorio semanal en tu calendario. Si se te pasa, tienes que desinstalar y empezar de cero.
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Limitaciones con Apple ID gratis</h2>
+    <ul class="compact">
+      <li><strong>Maximo 3 apps sideloaded</strong> al mismo tiempo en tu Apple ID.</li>
+      <li><strong>Sin notificaciones push</strong> — BeautyCita te avisa por WhatsApp en su lugar.</li>
+      <li><strong>Tiene que refrescarse cada 7 dias</strong> o deja de funcionar.</li>
+      <li>Todo esto se quita cuando tengamos cuenta Apple Developer oficial. En camino.</li>
+    </ul>
+  </section>
+
+  <section class="section">
+    <h2>¿No jala algo?</h2>
+    <ul class="compact">
+      <li><strong>"Untrusted Developer":</strong> Ajustes → General → VPN y administracion de dispositivos → toca tu Apple ID → <strong>Confiar</strong>.</li>
+      <li><strong>AltServer no ve mi iPhone:</strong> Misma Wi-Fi, o conecta por USB. Verifica que iTunes pueda ver el dispositivo.</li>
+      <li><strong>"Unable to install":</strong> Cierra AltStore, reinicia AltServer, vuelve a intentar. A veces Apple bloquea reintentos rapidos.</li>
+      <li><strong>Dudas:</strong> <a href="/soporte">soporte@beautycita.com</a> — o llamanos directo: +52 322 380-0207.</li>
+    </ul>
+  </section>
+
+</main>
+
+<footer>
+  <a href="/">← BeautyCita</a>  ·  <a href="/ayuda">Ayuda</a>  ·  <a href="/soporte">Soporte</a>
+</footer>
+
+<script>
+  function copySource() {
+    const url = document.getElementById('source-url').textContent;
+    navigator.clipboard.writeText(url).then(() => {
+      const btn = event.currentTarget;
+      btn.textContent = '✓ Copiado';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = '📋 Copiar URL';
+        btn.classList.remove('copied');
+      }, 2000);
+    });
+  }
+</script>
+
+</body>
+</html>
