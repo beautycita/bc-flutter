@@ -8,13 +8,12 @@ abstract final class DemoData {
   static const Map<String, dynamic> business = {
     'id': businessId,
     'owner_id': 'eef1c030-c1ae-49ec-9352-684f018c0e56',
-    'name': 'Salon de Vallarta',
+    'name': 'Ejemplo Salon',
     'phone': '(322) 380-0207',
     'whatsapp': '+523223800207',
-    'address':
-        'Priv. Politécnico Nacional, Los Portales, 48315 Puerto Vallarta, Jal., Mexico',
-    'city': 'Puerto Vallarta',
-    'state': 'Jalisco',
+    'address': 'Calle Ejemplo 123, Colonia Ejemplo',
+    'city': 'Ciudad Ejemplo',
+    'state': 'Estado Ejemplo',
     'country': 'MX',
     'lat': 20.6645623744056,
     'lng': -105.230326730276,
@@ -290,65 +289,56 @@ abstract final class DemoData {
     // Possible start hours for appointments (9:00 to 17:00, spread out)
     const startHours = [9, 10, 11, 12, 13, 14, 15, 16, 17];
 
-    // Generate past 45 days + future 60 days
-    for (var dayOffset = -45; dayOffset <= 60; dayOffset++) {
+    // ── Past 180 days: variable per-weekday busyness ──────────────────
+    // Rolling window — always 180 days of history so the dashboard
+    // stats / analytics chart / revenue trend always look lived-in.
+    for (var dayOffset = -180; dayOffset <= 0; dayOffset++) {
       final date = today.add(Duration(days: dayOffset));
+      if (date.weekday == DateTime.sunday) continue; // salon closed
 
-      // Skip Sundays (salon closed)
-      if (date.weekday == DateTime.sunday) continue;
-
-      final isPast = dayOffset < 0;
       final isToday = dayOffset == 0;
 
       for (var si = 0; si < staffIds.length; si++) {
         final staffId = staffIds[si];
         final pool = _staffServicePool[staffId] ?? [0];
 
-        // Vary appointment count by day of week:
-        // Mon(1)/Tue(2): 1-2, Wed(3)/Thu(4): 3-4, Fri(5)/Sat(6): 4-6
-        final daySeed = ((dayOffset + 100) * 1000 + si * 100) * 2654435761 & 0xFFFFFFFF;
+        final daySeed =
+            ((dayOffset + 1000) * 1000 + si * 100) * 2654435761 & 0xFFFFFFFF;
         final int apptCount;
         switch (date.weekday) {
           case DateTime.monday:
           case DateTime.tuesday:
-            apptCount = 1 + (daySeed % 2); // 1-2
+            apptCount = 1 + (daySeed % 2);
           case DateTime.wednesday:
           case DateTime.thursday:
-            apptCount = 3 + (daySeed % 2); // 3-4
+            apptCount = 3 + (daySeed % 2);
           case DateTime.friday:
           case DateTime.saturday:
-            apptCount = 4 + (daySeed % 3); // 4-6
+            apptCount = 4 + (daySeed % 3);
           default:
             apptCount = 2;
         }
 
         for (var apptIdx = 0; apptIdx < apptCount; apptIdx++) {
-          // Deterministic "random" based on day + staff + appt index
-          final seed = (dayOffset + 100) * 1000 + si * 100 + apptIdx;
+          final seed = (dayOffset + 1000) * 1000 + si * 100 + apptIdx;
           final hash = (seed * 2654435761) & 0xFFFFFFFF;
-
-          // Pick hour: spread appointments across the day
           final hourSlot = startHours[(apptIdx * 3 + hash) % startHours.length];
-
-          // Pick service from this staff's pool
           final svcIdx = pool[hash % pool.length];
           final svc = services[svcIdx];
 
-          // Determine status
           String status;
-          if (isPast || (isToday && hourSlot < now.hour)) {
-            // 90% completed, 5% cancelled, 5% no-show
+          if (isToday && hourSlot >= now.hour) {
+            status = 'confirmed';
+          } else {
             final statusRoll = hash % 20;
             status = statusRoll == 0
                 ? 'no_show'
                 : statusRoll == 1
                     ? 'cancelled_customer'
                     : 'completed';
-          } else {
-            status = 'confirmed';
           }
 
-          final id = 'demo-${dayOffset + 100}-$si-$apptIdx';
+          final id = 'demo-past-${dayOffset + 1000}-$si-$apptIdx';
           result.add(_appt(
             id,
             staffId,
@@ -362,6 +352,58 @@ abstract final class DemoData {
           ));
         }
       }
+    }
+
+    // ── Future: EXACTLY 28 scheduled appointments ─────────────────────
+    // Rolling window — always 28 future confirmed appointments so the
+    // calendar, upcoming-bookings widget, reschedule demo, and WhatsApp
+    // flow all have real-looking data to grab. Distributed across the
+    // next ~30 days (excluding Sundays), spread across stylists and
+    // hours so the calendar looks genuinely busy rather than clumpy.
+    const futureTarget = 28;
+    var futureGenerated = 0;
+    var dayOffset = 1;
+    var roundRobinStaff = 0;
+    final usedSlots = <String>{}; // 'date-staff-hour' collision guard
+    while (futureGenerated < futureTarget && dayOffset <= 45) {
+      final date = today.add(Duration(days: dayOffset));
+      if (date.weekday == DateTime.sunday) {
+        dayOffset++;
+        continue;
+      }
+
+      // 2-4 appointments per open day, cycling through stylists
+      final dayHash = (dayOffset * 2654435761) & 0xFFFFFFFF;
+      final perDay = 2 + (dayHash % 3);
+
+      for (var i = 0; i < perDay && futureGenerated < futureTarget; i++) {
+        final staffId = staffIds[roundRobinStaff % staffIds.length];
+        roundRobinStaff++;
+
+        final seed = (dayOffset * 1000 + i) * 2654435761 & 0xFFFFFFFF;
+        final hourSlot = startHours[(i * 2 + (seed ~/ 7)) % startHours.length];
+        final slotKey = '${date.toIso8601String().substring(0, 10)}-$staffId-$hourSlot';
+        if (usedSlots.contains(slotKey)) continue;
+        usedSlots.add(slotKey);
+
+        final pool = _staffServicePool[staffId] ?? [0];
+        final svcIdx = pool[seed % pool.length];
+        final svc = services[svcIdx];
+
+        result.add(_appt(
+          'demo-future-$futureGenerated',
+          staffId,
+          svc['name'] as String,
+          svc['service_type'] as String,
+          (svc['price'] as num).toDouble(),
+          date,
+          svc['duration_minutes'] as int,
+          'confirmed',
+          hour: hourSlot,
+        ));
+        futureGenerated++;
+      }
+      dayOffset++;
     }
 
     _cachedAppointments = result;
