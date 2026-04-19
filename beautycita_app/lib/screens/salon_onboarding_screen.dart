@@ -1,3 +1,5 @@
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:beautycita/widgets/cached_image.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
@@ -1206,7 +1208,7 @@ class _HeroHeader extends StatelessWidget {
                   child: CircleAvatar(
                     radius: 40,
                     backgroundColor: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2),
-                    backgroundImage: NetworkImage(photoUrl!),
+                    backgroundImage: CachedNetworkImageProvider(photoUrl!),
                     onBackgroundImageError: (_, _) {},
                   ),
                 )
@@ -1523,7 +1525,7 @@ class _ConfirmationCardState extends State<_ConfirmationCard>
                   child: SizedBox(
                     width: double.infinity,
                     height: 320,
-                    child: Image.network(
+                    child: CachedImage(
                       photoUrl.toString(),
                       fit: BoxFit.cover,
                       errorBuilder: (_, _, _) => Container(
@@ -1852,7 +1854,7 @@ class _NearbyMatchListState extends State<_NearbyMatchList>
                             ),
                             clipBehavior: Clip.antiAlias,
                             child: photoUrl != null
-                                ? Image.network(
+                                ? CachedImage(
                                     photoUrl.toString(),
                                     fit: BoxFit.cover,
                                     errorBuilder: (_, _, _) => Icon(

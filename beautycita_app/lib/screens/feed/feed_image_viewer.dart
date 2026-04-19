@@ -1,3 +1,4 @@
+import 'package:beautycita/widgets/cached_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:beautycita/config/fonts.dart';
@@ -143,7 +144,7 @@ class _FeedImageViewerState extends State<FeedImageViewer> {
                   minScale: 0.5,
                   maxScale: 4.0,
                   child: Center(
-                    child: Image.network(
+                    child: CachedImage(
                       url,
                       fit: BoxFit.contain,
                       loadingBuilder: (_, child, progress) {

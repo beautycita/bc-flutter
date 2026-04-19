@@ -1,3 +1,4 @@
+import 'package:beautycita/widgets/cached_image.dart';
 import 'package:flutter/material.dart';
 import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -593,7 +594,7 @@ class _MessageBubble extends StatelessWidget {
                           borderRadius: const BorderRadius.vertical(
                             top: Radius.circular(16),
                           ),
-                          child: Image.network(
+                          child: CachedImage(
                             message.mediaUrl!,
                             fit: BoxFit.cover,
                             width: double.infinity,
@@ -689,7 +690,7 @@ class _MessageBubble extends StatelessWidget {
                   children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(16),
-                      child: Image.network(
+                      child: CachedImage(
                         message.mediaUrl!,
                         fit: BoxFit.cover,
                         errorBuilder: (_, _, _) => Container(

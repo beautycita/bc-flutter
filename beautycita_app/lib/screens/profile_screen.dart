@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:async';
 import 'package:beautycita/config/app_transitions.dart';
 import 'dart:ui' as ui;
@@ -254,7 +255,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     radius: 46,
                     backgroundColor: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2),
                     backgroundImage: profile.avatarUrl != null
-                        ? NetworkImage(profile.avatarUrl!)
+                        ? CachedNetworkImageProvider(profile.avatarUrl!)
                         : null,
                     child: profile.avatarUrl == null
                         ? Icon(Icons.person_outline, size: 46,

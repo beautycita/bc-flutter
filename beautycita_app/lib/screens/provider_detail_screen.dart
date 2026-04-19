@@ -1,3 +1,4 @@
+import 'package:beautycita/widgets/cached_image.dart';
 import 'package:flutter/material.dart';
 import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -181,7 +182,7 @@ class ProviderDetailScreen extends ConsumerWidget {
       ],
       flexibleSpace: FlexibleSpaceBar(
         background: provider.photoUrl != null
-            ? Image.network(
+            ? CachedImage(
                 provider.photoUrl!,
                 fit: BoxFit.cover,
                 errorBuilder: (_, _, _) =>

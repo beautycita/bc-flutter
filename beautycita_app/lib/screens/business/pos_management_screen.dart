@@ -1,3 +1,4 @@
+import 'package:beautycita/widgets/cached_image.dart';
 import 'package:flutter/material.dart';
 import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter/services.dart';
@@ -782,7 +783,7 @@ class _ProductThumbnail extends StatelessWidget {
       child: isPlaceholder
           ? Icon(Icons.image_outlined,
               size: 28, color: colors.onSurface.withValues(alpha: 0.3))
-          : Image.network(
+          : CachedImage(
               photoUrl,
               fit: BoxFit.cover,
               errorBuilder: (_, _, _) => Icon(

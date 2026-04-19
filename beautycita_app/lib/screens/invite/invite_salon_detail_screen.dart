@@ -1,3 +1,4 @@
+import 'package:beautycita/widgets/cached_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita/config/fonts.dart';
@@ -127,7 +128,7 @@ class _InviteSalonDetailScreenState
         children: [
           // Background
           if (hasPhoto)
-            Image.network(
+            CachedImage(
               salon.photoUrl!,
               fit: BoxFit.cover,
               errorBuilder: (_, _, _) => _gradientPlaceholder(),

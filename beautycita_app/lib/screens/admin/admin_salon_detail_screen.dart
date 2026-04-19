@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -502,7 +503,7 @@ class _SalonDetailBody extends ConsumerWidget {
                 backgroundColor:
                     colors.primary.withValues(alpha: 0.12),
                 backgroundImage:
-                    photoUrl != null ? NetworkImage(photoUrl) : null,
+                    photoUrl != null ? CachedNetworkImageProvider(photoUrl) : null,
                 child: photoUrl == null
                     ? Icon(Icons.store,
                         size: 32,

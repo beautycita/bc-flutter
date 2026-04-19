@@ -1,3 +1,4 @@
+import 'package:beautycita/widgets/cached_image.dart';
 import 'package:flutter/material.dart';
 import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -382,7 +383,7 @@ class _MessageSalonsScreenState extends ConsumerState<MessageSalonsScreen> {
                     if (imageUrl != null && imageUrl.isNotEmpty)
                       ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: Image.network(imageUrl, width: 56, height: 56, fit: BoxFit.cover,
+                        child: CachedImage(imageUrl, width: 56, height: 56, fit: BoxFit.cover,
                           errorBuilder: (_, _, _) => Container(width: 56, height: 56, color: Colors.grey[200],
                             child: Icon(Icons.store, color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.4)))),
                       )
@@ -728,7 +729,7 @@ class _SalonCard extends StatelessWidget {
                 if (imageUrl != null && imageUrl.isNotEmpty)
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Image.network(imageUrl, width: 48, height: 48, fit: BoxFit.cover,
+                    child: CachedImage(imageUrl, width: 48, height: 48, fit: BoxFit.cover,
                       errorBuilder: (_, _, _) => _buildPlaceholder(context, waVerified)),
                   )
                 else

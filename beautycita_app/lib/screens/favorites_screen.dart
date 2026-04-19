@@ -1,3 +1,4 @@
+import 'package:beautycita/widgets/cached_image.dart';
 import 'package:flutter/material.dart';
 import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -163,7 +164,7 @@ class _FavoriteSalonCard extends ConsumerWidget {
                     ),
                     clipBehavior: Clip.antiAlias,
                     child: salon.photoUrl != null && salon.photoUrl!.isNotEmpty
-                        ? Image.network(
+                        ? CachedImage(
                             salon.photoUrl!,
                             fit: BoxFit.cover,
                             errorBuilder: (_, _, _) => Center(

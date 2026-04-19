@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita/config/fonts.dart';
@@ -110,7 +111,7 @@ class _RpCard extends StatelessWidget {
                 CircleAvatar(
                   radius: 20,
                   backgroundImage:
-                      avatarUrl != null ? NetworkImage(avatarUrl) : null,
+                      avatarUrl != null ? CachedNetworkImageProvider(avatarUrl) : null,
                   backgroundColor: const Color(0xFFEC4899).withValues(alpha: 0.15),
                   child: avatarUrl == null
                       ? Text(

@@ -1,3 +1,4 @@
+import 'package:beautycita/widgets/cached_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -157,7 +158,7 @@ class _DiscoveredSalonDetailScreenState extends ConsumerState<DiscoveredSalonDet
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(55),
                             child: widget.salon.photoUrl != null
-                                ? Image.network(
+                                ? CachedImage(
                                     widget.salon.photoUrl!,
                                     width: 104,
                                     height: 104,

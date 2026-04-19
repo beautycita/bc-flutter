@@ -1,3 +1,4 @@
+import 'package:beautycita/widgets/cached_image.dart';
 import 'package:flutter/material.dart';
 import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -390,7 +391,7 @@ class _ProviderAvatar extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: photoUrl != null && photoUrl!.isNotEmpty
-          ? Image.network(
+          ? CachedImage(
               photoUrl!,
               fit: BoxFit.cover,
               errorBuilder: (_, _, _) => _AvatarFallback(

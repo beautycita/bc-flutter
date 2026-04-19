@@ -1,3 +1,5 @@
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:beautycita/widgets/cached_image.dart';
 import 'package:flutter/material.dart';
 import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter/services.dart';
@@ -514,7 +516,7 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
           radius: 24,
           backgroundColor: palette.primary.withValues(alpha: 0.15),
           backgroundImage:
-              avatarUrl != null ? NetworkImage(avatarUrl) : null,
+              avatarUrl != null ? CachedNetworkImageProvider(avatarUrl) : null,
           child: avatarUrl == null
               ? Icon(
                   Icons.storefront_rounded,
@@ -1335,7 +1337,7 @@ class _NearbySalonCardState extends State<_NearbySalonCard>
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(27),
                   child: widget.salon.photoUrl != null
-                      ? Image.network(
+                      ? CachedImage(
                           widget.salon.photoUrl!,
                           width: 54,
                           height: 54,

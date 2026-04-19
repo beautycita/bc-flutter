@@ -3,6 +3,7 @@
 /// /chat/list; RLS guarantees each owner only sees their own threads.
 library;
 
+import 'package:beautycita/widgets/cached_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -226,7 +227,7 @@ class _Avatar extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     if (avatarUrl != null && avatarUrl!.isNotEmpty) {
       return ClipOval(
-        child: Image.network(
+        child: CachedImage(
           avatarUrl!,
           width: size,
           height: size,

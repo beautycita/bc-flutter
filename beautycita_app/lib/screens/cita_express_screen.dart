@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -274,7 +275,7 @@ class _ServiceSelectView extends StatelessWidget {
                   color: colors.primary.withValues(alpha: 0.08),
                   image: bizPhoto != null
                       ? DecorationImage(
-                          image: NetworkImage(bizPhoto),
+                          image: CachedNetworkImageProvider(bizPhoto),
                           fit: BoxFit.cover,
                         )
                       : null,
@@ -614,7 +615,7 @@ class _ResultCardWidget extends StatelessWidget {
                   radius: 22,
                   backgroundColor: colors.primary.withValues(alpha: 0.08),
                   backgroundImage: result.staff?.avatarUrl != null
-                      ? NetworkImage(result.staff!.avatarUrl!)
+                      ? CachedNetworkImageProvider(result.staff!.avatarUrl!)
                       : null,
                   child: result.staff?.avatarUrl == null
                       ? Icon(Icons.person, color: colors.primary, size: 22)

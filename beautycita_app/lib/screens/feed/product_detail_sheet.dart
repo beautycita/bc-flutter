@@ -1,3 +1,4 @@
+import 'package:beautycita/widgets/cached_image.dart';
 import 'package:flutter/material.dart';
 import 'package:beautycita/config/app_transitions.dart';
 import 'package:beautycita/config/fonts.dart';
@@ -87,7 +88,7 @@ class ProductDetailSheet extends StatelessWidget {
                           BorderRadius.circular(AppConstants.radiusMD),
                       child: AspectRatio(
                         aspectRatio: 1,
-                        child: Image.network(
+                        child: CachedImage(
                           product.photoUrl,
                           fit: BoxFit.cover,
                           errorBuilder: (_, _, _) => Container(

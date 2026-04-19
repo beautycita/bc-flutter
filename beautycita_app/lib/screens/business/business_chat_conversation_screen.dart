@@ -4,6 +4,7 @@
 /// gated by the chat_messages_business_insert RLS policy.
 library;
 
+import 'package:beautycita/widgets/cached_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -271,7 +272,7 @@ class _BusinessBubble extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(16),
-              child: Image.network(
+              child: CachedImage(
                 message.mediaUrl!,
                 width: MediaQuery.of(context).size.width * 0.6,
                 fit: BoxFit.cover,
@@ -475,7 +476,7 @@ class _CustomerAvatar extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     if (avatarUrl != null && avatarUrl!.isNotEmpty) {
       return ClipOval(
-        child: Image.network(
+        child: CachedImage(
           avatarUrl!,
           width: size,
           height: size,

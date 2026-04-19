@@ -333,7 +333,7 @@ class _ProductShowcaseCard extends StatelessWidget {
                   radius: 14,
                   backgroundColor: palette.primaryContainer,
                   backgroundImage: item.businessPhotoUrl != null
-                      ? NetworkImage(item.businessPhotoUrl!)
+                      ? CachedNetworkImageProvider(item.businessPhotoUrl!)
                       : null,
                   child: item.businessPhotoUrl == null
                       ? Text(
@@ -481,7 +481,7 @@ class _SalonHeader extends StatelessWidget {
             radius: 20,
             backgroundColor: palette.primaryContainer,
             backgroundImage: item.businessPhotoUrl != null
-                ? NetworkImage(item.businessPhotoUrl!)
+                ? CachedNetworkImageProvider(item.businessPhotoUrl!)
                 : null,
             child: item.businessPhotoUrl == null
                 ? Text(

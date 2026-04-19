@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -63,7 +64,7 @@ class SettingsScreen extends ConsumerWidget {
                         radius: 28,
                         backgroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                         backgroundImage: profile.avatarUrl != null
-                            ? NetworkImage(profile.avatarUrl!)
+                            ? CachedNetworkImageProvider(profile.avatarUrl!)
                             : null,
                         child: profile.avatarUrl == null
                             ? Icon(Icons.person_outline, color: Theme.of(context).colorScheme.onPrimary, size: 28)

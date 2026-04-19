@@ -1,3 +1,4 @@
+import 'package:beautycita/widgets/cached_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter/material.dart';
@@ -81,7 +82,7 @@ class _FullscreenImageView extends StatelessWidget {
         child: Center(
           child: bytes != null
               ? Image.memory(bytes!, fit: BoxFit.contain)
-              : Image.network(
+              : CachedImage(
                   url!,
                   fit: BoxFit.contain,
                   loadingBuilder: (_, child, progress) {
@@ -805,7 +806,7 @@ class _ToolViewState extends ConsumerState<_ToolView>
                         borderRadius: BorderRadius.circular(12),
                         child: AspectRatio(
                           aspectRatio: 3 / 4,
-                          child: Image.network(
+                          child: CachedImage(
                             _resultUrl!,
                             fit: BoxFit.contain,
                             errorBuilder: (_, _, _) => Container(
@@ -1299,7 +1300,7 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
                           Expanded(
                             child: ClipRRect(
                               borderRadius: const BorderRadius.vertical(top: Radius.circular(11)),
-                              child: Image.network(
+                              child: CachedImage(
                                 sample.previewUrl,
                                 fit: BoxFit.cover,
                                 width: double.infinity,
@@ -1471,7 +1472,7 @@ class _FaceSwapViewState extends ConsumerState<_FaceSwapView>
                         borderRadius: BorderRadius.circular(12),
                         child: AspectRatio(
                           aspectRatio: 3 / 4,
-                          child: Image.network(
+                          child: CachedImage(
                             _resultUrl!,
                             fit: BoxFit.contain,
                             errorBuilder: (_, _, _) => Container(

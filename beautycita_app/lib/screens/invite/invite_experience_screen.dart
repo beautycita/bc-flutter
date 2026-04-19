@@ -1,3 +1,5 @@
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:beautycita/widgets/cached_image.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -495,7 +497,7 @@ class _SalonPhoto extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppConstants.radiusSM),
       child: photoUrl != null
-          ? Image.network(
+          ? CachedImage(
               photoUrl!,
               width: _size,
               height: _size,
@@ -1071,7 +1073,7 @@ class _ContactMatchesBanner extends ConsumerWidget {
                     padding: const EdgeInsets.all(12),
                     child: Row(
                       children: [
-                        CircleAvatar(radius: 22, backgroundImage: match.salonPhoto != null ? NetworkImage(match.salonPhoto!) : null, child: match.salonPhoto == null ? Icon(Icons.store, color: theme.colorScheme.primary) : null),
+                        CircleAvatar(radius: 22, backgroundImage: match.salonPhoto != null ? CachedNetworkImageProvider(match.salonPhoto!) : null, child: match.salonPhoto == null ? Icon(Icons.store, color: theme.colorScheme.primary) : null),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

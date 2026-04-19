@@ -1,3 +1,4 @@
+import 'package:beautycita/widgets/cached_image.dart';
 import 'package:flutter/material.dart';
 import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -248,7 +249,7 @@ class _ApplicationCard extends ConsumerWidget {
                   if (photoUrl != null && photoUrl.isNotEmpty)
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: Image.network(photoUrl,
+                      child: CachedImage(photoUrl,
                           width: 56, height: 56, fit: BoxFit.cover,
                           errorBuilder: (_, _, _) => _placeholderIcon(context)),
                     )

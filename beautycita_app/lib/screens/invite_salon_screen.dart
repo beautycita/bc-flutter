@@ -1,3 +1,4 @@
+import 'package:beautycita/widgets/cached_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -634,7 +635,7 @@ class _ContactMatchCard extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(25),
               child: match.salonPhoto != null
-                  ? Image.network(
+                  ? CachedImage(
                       match.salonPhoto!,
                       width: 50,
                       height: 50,
@@ -758,7 +759,7 @@ class _SalonCard extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(25),
               child: salon.photoUrl != null
-                  ? Image.network(
+                  ? CachedImage(
                       salon.photoUrl!,
                       width: 50,
                       height: 50,

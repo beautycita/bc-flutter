@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:async';
 import 'dart:io';
 import 'dart:math';
@@ -265,7 +266,7 @@ class _StaffCard extends StatelessWidget {
               : colors.onSurface.withValues(alpha: 0.05),
           backgroundImage:
               avatarUrl != null && avatarUrl.isNotEmpty
-                  ? NetworkImage(avatarUrl)
+                  ? CachedNetworkImageProvider(avatarUrl)
                   : null,
           child: avatarUrl == null || avatarUrl.isEmpty
               ? Text(
@@ -789,7 +790,7 @@ class _AddStaffSheetState extends ConsumerState<_AddStaffSheet> {
                             radius: 18,
                             backgroundColor: colors.primary.withValues(alpha: 0.1),
                             backgroundImage: _matchedStylist!['avatar_url'] != null
-                                ? NetworkImage(_matchedStylist!['avatar_url'] as String)
+                                ? CachedNetworkImageProvider(_matchedStylist!['avatar_url'] as String)
                                 : null,
                             child: _matchedStylist!['avatar_url'] == null
                                 ? Icon(Icons.person, size: 18, color: colors.primary)
@@ -1414,7 +1415,7 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
                       backgroundImage: _newAvatarFile != null
                           ? FileImage(_newAvatarFile!)
                           : (!_avatarDeleted && widget.staff['avatar_url'] != null)
-                              ? NetworkImage(widget.staff['avatar_url'] as String) as ImageProvider
+                              ? CachedNetworkImageProvider(widget.staff['avatar_url'] as String) as ImageProvider
                               : null,
                       child: (_newAvatarFile == null && (_avatarDeleted || widget.staff['avatar_url'] == null))
                           ? Icon(Icons.person, size: 40, color: colors.primary.withValues(alpha: 0.5))
