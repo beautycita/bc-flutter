@@ -322,16 +322,16 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
               Text('Detalle Resena',
                   style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700)),
               const SizedBox(height: 16),
-              _ReviewDetailRow('ID', review['id']?.toString()),
-              _ReviewDetailRow('Calificacion', review['rating']?.toString()),
-              _ReviewDetailRow('Comentario', review['comment'] as String?),
-              _ReviewDetailRow('Tipo de servicio', review['service_type'] as String?),
-              _ReviewDetailRow('Negocio', bizData?['name'] as String?),
-              _ReviewDetailRow('Negocio ID', review['business_id']?.toString()),
-              _ReviewDetailRow('Usuario ID', review['user_id']?.toString()),
-              _ReviewDetailRow('Creado', dateStr),
-              _ReviewDetailRow('Visible', review['is_visible']?.toString()),
-              _ReviewDetailRow('Etiquetas', tagsStr),
+              _reviewDetailRow('ID', review['id']?.toString()),
+              _reviewDetailRow('Calificacion', review['rating']?.toString()),
+              _reviewDetailRow('Comentario', review['comment'] as String?),
+              _reviewDetailRow('Tipo de servicio', review['service_type'] as String?),
+              _reviewDetailRow('Negocio', bizData?['name'] as String?),
+              _reviewDetailRow('Negocio ID', review['business_id']?.toString()),
+              _reviewDetailRow('Usuario ID', review['user_id']?.toString()),
+              _reviewDetailRow('Creado', dateStr),
+              _reviewDetailRow('Visible', review['is_visible']?.toString()),
+              _reviewDetailRow('Etiquetas', tagsStr),
               if (bizData != null) ...[
                 const Divider(height: 24),
                 Text('Datos del negocio',
@@ -339,7 +339,7 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
                         color: Colors.grey[600])),
                 const SizedBox(height: 8),
                 ...bizData.entries.map(
-                  (e) => _ReviewDetailRow(e.key, e.value?.toString()),
+                  (e) => _reviewDetailRow(e.key, e.value?.toString()),
                 ),
               ],
               // Dump all raw keys not already shown above
@@ -350,7 +350,7 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
               const SizedBox(height: 8),
               ...review.entries
                   .where((e) => e.key != 'businesses')
-                  .map((e) => _ReviewDetailRow(e.key, e.value?.toString())),
+                  .map((e) => _reviewDetailRow(e.key, e.value?.toString())),
             ],
           );
         },
@@ -358,7 +358,7 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
     );
   }
 
-  Widget _ReviewDetailRow(String label, String? value) => Padding(
+  Widget _reviewDetailRow(String label, String? value) => Padding(
     padding: const EdgeInsets.only(bottom: 8),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,

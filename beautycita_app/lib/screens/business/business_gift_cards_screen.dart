@@ -596,17 +596,17 @@ class _GiftCardDetailSheet extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          if (buyerName != null) _Row('Comprador', buyerName),
-          if (recipientName != null) _Row('Destinatario', recipientName),
+          if (buyerName != null) _giftCardRow('Comprador', buyerName),
+          if (recipientName != null) _giftCardRow('Destinatario', recipientName),
           if (message != null && message.isNotEmpty)
-            _Row('Mensaje', message),
-          _Row('Estado', isActive ? 'Activa' : 'Inactiva'),
+            _giftCardRow('Mensaje', message),
+          _giftCardRow('Estado', isActive ? 'Activa' : 'Inactiva'),
           if (createdDt != null)
-            _Row('Creada', dateFmt.format(createdDt.toLocal())),
+            _giftCardRow('Creada', dateFmt.format(createdDt.toLocal())),
           if (expiresDt != null)
-            _Row('Vence', dateFmt.format(expiresDt.toLocal())),
+            _giftCardRow('Vence', dateFmt.format(expiresDt.toLocal())),
           if (redeemedDt != null)
-            _Row('Canjeada', dateFmt.format(redeemedDt.toLocal())),
+            _giftCardRow('Canjeada', dateFmt.format(redeemedDt.toLocal())),
 
           const SizedBox(height: 24),
 
@@ -660,7 +660,7 @@ class _DetailChip extends StatelessWidget {
   }
 }
 
-Widget _Row(String label, String value) => Padding(
+Widget _giftCardRow(String label, String value) => Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

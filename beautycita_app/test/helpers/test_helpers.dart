@@ -65,7 +65,7 @@ class MockPostgrestFilterBuilder implements PostgrestFilterBuilder<PostgrestList
   }
 }
 
-/// Awaitable that resolves to null. Implements Future<Map?> via then().
+/// Awaitable that resolves to null. Implements `Future<Map?>` via then().
 class _AwaitableNull implements PostgrestTransformBuilder<PostgrestMap?> {
   @override
   Future<R> then<R>(FutureOr<R> Function(PostgrestMap? value) onValue,

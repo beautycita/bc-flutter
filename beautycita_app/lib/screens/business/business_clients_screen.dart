@@ -645,11 +645,11 @@ class _ClientDetailSheetState extends State<_ClientDetailSheet> {
           const SizedBox(height: 16),
 
           // Dates
-          _DetailRow('Primera visita', firstVisit != null ? dateFmt.format(firstVisit.toLocal()) : '—'),
-          _DetailRow('Ultima visita', lastVisit != null ? dateFmt.format(lastVisit.toLocal()) : '—'),
-          if (birthday != null) _DetailRow('Cumpleanos', birthday),
-          _DetailRow('ID', c['id']?.toString() ?? '—'),
-          if (c['user_id'] != null) _DetailRow('User ID', c['user_id'].toString()),
+          _detailRow('Primera visita', firstVisit != null ? dateFmt.format(firstVisit.toLocal()) : '—'),
+          _detailRow('Ultima visita', lastVisit != null ? dateFmt.format(lastVisit.toLocal()) : '—'),
+          if (birthday != null) _detailRow('Cumpleanos', birthday),
+          _detailRow('ID', c['id']?.toString() ?? '—'),
+          if (c['user_id'] != null) _detailRow('User ID', c['user_id'].toString()),
 
           const SizedBox(height: 20),
 
@@ -739,7 +739,7 @@ class _StatPill extends StatelessWidget {
   }
 }
 
-Widget _DetailRow(String label, String value) => Padding(
+Widget _detailRow(String label, String value) => Padding(
   padding: const EdgeInsets.only(bottom: 6),
   child: Row(
     children: [

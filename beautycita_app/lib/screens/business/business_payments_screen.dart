@@ -441,7 +441,7 @@ class _StatusBanner extends StatelessWidget {
   }
 }
 
-Widget _PaymentsDetailRow(String label, String? value) => Padding(
+Widget _paymentsDetailRow(String label, String? value) => Padding(
   padding: const EdgeInsets.only(bottom: 8),
   child: Row(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -586,7 +586,7 @@ class _PaymentCard extends StatelessWidget {
               } else {
                 val = e.value.toString();
               }
-              return _PaymentsDetailRow(e.key, val);
+              return _paymentsDetailRow(e.key, val);
             }),
           ],
         ),
@@ -802,7 +802,7 @@ class _PayoutCard extends StatelessWidget {
               } else {
                 val = e.value.toString();
               }
-              return _PaymentsDetailRow(e.key, val);
+              return _paymentsDetailRow(e.key, val);
             }),
           ],
         ),
