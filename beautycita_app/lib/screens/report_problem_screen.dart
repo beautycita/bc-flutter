@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:beautycita/config/fonts.dart';
 import 'package:beautycita_core/supabase.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/constants.dart';

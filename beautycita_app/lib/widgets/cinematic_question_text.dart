@@ -1,6 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:beautycita/config/fonts.dart';
 import '../config/theme_extension.dart';
 import '../config/palettes.dart';
 import 'flare_particle_painter.dart';

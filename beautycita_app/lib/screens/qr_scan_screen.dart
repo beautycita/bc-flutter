@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:beautycita/config/fonts.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/providers/feature_toggle_provider.dart';

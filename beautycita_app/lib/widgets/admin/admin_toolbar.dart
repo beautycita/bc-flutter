@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:beautycita/config/fonts.dart';
 import 'package:intl/intl.dart';
 /// Composable toolbar for admin list screens.
 /// Each screen picks which tools it needs via boolean flags.

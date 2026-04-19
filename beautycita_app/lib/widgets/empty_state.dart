@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:beautycita/config/fonts.dart';
 
 /// Standard empty state widget used across all screens.
 /// Provides consistent look: icon + message + optional action button.

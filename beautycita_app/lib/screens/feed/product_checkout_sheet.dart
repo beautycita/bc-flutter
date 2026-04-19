@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:beautycita/config/fonts.dart';
 import 'package:uuid/uuid.dart';
 import 'package:beautycita/config/app_transitions.dart';
 import 'package:beautycita/config/constants.dart';

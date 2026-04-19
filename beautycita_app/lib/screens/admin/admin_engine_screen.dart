@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:beautycita/config/fonts.dart';
 import 'service_profile_editor_screen.dart';
 import 'engine_settings_editor_screen.dart';
 import 'category_tree_screen.dart';

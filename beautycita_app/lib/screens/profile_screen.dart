@@ -27,7 +27,7 @@ import 'package:beautycita/providers/feature_toggle_provider.dart';
 import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita/services/supabase_client.dart';
 import 'package:beautycita/services/toast_service.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:beautycita/config/fonts.dart';
 
 // ── Profile stat providers ──
 

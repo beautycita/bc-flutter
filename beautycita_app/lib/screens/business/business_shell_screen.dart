@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:beautycita/config/fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/business_provider.dart';
 import '../../providers/feature_toggle_provider.dart';
 // currentStaffPositionProvider lives in business_provider.dart
+import '../../providers/business_chat_provider.dart';
+import 'business_chat_list_screen.dart';
 import 'business_clients_screen.dart';
 import 'business_dashboard_screen.dart';
 import 'business_calendar_screen.dart';
@@ -73,6 +75,7 @@ class BusinessShellScreen extends ConsumerWidget {
     _BizTab(icon: Icons.design_services_rounded, label: 'Servicios'),
     _BizTab(icon: Icons.people_rounded, label: 'Equipo'),
     _BizTab(icon: Icons.contacts_rounded, label: 'Clientes'),
+    _BizTab(icon: Icons.forum_rounded, label: 'Bandeja'),
     _BizTab(icon: Icons.gavel_rounded, label: 'Disputas'),
     _BizTab(icon: Icons.campaign_rounded, label: 'Marketing'),
     _BizTab(icon: Icons.qr_code_rounded, label: 'QR Walk-in'),
@@ -229,6 +232,7 @@ class _BusinessContent extends ConsumerWidget {
       const BusinessServicesScreen(),
       const BusinessStaffScreen(),
       const BusinessClientsScreen(),
+      const BusinessChatListScreen(),
       const BusinessDisputesScreen(),
       const BusinessMarketingScreen(),
       const BusinessQrScreen(),
@@ -454,7 +458,7 @@ class _BusinessDrawer extends StatelessWidget {
   }
 }
 
-class _DrawerItem extends StatelessWidget {
+class _DrawerItem extends ConsumerWidget {
   final _BizTab tab;
   final bool isSelected;
   final VoidCallback onTap;
@@ -466,8 +470,18 @@ class _DrawerItem extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).colorScheme;
+
+    // Only the inbox tab ("Bandeja") shows an unread badge. Keeps every
+    // other drawer row cheap — no extra stream subscriptions.
+    final showBadge = tab.label == 'Bandeja';
+    final unread = showBadge
+        ? ref.watch(businessTotalUnreadProvider).maybeWhen(
+              data: (n) => n,
+              orElse: () => 0,
+            )
+        : 0;
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -493,6 +507,24 @@ class _DrawerItem extends StatelessWidget {
               color: isSelected ? colors.primary : colors.onSurface,
             ),
           ),
+          trailing: (showBadge && unread > 0)
+              ? Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: colors.primary,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    unread > 99 ? '99+' : '$unread',
+                    style: GoogleFonts.nunito(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: colors.onPrimary,
+                    ),
+                  ),
+                )
+              : null,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppConstants.radiusMD),
           ),

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:beautycita/config/fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -736,16 +736,29 @@ class _RPCentroScreenState extends ConsumerState<RPCentroScreen> {
                               : null,
                         );
                         ref.invalidate(rpAssignedSalonsProvider);
-                        if (ctx.mounted) Navigator.pop(ctx);
-                        if (context.mounted) {
-                          ToastService.showSuccess(
-                              outcome == 'completed'
-                                  ? 'Proceso cerrado: Convertido'
-                                  : 'Proceso cerrado');
-                          context.pop();
+                        // Both the dialog's `ctx` and the screen's
+                        // `context` can unmount during the await above;
+                        // each gets its own check. Order matters — we
+                        // pop the dialog first so its ctx is done before
+                        // we touch the screen.
+                        if (ctx.mounted) {
+                          Navigator.pop(ctx);
                         }
+                        if (!context.mounted) {
+                          return;
+                        }
+                        ToastService.showSuccess(
+                            outcome == 'completed'
+                                ? 'Proceso cerrado: Convertido'
+                                : 'Proceso cerrado');
+                        // ToastService.showSuccess is synchronous but the
+                        // analyzer can't see that — context is still live
+                        // since we just checked mounted above without any
+                        // intervening await. Safe to pop.
+                        // ignore: use_build_context_synchronously
+                        context.pop();
                       } catch (e) {
-                        if (mounted) {
+                        if (context.mounted) {
                           ToastService.showError('Error al cerrar proceso: $e');
                         }
                       }

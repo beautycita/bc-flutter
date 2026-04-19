@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:beautycita/config/fonts.dart';
 import 'package:latlong2/latlong.dart' as ll;
 import '../models/curate_result.dart' show LatLng;
 import '../services/route_service.dart';

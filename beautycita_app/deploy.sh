@@ -29,11 +29,24 @@ R2_VERSION_JSON_PATH="${R2_BUCKET_ROOT}/version.json"
 R2_ENDPOINT="https://e61486f47c2fe5a12fdce43b7a318343.r2.cloudflarestorage.com"
 R2_ACCESS_KEY="ca3c10c25e5a6389797d8b47368626d4"
 R2_SECRET_KEY="9a761a36330e00d98e1faa6c588c47a76fb8f15b573c6dcf197efe10d80bba4d"
-APK_PUBLIC_URL="https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/apk/beautycita.apk"
+# APK served via nginx proxy on beautycita.com → R2. Using the reputable
+# domain avoids Chrome Safe Browsing "file might be harmful" warnings that
+# raw pub-*.r2.dev bucket URLs trigger.
+APK_PUBLIC_URL="https://beautycita.com/download/beautycita.apk"
+
+# Firebase App Distribution — optional sidecar to R2 publish. When
+# --distribute is passed, the built APK is also pushed to Firebase and
+# the alpha-testers group is notified by email.
+FIREBASE_CLI="$HOME/bin/firebase"
+FIREBASE_PROJECT="beautycita-472406"
+FIREBASE_APP_ID="1:925456539297:android:0578ed8632117802b39ae0"
+FIREBASE_TESTER_GROUPS="alpha-testers"
 
 REQUIRED="false"
 RELEASE_NOTES=""
-# Flag parsing: --required forces the update; --notes "text" sets release notes
+DISTRIBUTE="false"
+# Flag parsing: --required forces the update; --notes "text" sets release
+# notes; --distribute also pushes the APK to Firebase App Distribution.
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --required)
@@ -44,8 +57,12 @@ while [[ $# -gt 0 ]]; do
       RELEASE_NOTES="${2:-}"
       shift 2
       ;;
+    --distribute)
+      DISTRIBUTE="true"
+      shift
+      ;;
     *)
-      echo "Unknown arg: $1 (supported: --required, --notes \"text\")"
+      echo "Unknown arg: $1 (supported: --required, --notes \"text\", --distribute)"
       exit 1
       ;;
   esac
@@ -132,9 +149,25 @@ aws s3 cp /tmp/beautycita-version.json "$R2_VERSION_JSON_PATH" \
 VERSION_JSON=$(cat /tmp/beautycita-version.json)
 rm -f /tmp/beautycita-version.json
 
+# ── 7. Firebase App Distribution (optional) ──
+if [[ "$DISTRIBUTE" == "true" ]]; then
+  if [[ ! -x "$FIREBASE_CLI" ]]; then
+    echo "WARN: --distribute requested but $FIREBASE_CLI not executable — skipping"
+  else
+    echo "[6/6] Distributing to Firebase tester group ($FIREBASE_TESTER_GROUPS)..."
+    FB_NOTES="Build $NEW_BUILD"
+    [[ -n "$RELEASE_NOTES" ]] && FB_NOTES="$FB_NOTES — $RELEASE_NOTES"
+    "$FIREBASE_CLI" --project "$FIREBASE_PROJECT" appdistribution:distribute "$APK_PATH" \
+      --app "$FIREBASE_APP_ID" \
+      --release-notes "$FB_NOTES" \
+      --groups "$FIREBASE_TESTER_GROUPS" 2>&1 | grep -E "uploaded|distributed|Error" || true
+  fi
+fi
+
 echo ""
 echo "=== Deploy Complete ==="
-echo "  Version:  $VERSION+$NEW_BUILD"
-echo "  Required: $REQUIRED"
-echo "  APK:      $APK_PUBLIC_URL"
-echo "  JSON:     $VERSION_JSON"
+echo "  Version:    $VERSION+$NEW_BUILD"
+echo "  Required:   $REQUIRED"
+echo "  APK:        $APK_PUBLIC_URL"
+echo "  Distribute: $DISTRIBUTE"
+echo "  JSON:       $VERSION_JSON"

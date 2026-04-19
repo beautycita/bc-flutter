@@ -489,6 +489,7 @@ class SettingsScreen extends ConsumerWidget {
     );
 
     if (confirmed == true) {
+      if (!context.mounted) return;
       await showShredderTransition(context);
       await ref.read(authStateProvider.notifier).logout();
       if (context.mounted) {

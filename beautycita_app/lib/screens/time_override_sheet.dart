@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:beautycita/config/fonts.dart';
 import 'package:beautycita/services/toast_service.dart';
 import '../config/constants.dart';
 import '../models/curate_result.dart';

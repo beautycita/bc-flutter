@@ -32,6 +32,8 @@ import 'package:beautycita/screens/payment_methods_screen.dart';
 import 'package:beautycita/screens/cash_payment_screen.dart';
 import 'package:beautycita/screens/cita_express_screen.dart';
 import 'package:beautycita/screens/legal_screens.dart';
+import 'package:beautycita/screens/business/business_chat_conversation_screen.dart';
+import 'package:beautycita/screens/business/business_chat_list_screen.dart';
 import 'package:beautycita/screens/business/business_shell_screen.dart';
 import 'package:beautycita/screens/discovered_salon_confirm_screen.dart';
 import 'package:beautycita/screens/post_registration_screen.dart';
@@ -362,6 +364,25 @@ class AppRoutes {
           return bcSweepPage(
             key: state.pageKey,
             child: ChatConversationScreen(threadId: threadId),
+          );
+        },
+      ),
+      GoRoute(
+        path: '/negocio/bandeja',
+        name: 'business-chat-list',
+        pageBuilder: (context, state) => bcSweepPage(
+          key: state.pageKey,
+          child: const BusinessChatListScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/negocio/bandeja/:threadId',
+        name: 'business-chat-conversation',
+        pageBuilder: (context, state) {
+          final threadId = state.pathParameters['threadId']!;
+          return bcSweepPage(
+            key: state.pageKey,
+            child: BusinessChatConversationScreen(threadId: threadId),
           );
         },
       ),

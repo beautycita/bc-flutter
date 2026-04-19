@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:beautycita/config/fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/business_provider.dart';
 import 'package:go_router/go_router.dart';
@@ -402,7 +402,11 @@ class _BusinessCalendarScreenState
       _refresh();
       ToastService.showSuccess('Cita actualizada');
       if (action == 'cancelled_business') {
-        // Notify client their appointment was cancelled
+        // Notify client their appointment was cancelled. Fire-and-forget:
+        // a failed push shouldn't block the cancel UX, and the old
+        // `.catchError((_) {})` was a type error (onError must return a
+        // FunctionResponse, not void). `.ignore()` is the correct
+        // swallow-everything idiom.
         SupabaseClientService.client.functions.invoke(
           'send-push-notification',
           body: {
@@ -412,7 +416,7 @@ class _BusinessCalendarScreenState
             'body': 'Tu salon cancelo tu cita. Se te devolvio el pago completo.',
             'data': {'type': 'booking_cancelled', 'booking_id': id},
           },
-        ).catchError((_) {});
+        ).ignore();
         if (mounted) await showShredderTransition(context);
       }
     } catch (e, stack) {

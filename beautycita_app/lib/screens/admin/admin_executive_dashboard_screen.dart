@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:beautycita/config/fonts.dart';
 import 'admin_finance_dashboard_screen.dart';
 import 'admin_operations_dashboard_screen.dart';
 import 'analytics_screen.dart';

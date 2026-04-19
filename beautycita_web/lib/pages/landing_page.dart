@@ -369,42 +369,17 @@ class _LandingPageState extends State<LandingPage>
   Widget _buildMobileMenu() {
     return Container(
       color: _bgColor.withValues(alpha: 0.98),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _mobileNavItem('Inicio', _heroKey),
-          _mobileNavItem('Para Salones', _forSalonsKey),
-          GestureDetector(
-            onTap: () { setState(() => _mobileMenuOpen = false); context.go('/porque-beautycita'); },
-            child: const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Text('Por que BC?', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: _brandPurple)),
-            ),
-          ),
-          _mobileNavItem('Demo', _demoKey),
-          GestureDetector(
-            onTap: () { setState(() => _mobileMenuOpen = false); context.go('/salones'); },
-            child: const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Text('Directorio', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: _textPrimary)),
-            ),
-          ),
-          _mobileNavItem('Descargar', _downloadKey),
-          const SizedBox(height: 8),
-          GestureDetector(
-            onTap: () { setState(() => _mobileMenuOpen = false); context.go('/auth'); },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Row(
-                children: [
-                  Icon(Icons.login_rounded, size: 18, color: _textSecondary),
-                  const SizedBox(width: 8),
-                  Text('Iniciar sesion', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: _textSecondary)),
-                ],
-              ),
-            ),
-          ),
+          _mobileNavItem('Inicio', onTap: () => _scrollToSection(_heroKey)),
+          _mobileNavItem('Para Salones', onTap: () => _scrollToSection(_forSalonsKey)),
+          _mobileNavItem('Por que BC?', onTap: () { setState(() => _mobileMenuOpen = false); context.go('/porque-beautycita'); }),
+          _mobileNavItem('Demo', onTap: () => _scrollToSection(_demoKey)),
+          _mobileNavItem('Directorio', onTap: () { setState(() => _mobileMenuOpen = false); context.go('/salones'); }),
+          _mobileNavItem('Descargar', onTap: () => _scrollToSection(_downloadKey)),
+          _mobileNavItem('Iniciar sesion', onTap: () { setState(() => _mobileMenuOpen = false); context.go('/auth'); }, icon: Icons.login_rounded),
           const SizedBox(height: 16),
           _HoverScaleButton(
             onTap: () {
@@ -446,14 +421,26 @@ class _LandingPageState extends State<LandingPage>
     );
   }
 
-  Widget _mobileNavItem(String label, GlobalKey key) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 24),
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          onTap: () => _scrollToSection(key),
-          child: Text(label, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: _textPrimary)),
+  // Uniform menu row: single font size/weight/color, single padding, 44px min
+  // tap target. `icon` is optional (only used for "Iniciar sesion").
+  Widget _mobileNavItem(String label, {required VoidCallback onTap, IconData? icon}) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 44),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Row(
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 18, color: _textPrimary),
+                const SizedBox(width: 10),
+              ],
+              Text(label, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w500, color: _textPrimary, height: 1.2)),
+            ],
+          ),
         ),
       ),
     );

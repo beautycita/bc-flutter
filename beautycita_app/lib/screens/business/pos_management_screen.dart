@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:beautycita/config/fonts.dart';
 import 'package:beautycita_core/models.dart' hide Provider;
 import '../../config/constants.dart';
 import '../../providers/product_provider.dart';

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:beautycita/config/fonts.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/config/theme_extension.dart';
 import 'package:beautycita/providers/payment_methods_provider.dart';
@@ -490,7 +490,9 @@ class _CardTile extends StatelessWidget {
 
     if (confirmed == true) {
       ref.read(paymentMethodsProvider.notifier).removeCard(card.id);
-      await showShredderTransition(context);
+      if (context.mounted) {
+        await showShredderTransition(context);
+      }
     }
   }
 }

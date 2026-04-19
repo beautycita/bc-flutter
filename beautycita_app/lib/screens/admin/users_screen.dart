@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:beautycita/config/fonts.dart';
 import 'package:intl/intl.dart';
 import '../../config/constants.dart';
 import '../../config/theme_extension.dart';
@@ -1025,6 +1025,10 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
       ),
     );
     if (first != true) return;
+    // The outer context can be unmounted after the first dialog awaits
+    // (e.g. the admin list rebuilt under us). Bail rather than passing a
+    // dead BuildContext to the second showDialog.
+    if (!ctx.mounted) return;
 
     // Second confirmation — type username
     final confirmCtrl = TextEditingController();

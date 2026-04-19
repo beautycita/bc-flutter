@@ -37,7 +37,10 @@ class UpdaterService {
       return;
     }
 
-    // Rate-limit to once per 24h unless forced (manual button)
+    // Rate-limit to once per hour unless forced (manual button). Was 24h —
+    // too conservative for a platform that deploys multiple times per day.
+    // version.json has 60s cache-control at the CDN and the HTTP call is
+    // 5s-timeout fail-silent, so hourly polling is cheap.
     if (!force) {
       try {
         final prefs = await SharedPreferences.getInstance();
@@ -45,8 +48,8 @@ class UpdaterService {
         if (lastCheck != null) {
           final lastTime = DateTime.tryParse(lastCheck);
           if (lastTime != null &&
-              DateTime.now().difference(lastTime) < const Duration(hours: 24)) {
-            if (kDebugMode) debugPrint('[Updater] Skipping version check (last check < 24h ago)');
+              DateTime.now().difference(lastTime) < const Duration(hours: 1)) {
+            if (kDebugMode) debugPrint('[Updater] Skipping version check (last check < 1h ago)');
             return;
           }
         }

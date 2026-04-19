@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:beautycita/config/app_transitions.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:beautycita/config/fonts.dart';
 import 'package:beautycita_core/models.dart' hide Provider;
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/screens/feed/feed_image_viewer.dart';

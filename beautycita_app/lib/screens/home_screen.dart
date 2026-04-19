@@ -10,7 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:beautycita/config/fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -964,9 +964,6 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
   late Animation<double> _scaleAnimation;
   bool _isPressed = false;
 
-  // Task 26: Animated GIF on selection before navigation
-  bool _isAnimating = false;
-
   @override
   void initState() {
     super.initState();
@@ -1082,25 +1079,6 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
       );
     }
 
-    // Animated icon mapping — null means fall back to static icon
-    const animatedIcons = <String, String>{
-      'nails': 'assets/animated_icons/nails.gif',
-      'hair': 'assets/animated_icons/hair.gif',
-      'lashes_brows': 'assets/animated_icons/lashes_brows.gif',
-      'makeup': 'assets/animated_icons/makeup.gif',
-      'facial': 'assets/animated_icons/facial.gif',
-      'body_spa': 'assets/animated_icons/body_spa.gif',
-      'specialized': 'assets/animated_icons/specialized.gif',
-      'barberia': 'assets/animated_icons/barberia.gif',
-    };
-
-    final animatedPath = animatedIcons[category.id];
-
-    // Task 26: When animating, show the full-color animated GIF
-    final gifPath = _animatedGifs[category.id];
-    final showAnimatedGif = _isAnimating && gifPath != null;
-
-    // Default icon-based card (no parallax — BC: remove gyroscope)
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -1119,27 +1097,12 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
             ),
           ),
           child: Center(
-            child: showAnimatedGif
-                // Task 26: Full-color animated GIF during selection
-                ? Image.asset(
-                    gifPath,
-                    width: 48,
-                    height: 48,
-                  )
-                : animatedPath != null
-                    ? Image.asset(
-                        animatedPath,
-                        width: 40,
-                        height: 40,
-                        color: categoryColor,
-                        colorBlendMode: BlendMode.srcIn,
-                      )
-                    : getCategoryIcon(
-                        variant: widget.variant,
-                        categoryId: category.id,
-                        color: categoryColor,
-                        size: 36,
-                      ),
+            child: getCategoryIcon(
+              variant: widget.variant,
+              categoryId: category.id,
+              color: categoryColor,
+              size: 36,
+            ),
           ),
         ),
         const SizedBox(height: 10),
@@ -1166,35 +1129,6 @@ class _CategoryCardState extends ConsumerState<_CategoryCard>
   void dispose() {
     _controller.dispose();
     super.dispose();
-  }
-
-  /// Animated GIF mapping for tap-to-play effect
-  static const _animatedGifs = <String, String>{
-    'nails': 'assets/animated_icons/nails.gif',
-    'hair': 'assets/animated_icons/hair.gif',
-    'lashes_brows': 'assets/animated_icons/lashes_brows.gif',
-    'makeup': 'assets/animated_icons/makeup.gif',
-    'facial': 'assets/animated_icons/facial.gif',
-    'body_spa': 'assets/animated_icons/body_spa.gif',
-    'specialized': 'assets/animated_icons/specialized.gif',
-    'barberia': 'assets/animated_icons/barberia.gif',
-  };
-
-  void _handleTapWithAnimation() {
-    final gifPath = _animatedGifs[widget.category.id];
-    if (gifPath == null) {
-      // No animated GIF available — proceed immediately
-      widget.onTap();
-      return;
-    }
-    // Show animated GIF for 1.5s, then navigate
-    setState(() => _isAnimating = true);
-    Future.delayed(const Duration(milliseconds: 1500), () {
-      if (mounted) {
-        setState(() => _isAnimating = false);
-        widget.onTap();
-      }
-    });
   }
 
   @override

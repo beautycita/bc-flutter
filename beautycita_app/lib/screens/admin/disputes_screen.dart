@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:beautycita/config/fonts.dart';
 import '../../config/constants.dart';
 import '../../config/theme_extension.dart';
 import '../../providers/admin_provider.dart';
@@ -1304,10 +1304,12 @@ class _DisputeDetailSheetState extends State<_DisputeDetailSheet> {
       }
 
       widget.onChanged();
+      if (_selectedOutcome == 'dismissed' && mounted) {
+        await showShredderTransition(context);
+      }
+      // Re-check mounted after the shredder await — the widget can
+      // unmount during the transition.
       if (mounted) {
-        if (_selectedOutcome == 'dismissed') {
-          await showShredderTransition(context);
-        }
         Navigator.pop(context);
         ToastService.showSuccess('Disputa resuelta: ${_outcomeLabel(_selectedOutcome!)}');
       }

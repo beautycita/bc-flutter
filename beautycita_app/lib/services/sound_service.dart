@@ -8,15 +8,13 @@ class SoundService {
   static final instance = SoundService._();
 
   final _player = AudioPlayer();
-  bool _enabled = true;
 
   /// Enable/disable sounds globally (mirrors haptic toggle).
-  set enabled(bool value) => _enabled = value;
-  bool get enabled => _enabled;
+  bool enabled = true;
 
   /// Play a named sound from assets/sounds/.
   Future<void> play(UiSound sound) async {
-    if (!_enabled) return;
+    if (!enabled) return;
     try {
       await _player.stop();
       await _player.setSource(AssetSource('sounds/${sound.filename}'));
