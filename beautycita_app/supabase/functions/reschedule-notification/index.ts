@@ -99,7 +99,10 @@ Deno.serve(async (req) => {
       return json({ error: "appointment_id is required" }, 400, req);
     }
 
-    // 1. Fetch appointment with business + staff join
+    // 1. Fetch appointment with business join. staff_name is NOT a column
+    //    on appointments (despite being a SELECT alias in some RPCs) —
+    //    hunter caught this edge-fn silently 404ing on every reschedule.
+    //    Staff name is now assembled from the staff join further down.
     const { data: appt, error: apptErr } = await supabase
       .from("appointments")
       .select(
@@ -109,7 +112,6 @@ Deno.serve(async (req) => {
         business_id,
         staff_id,
         service_name,
-        staff_name,
         customer_name,
         starts_at,
         ends_at,
@@ -129,8 +131,25 @@ Deno.serve(async (req) => {
     const salonName =
       (appt as any).businesses?.name ?? "Salon";
     const { date, time } = formatDateEs(appt.starts_at);
-    const staffName = appt.staff_name || "";
     const serviceName = appt.service_name || "servicio";
+
+    // Assemble staff display name from staff table (optional — empty
+    // string if no staff assigned or staff row missing).
+    let staffName = "";
+    if (appt.staff_id) {
+      const { data: staffRow } = await supabase
+        .from("staff")
+        .select("first_name, last_name")
+        .eq("id", appt.staff_id)
+        .maybeSingle();
+      if (staffRow) {
+        const first = staffRow.first_name ?? "";
+        const lastInitial = staffRow.last_name
+          ? ` ${staffRow.last_name.slice(0, 1)}.`
+          : "";
+        staffName = `${first}${lastInitial}`.trim();
+      }
+    }
 
     const results: Record<string, string> = {};
 
