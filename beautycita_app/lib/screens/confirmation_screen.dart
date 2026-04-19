@@ -505,22 +505,51 @@ class _PriceBreakdown extends StatelessWidget {
 // Payment method selector
 // ---------------------------------------------------------------------------
 
-/// Checks if the selected business requires a deposit but lacks Stripe configuration.
-/// Returns true when Stripe-dependent payment methods (card/oxxo) should be blocked.
-final _bizStripeBlockedProvider = FutureProvider.family<bool, String>((ref, businessId) async {
-  if (businessId.isEmpty) return false;
+class _BizPaymentPolicy {
+  final bool stripeEnabled;
+  final bool depositRequired;
+  final double depositPercentage;
+  const _BizPaymentPolicy({
+    required this.stripeEnabled,
+    required this.depositRequired,
+    required this.depositPercentage,
+  });
+
+  bool get stripeBlocked => !stripeEnabled;
+  double depositFor(double price) =>
+      depositRequired ? (price * depositPercentage).clamp(0, price) : 0;
+}
+
+/// Payment policy for a salon: Stripe availability + deposit requirements.
+/// Used by the payment selector to decide which tiles to show and whether
+/// "En salon" requires a saldo-based deposit first.
+final _bizPaymentPolicyProvider =
+    FutureProvider.family<_BizPaymentPolicy, String>((ref, businessId) async {
+  if (businessId.isEmpty) {
+    return const _BizPaymentPolicy(
+      stripeEnabled: false,
+      depositRequired: false,
+      depositPercentage: 0,
+    );
+  }
   final data = await SupabaseClientService.client
       .from(BCTables.businesses)
-      .select('stripe_charges_enabled')
+      .select('stripe_charges_enabled, deposit_required, deposit_percentage')
       .eq('id', businessId)
       .maybeSingle();
-  if (data == null) return false;
-  final stripeEnabled = data['stripe_charges_enabled'] as bool? ?? false;
-  // Block card/OXXO whenever the salon isn't actually able to accept Stripe
-  // charges. Without this, confirmation auto-selects 'card' and the user hits
-  // a 400 from create-payment-intent ("banking_complete"/"stripe_account_id").
-  // Salons in this state should offer saldo + cash_direct only.
-  return !stripeEnabled;
+  if (data == null) {
+    return const _BizPaymentPolicy(
+      stripeEnabled: false,
+      depositRequired: false,
+      depositPercentage: 0,
+    );
+  }
+  return _BizPaymentPolicy(
+    stripeEnabled: data['stripe_charges_enabled'] as bool? ?? false,
+    depositRequired: data['deposit_required'] as bool? ?? false,
+    // deposit_percentage is stored as 0..1 (e.g. 0.20 for 20%)
+    depositPercentage: (data['deposit_percentage'] as num?)?.toDouble() ?? 0,
+  );
 });
 
 final _userSaldoProvider = FutureProvider<double>((ref) async {
@@ -559,28 +588,33 @@ class _PaymentMethodSelectorState extends ConsumerState<_PaymentMethodSelector> 
     final cards = ref.watch(paymentMethodsProvider).cards;
     final hasCards = cards.isNotEmpty;
 
-    // Check if this business requires deposit but has no Stripe configured.
-    // In that case, card/oxxo are dead-ends — offer saldo or cash_direct.
-    final stripeBlockedAsync = ref.watch(_bizStripeBlockedProvider(widget.businessId));
-    final stripeBlocked = stripeBlockedAsync.valueOrNull ?? false;
+    final policyAsync = ref.watch(_bizPaymentPolicyProvider(widget.businessId));
+    final policy = policyAsync.valueOrNull ??
+        const _BizPaymentPolicy(
+          stripeEnabled: false,
+          depositRequired: false,
+          depositPercentage: 0,
+        );
+    final stripeBlocked = policy.stripeBlocked;
+    final depositAmount = policy.depositFor(widget.servicePrice);
+    final hasDeposit = depositAmount > 0;
 
     // Saldo is applied automatically — not a choice
     final saldoAsync = ref.watch(_userSaldoProvider);
     final saldo = saldoAsync.valueOrNull ?? 0.0;
     final servicePrice = widget.servicePrice;
     final coversFullPrice = saldo >= servicePrice && servicePrice > 0;
-    final hasPartialSaldo = saldo > 0 && saldo < servicePrice;
 
-    // If saldo covers full price, auto-select saldo.
-    // If Stripe is blocked (deposit without config), fallback to cash_direct.
-    // Otherwise card/oxxo for the remainder.
+    // Auto-pick the best default method once per mount. Priority:
+    // saldo-covers-full > stripeBlocked fallback > card > oxxo.
+    // Customer can always switch to "En salon" manually afterwards.
     if (!_didAutoSelect) {
       _didAutoSelect = true;
       String preferred;
       if (coversFullPrice) {
         preferred = 'saldo';
       } else if (stripeBlocked) {
-        preferred = coversFullPrice ? 'saldo' : 'cash_direct';
+        preferred = saldo > 0 ? 'saldo' : 'cash_direct';
       } else {
         preferred = hasCards ? 'card' : 'oxxo';
       }
@@ -637,8 +671,8 @@ class _PaymentMethodSelectorState extends ConsumerState<_PaymentMethodSelector> 
           const SizedBox(height: 10),
         ],
 
-        // If Stripe is blocked (deposit required, no Stripe config), show
-        // a notice and offer cash_direct instead of card/oxxo
+        // Notice banner for Stripe-blocked salons (they only support cash /
+        // saldo; card/oxxo tiles are hidden below).
         if (stripeBlocked && !coversFullPrice) ...[
           Container(
             padding: const EdgeInsets.all(12),
@@ -661,55 +695,129 @@ class _PaymentMethodSelectorState extends ConsumerState<_PaymentMethodSelector> 
             ),
           ),
           const SizedBox(height: 10),
-          Row(
-            children: [
-              if (saldo > 0)
-                _PaymentMethodCard(
-                  icon: Icons.account_balance_wallet,
-                  label: 'Saldo',
-                  subtitle: '\$${saldo.toStringAsFixed(0)} disponible',
-                  method: 'saldo',
-                  isSelected: widget.selected == 'saldo',
-                  onTap: () => widget.onSelect('saldo'),
-                ),
-              if (saldo > 0) const SizedBox(width: 10),
-              _PaymentMethodCard(
-                icon: Icons.payments_outlined,
-                label: 'En salon',
-                subtitle: 'Paga al llegar',
-                method: 'cash_direct',
-                isSelected: widget.selected == 'cash_direct',
-                onTap: () => widget.onSelect('cash_direct'),
-              ),
-            ],
-          ),
         ],
 
-        // Normal card/oxxo options when Stripe is not blocked
-        if (!stripeBlocked && !coversFullPrice)
-        Row(
-          children: [
-            _PaymentMethodCard(
-              icon: Icons.credit_card,
-              label: 'Tarjeta',
-              subtitle: 'Pago inmediato',
-              method: 'card',
-              isSelected: widget.selected == 'card',
-              onTap: () => widget.onSelect('card'),
+        // Deposit banner: customer chose (or will choose) to pay at salon
+        // but the salon requires a deposit that must come through BC.
+        if (hasDeposit && !coversFullPrice && widget.selected == 'cash_with_deposit') ...[
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF2563eb).withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFF2563eb).withValues(alpha: 0.2)),
             ),
-            const SizedBox(width: 10),
-            _PaymentMethodCard(
-              icon: Icons.store,
-              label: 'Efectivo',
-              subtitle: 'OXXO, 7-Eleven',
-              method: 'oxxo',
-              isSelected: widget.selected == 'oxxo',
-              onTap: () => widget.onSelect('oxxo'),
+            child: Row(
+              children: [
+                const Icon(Icons.savings_outlined, size: 20, color: Color(0xFF2563eb)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Deposito: \$${depositAmount.toStringAsFixed(0)} MXN (saldo)',
+                        style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF2563eb)),
+                      ),
+                      Text(
+                        'Efectivo al llegar: \$${(widget.servicePrice - depositAmount).toStringAsFixed(0)} MXN',
+                        style: GoogleFonts.nunito(
+                            fontSize: 12,
+                            color: const Color(0xFF2563eb).withValues(alpha: 0.75)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
+          const SizedBox(height: 10),
+        ],
+
+        if (!coversFullPrice) _paymentTiles(
+          stripeBlocked: stripeBlocked,
+          hasDeposit: hasDeposit,
+          saldo: saldo,
+          depositAmount: depositAmount,
         ),
       ],
     );
+  }
+
+  Widget _paymentTiles({
+    required bool stripeBlocked,
+    required bool hasDeposit,
+    required double saldo,
+    required double depositAmount,
+  }) {
+    // Build the set of tiles applicable to this salon + user.
+    // Policy matrix:
+    //   stripeBlocked=true                → saldo + "en salon" only
+    //   stripeBlocked=false, hasDeposit=0 → tarjeta + oxxo + "en salon"
+    //   hasDeposit>0                      → tarjeta + oxxo + "en salon w/ deposit"
+    final tiles = <Widget>[];
+
+    if (!stripeBlocked) {
+      tiles.add(_PaymentMethodCard(
+        icon: Icons.credit_card,
+        label: 'Tarjeta',
+        subtitle: 'Pago inmediato',
+        method: 'card',
+        isSelected: widget.selected == 'card',
+        onTap: () => widget.onSelect('card'),
+      ));
+      tiles.add(const SizedBox(width: 10));
+      tiles.add(_PaymentMethodCard(
+        icon: Icons.store,
+        label: 'OXXO',
+        subtitle: 'Pagar en tienda',
+        method: 'oxxo',
+        isSelected: widget.selected == 'oxxo',
+        onTap: () => widget.onSelect('oxxo'),
+      ));
+      tiles.add(const SizedBox(width: 10));
+    }
+
+    if (stripeBlocked && saldo > 0) {
+      tiles.add(_PaymentMethodCard(
+        icon: Icons.account_balance_wallet,
+        label: 'Saldo',
+        subtitle: '\$${saldo.toStringAsFixed(0)} disponible',
+        method: 'saldo',
+        isSelected: widget.selected == 'saldo',
+        onTap: () => widget.onSelect('saldo'),
+      ));
+      tiles.add(const SizedBox(width: 10));
+    }
+
+    // "En salon" tile — always present, but the behavior changes with deposit.
+    if (hasDeposit) {
+      final canCoverDeposit = saldo >= depositAmount;
+      tiles.add(_PaymentMethodCard(
+        icon: Icons.payments_outlined,
+        label: 'En salon',
+        subtitle: canCoverDeposit
+            ? 'Dep. \$${depositAmount.toStringAsFixed(0)} + efectivo'
+            : 'Necesitas \$${depositAmount.toStringAsFixed(0)} saldo',
+        method: 'cash_with_deposit',
+        isSelected: widget.selected == 'cash_with_deposit',
+        onTap: canCoverDeposit ? () => widget.onSelect('cash_with_deposit') : null,
+      ));
+    } else {
+      tiles.add(_PaymentMethodCard(
+        icon: Icons.payments_outlined,
+        label: 'En salon',
+        subtitle: 'Paga al llegar',
+        method: 'cash_direct',
+        isSelected: widget.selected == 'cash_direct',
+        onTap: () => widget.onSelect('cash_direct'),
+      ));
+    }
+
+    return Row(children: tiles);
   }
 }
 

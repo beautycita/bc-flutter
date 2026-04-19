@@ -307,6 +307,8 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
           await _confirmWithSaldo(result);
         case 'cash_direct':
           await _confirmWithCashDirect(result);
+        case 'cash_with_deposit':
+          await _confirmWithCashDeposit(result);
         case 'oxxo':
           await _confirmStripe(result, oxxoOnly: true);
         default: // card
@@ -584,6 +586,68 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
     );
   }
 
+
+  /// Pay the salon-required deposit via saldo; remainder is cash at salon.
+  /// Salon sets deposit_required + deposit_percentage on their profile;
+  /// we read both from state (set at confirmation screen load). Saldo must
+  /// cover the deposit — customer can't opt into this otherwise.
+  Future<void> _confirmWithCashDeposit(ResultCard result) async {
+    final price = result.service.price ?? 0;
+    final userId = SupabaseClientService.currentUserId;
+    if (userId == null) throw Exception('No autenticado');
+    if (result.slot == null) {
+      throw Exception('No hay horario disponible para este servicio');
+    }
+
+    // Look up deposit settings fresh at confirm time so the RPC isn't
+    // relying on stale client state. Also guards against the salon
+    // disabling deposit_required between selection and confirm.
+    final biz = await SupabaseClientService.client
+        .from(BCTables.businesses)
+        .select('deposit_required, deposit_percentage')
+        .eq('id', result.business.id)
+        .maybeSingle();
+    final depositRequired = (biz?['deposit_required'] as bool?) ?? false;
+    final depositPct = (biz?['deposit_percentage'] as num?)?.toDouble() ?? 0;
+    if (!depositRequired || depositPct <= 0) {
+      // Fell through: salon no longer requires a deposit. Downgrade to
+      // cash_direct so the user still books successfully.
+      return _confirmWithCashDirect(result);
+    }
+    final depositAmount =
+        (price * depositPct).clamp(0, price).toDouble();
+    final endsAt = result.slot!.startTime.add(
+      Duration(minutes: result.service.durationMinutes),
+    );
+
+    final rpcResult = await SupabaseClientService.client.rpc(
+      'create_booking_with_financials',
+      params: {
+        'p_user_id': userId,
+        'p_business_id': result.business.id,
+        'p_service_id': result.service.id ?? '',
+        'p_service_name': result.service.name,
+        'p_service_type': state.serviceType ?? '',
+        'p_starts_at': result.slot!.startTime.toUtc().toIso8601String(),
+        'p_ends_at': endsAt.toUtc().toIso8601String(),
+        'p_price': price,
+        'p_payment_method': 'saldo',
+        'p_booking_source': 'bc_marketplace',
+        'p_transport_mode': state.transportMode,
+        'p_staff_id': result.staff?.id,
+        'p_idempotency_key':
+            '${userId}_${result.service.id}_${result.slot!.startTime.millisecondsSinceEpoch}',
+        'p_deposit_amount': depositAmount,
+      },
+    );
+
+    final bookingId = (rpcResult as Map<String, dynamic>)['booking_id'] as String;
+    _sendBookingNotifications(bookingId);
+    state = state.copyWith(
+      step: BookingFlowStep.emailVerification,
+      bookingId: bookingId,
+    );
+  }
 
   /// Pay cash directly at the salon — no money flows through the platform.
   /// Used when the salon has no Stripe account configured. Booking is
