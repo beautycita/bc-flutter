@@ -1958,7 +1958,7 @@ class _LandingPageState extends State<LandingPage>
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Disponible para Android. iOS proximamente.',
+                    'Disponible para Android. iPhone via AltStore.',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 18, color: Colors.white.withValues(alpha: 0.85)),
                   ),
@@ -1970,7 +1970,8 @@ class _LandingPageState extends State<LandingPage>
                     alignment: WrapAlignment.center,
                     children: [
                       _downloadBtn(Icons.play_arrow, 'Google Play (proximamente)', null),
-                      _downloadBtn(Icons.download, 'Descarga APK directa', _apkUrl),
+                      _downloadBtn(Icons.android, 'Descarga APK Android', _apkUrl),
+                      _downloadBtn(Icons.phone_iphone, 'Instalar en iPhone', 'https://beautycita.com/ios-install.html'),
                     ],
                   ),
                   const SizedBox(height: 40),
