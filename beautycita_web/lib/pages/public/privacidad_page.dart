@@ -27,7 +27,7 @@ class PrivacidadPage extends StatelessWidget {
                 Text('Aviso de Privacidad Integral',
                     style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-                Text('Ultima actualizacion: 15 de abril de 2026',
+                Text('Ultima actualizacion: 19 de abril de 2026',
                     style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey)),
                 const SizedBox(height: 32),
 
@@ -61,6 +61,10 @@ class PrivacidadPage extends StatelessWidget {
                     '  - Token de notificaciones push (Firebase Cloud Messaging)\n'
                     '  - Modelo de dispositivo, sistema operativo, version de la aplicacion\n'
                     '  - Reportes de errores anonimizados (Sentry)\n\n'
+                    'Datos accedidos con permiso explicito (procesados localmente, no enviados a nuestros servidores salvo cuando el usuario lo decida):\n'
+                    '  - Lista de contactos: con su permiso, leemos los nombres y numeros de telefono de sus contactos para identificar cuales corresponden a salones registrados en BeautyCita. El procesamiento ocurre en su dispositivo. Solo las coincidencias (no la lista completa) se cachean localmente. Puede revocar el permiso en cualquier momento desde los ajustes del sistema.\n'
+                    '  - Camara: solo cuando usted captura una foto desde la aplicacion (avatar de perfil, portafolio del salon, fotos antes/despues). Las fotos elegidas para subir se almacenan en nuestros servidores; las descartadas no.\n'
+                    '  - Fotos / galeria: solo cuando usted selecciona una imagen para subir (avatar, portafolio, foto de soporte, evidencia en disputas). Solo la imagen elegida se transfiere.\n\n'
                     'Para salones y profesionales, adicionalmente:\n'
                     '  - RFC (Registro Federal de Contribuyentes)\n'
                     '  - Regimen fiscal\n'
@@ -71,7 +75,7 @@ class PrivacidadPage extends StatelessWidget {
                 _section('Datos que NO Recopilamos',
                     '  - Datos biometricos: La autenticacion biometrica (huella digital, reconocimiento facial) se procesa exclusivamente en el hardware seguro de su dispositivo (Secure Enclave / TEE). BeautyCita nunca recibe, transmite ni almacena datos biometricos.\n\n'
                     '  - Datos completos de tarjeta: Los datos de pago son procesados directamente por Stripe (certificado PCI-DSS Nivel 1). Solo conservamos los ultimos 4 digitos como referencia.\n\n'
-                    '  - Contactos del dispositivo: No accedemos ni almacenamos su lista de contactos.\n\n'
+                    '  - Lista de contactos en nuestros servidores: Aunque podemos leer su lista de contactos en su dispositivo (con permiso explicito) para identificar coincidencias con salones registrados, la lista completa nunca se transmite a nuestros servidores; el procesamiento es local. Vea la seccion anterior "Datos accedidos con permiso explicito" para mas detalles.\n\n'
                     '  - Cookies de rastreo: No utilizamos cookies publicitarias ni de terceros para seguimiento.'),
 
                 _section('Finalidades del Tratamiento',
@@ -191,7 +195,7 @@ class PrivacidadPage extends StatelessWidget {
                     '  - No utilizamos estos datos para publicidad de terceros\n\n'
                     'Su control:\n'
                     '  - Puede desactivar el analisis de comportamiento en cualquier momento desde '
-                    'Ajustes > "Recomendaciones personalizadas" en la aplicacion\n'
+                    'Ajustes > Privacidad > "Analisis de actividad" en la aplicacion\n'
                     '  - Al desactivar, detenemos la recopilacion y eliminamos sus puntuaciones dentro de 30 dias\n'
                     '  - Los registros transaccionales (reservas, pagos) se mantienen por obligacion legal independiente\n'
                     '  - Puede solicitar acceso a su perfil de comportamiento via soporte@beautycita.com (Art. 27 LFPDPPP)\n\n'

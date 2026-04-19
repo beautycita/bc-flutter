@@ -1187,7 +1187,7 @@ const _privacySections = [
         '• No compartimos perfiles individuales con terceros.\n\n'
         'SU CONTROL:\n'
         '• Puede desactivar el analisis de comportamiento en cualquier momento '
-        'desde Ajustes > "Recomendaciones personalizadas".\n'
+        'desde Ajustes > Privacidad > "Analisis de actividad".\n'
         '• Al desactivar, detenemos la recopilacion y eliminamos sus puntuaciones '
         'dentro de 30 dias.\n'
         '• Los registros transaccionales (reservas, pagos) se mantienen por '

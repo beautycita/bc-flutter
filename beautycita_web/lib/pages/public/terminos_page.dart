@@ -27,7 +27,7 @@ class TerminosPage extends StatelessWidget {
                 Text('Terminos y Condiciones de Uso',
                     style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-                Text('Ultima actualizacion: 17 de abril de 2026',
+                Text('Ultima actualizacion: 19 de abril de 2026',
                     style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey)),
                 const SizedBox(height: 12),
                 Text('BEAUTYCITA, S.A. de C.V. (RFC: BEA260313MI8)\nAvenida Manuel Corona, Alazan 11A, C.P. 48290, Jalisco, Mexico',
@@ -72,10 +72,10 @@ class TerminosPage extends StatelessWidget {
 
                 _section('6. Cancelaciones y Reembolsos',
                     'La politica de cancelacion es configurable por cada salon. Las reglas generales son:\n\n'
-                    'Cancelacion gratuita: Si el usuario cancela con la anticipacion establecida por el salon (por defecto, 24 horas antes), recibe un reembolso completo menos la comision de plataforma (3%) acreditado a su saldo.\n\n'
-                    'Cancelacion tardia: Si el usuario cancela dentro del periodo no reembolsable y el salon requiere deposito, el deposito se pierde. El monto restante se reembolsa al saldo.\n\n'
-                    'Cancelacion por el salon: Si el salon cancela la cita, el usuario recibe un reembolso completo acreditado a su saldo.\n\n'
-                    'No se realizan devoluciones a tarjetas de credito o cuentas bancarias. Todos los reembolsos se procesan como credito en la Plataforma.'),
+                    'Cancelacion gratuita: Si el usuario cancela con la anticipacion establecida por el salon (por defecto, 24 horas antes), recibe un reembolso completo del precio pagado, acreditado a su saldo en la Plataforma. La comision de plataforma (3%) la asume el salon como adeudo, no se descuenta del reembolso al usuario.\n\n'
+                    'Cancelacion tardia: Si el usuario cancela dentro del periodo no reembolsable y el salon requiere deposito, el deposito se pierde. El monto restante se reembolsa al saldo del usuario.\n\n'
+                    'Cancelacion por el salon: Si el salon cancela la cita, el usuario recibe un reembolso completo acreditado a su saldo. El salon asume la comision (3%) como adeudo.\n\n'
+                    'No se realizan devoluciones a tarjetas de credito o cuentas bancarias. Todos los reembolsos se procesan como credito en la Plataforma (saldo).'),
 
                 _section('7. Comisiones',
                     'BeautyCita opera bajo el siguiente modelo de comisiones:\n\n'
