@@ -1365,14 +1365,19 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
                     ),
                   ),
                   const SizedBox(height: AppConstants.paddingMD),
-                  ...reasons.map((r) => RadioListTile<String>(
-                    value: r,
+                  RadioGroup<String>(
                     groupValue: selectedReason,
                     onChanged: (v) => setSheetState(() => selectedReason = v),
-                    title: Text(r, style: Theme.of(ctx).textTheme.bodyMedium),
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                  )),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: reasons.map((r) => RadioListTile<String>(
+                        value: r,
+                        title: Text(r, style: Theme.of(ctx).textTheme.bodyMedium),
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                      )).toList(),
+                    ),
+                  ),
                   const SizedBox(height: AppConstants.paddingSM),
                   TextField(
                     controller: detailsCtl,

@@ -1773,7 +1773,8 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
                   version: QrVersions.auto,
                   size: 180,
                   backgroundColor: Colors.white, // QR must stay white for scannability
-                  foregroundColor: const Color(0xFF1a1a2e),
+                  eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Color(0xFF1a1a2e)),
+                  dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: Color(0xFF1a1a2e)),
                 ),
               ),
             ),
