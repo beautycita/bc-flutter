@@ -310,7 +310,7 @@ class _DiscoveredSalonDetailScreenState extends ConsumerState<DiscoveredSalonDet
                     width: double.infinity,
                     padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.onPrimary,
+                      color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(AppConstants.radiusMD),
                       boxShadow: [
                         BoxShadow(
@@ -514,7 +514,10 @@ class _InfoCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.onPrimary,
+        // Use surface (card background) + onSurface (text) so the card
+        // flips correctly with the theme. onPrimary was wrong — in dark
+        // mode it resolves to light, making text+bg both white.
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(AppConstants.radiusMD),
         boxShadow: [
           BoxShadow(
