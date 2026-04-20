@@ -118,10 +118,12 @@ final _staffAnalyticsProvider = FutureProvider.autoDispose
 
   final client = BCSupabase.client;
 
-  // Appointments grouped by staff with revenue sum
+  // appointments has no denormalized staff_name column — join via staff FK.
+  // An earlier version selected staff_name directly and failed with 400
+  // on every dashboard load (Hunter finding 2026-04-20).
   final apptRows = await client
       .from(BCTables.appointments)
-      .select('staff_id, staff_name, price')
+      .select('staff_id, price, staff(first_name, last_name)')
       .eq('business_id', bizId)
       .eq('status', 'completed');
 
@@ -131,7 +133,10 @@ final _staffAnalyticsProvider = FutureProvider.autoDispose
   final Map<String, Map<String, dynamic>> byStaff = {};
   for (final a in appts) {
     final sid = a['staff_id']?.toString() ?? 'unknown';
-    final name = a['staff_name'] as String? ?? 'Sin nombre';
+    final staffObj = a['staff'] as Map<String, dynamic>?;
+    final name = staffObj == null
+        ? 'Sin nombre'
+        : '${staffObj['first_name'] ?? ''} ${staffObj['last_name'] ?? ''}'.trim();
     final price = (a['price'] as num?)?.toDouble() ?? 0;
 
     byStaff.putIfAbsent(sid, () => {

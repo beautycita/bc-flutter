@@ -565,20 +565,21 @@ final businessTaxSummaryProvider =
     ytdRevenue += ((a as Map<String, dynamic>)['price'] as num?)?.toDouble() ?? 0;
   }
 
-  // YTD expenses
+  // YTD expenses. business_expenses schema uses (year, month) integer
+  // columns — NOT expense_date. An earlier version of this provider used
+  // expense_date which never existed in the table, silently throwing
+  // HTTP 400 on every dashboard load (Hunter finding 2026-04-20).
   double ytdExpenses = 0;
   try {
     final expenses = await client
         .from(BCTables.businessExpenses)
         .select('amount')
         .eq('business_id', bizId)
-        .gte('expense_date', yearStart)
-        .lte('expense_date', todayStr);
+        .eq('year', now.year);
     for (final e in expenses as List) {
       ytdExpenses += ((e as Map<String, dynamic>)['amount'] as num?)?.toDouble() ?? 0;
     }
   } catch (e) {
-    // Table may not exist yet
     debugPrint('[businessTaxSummaryProvider] expenses query error: $e');
   }
 

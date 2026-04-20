@@ -28,7 +28,7 @@ final _bizClientsProvider = FutureProvider.autoDispose
       .from(BCTables.businessClients)
       .select()
       .eq('business_id', bizId)
-      .order('last_visit', ascending: false, nullsFirst: false);
+      .order('last_visit_at', ascending: false, nullsFirst: false);
   return List<Map<String, dynamic>>.from(rows as List);
 });
 
@@ -141,9 +141,9 @@ class _ClientsTableState extends ConsumerState<_ClientsTable> {
       sb.writeln([
         _csvEscape(c['client_name'] ?? ''),
         _csvEscape(c['phone'] ?? ''),
-        c['visit_count'] ?? 0,
+        c['total_visits'] ?? 0,
         c['total_spent'] ?? 0,
-        _csvEscape(c['last_visit'] ?? ''),
+        _csvEscape(c['last_visit_at'] ?? ''),
         c['no_show_count'] ?? 0,
         c['loyalty_points'] ?? 0,
         _csvEscape(tags),
@@ -409,7 +409,7 @@ class _DataTableState extends State<_DataTable> {
                       )),
                   _hoverTd(i, theme,
                       child: Text(
-                        '${rows[i]['visit_count'] ?? 0}',
+                        '${rows[i]['total_visits'] ?? 0}',
                         style: theme.textTheme.bodySmall
                             ?.copyWith(color: kWebTextPrimary),
                       )),
@@ -424,7 +424,7 @@ class _DataTableState extends State<_DataTable> {
                   if (isDesktop) ...[
                     _hoverTd(i, theme,
                         child: Text(
-                          fmtDate(rows[i]['last_visit']),
+                          fmtDate(rows[i]['last_visit_at']),
                           style: theme.textTheme.bodySmall
                               ?.copyWith(color: kWebTextSecondary),
                         )),
@@ -755,7 +755,7 @@ class _ClientDetailPanelState extends ConsumerState<_ClientDetailPanel> {
                     children: [
                       _StatCard(
                           label: 'Visitas',
-                          value: '${c['visit_count'] ?? 0}'),
+                          value: '${c['total_visits'] ?? 0}'),
                       _StatCard(
                         label: 'Total Gastado',
                         value:
@@ -774,7 +774,7 @@ class _ClientDetailPanelState extends ConsumerState<_ClientDetailPanel> {
 
                   _InfoRow(
                       label: 'Ultima visita',
-                      value: fmtDate(c['last_visit'])),
+                      value: fmtDate(c['last_visit_at'])),
                   _InfoRow(
                       label: 'Primera visita',
                       value: fmtDate(c['first_visit'])),

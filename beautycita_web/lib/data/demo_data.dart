@@ -28,14 +28,17 @@ abstract final class DemoData {
       'Servicios Especiales',
       'Depilación',
     ],
+    // Shape matches biz_settings_page.dart: per-day {open: bool, start/end
+     // strings, breaks[{start,end}]}. The earlier {'open': '09:00'} format
+     // read as time strings crashed parseBusinessHours with a bool cast.
     'hours': {
-      'monday': {'open': '09:00', 'close': '20:00', 'breaks': []},
-      'tuesday': {'open': '09:00', 'close': '20:00', 'breaks': []},
-      'wednesday': {'open': '09:00', 'close': '20:00', 'breaks': []},
-      'thursday': {'open': '09:00', 'close': '20:00', 'breaks': []},
-      'friday': {'open': '09:00', 'close': '20:00', 'breaks': []},
-      'saturday': {'open': '09:00', 'close': '20:00', 'breaks': []},
-      'sunday': null,
+      'monday':    {'open': true,  'start': '09:00', 'end': '20:00', 'breaks': []},
+      'tuesday':   {'open': true,  'start': '09:00', 'end': '20:00', 'breaks': []},
+      'wednesday': {'open': true,  'start': '09:00', 'end': '20:00', 'breaks': []},
+      'thursday':  {'open': true,  'start': '09:00', 'end': '20:00', 'breaks': []},
+      'friday':    {'open': true,  'start': '09:00', 'end': '20:00', 'breaks': []},
+      'saturday':  {'open': true,  'start': '09:00', 'end': '20:00', 'breaks': []},
+      'sunday':    {'open': false, 'start': '09:00', 'end': '18:00', 'breaks': []},
     },
     'website': 'https://beautycita.com',
     'instagram': null,
@@ -672,22 +675,22 @@ abstract final class DemoData {
       agg.putIfAbsent(
         name,
         () => {
-          'visit_count': 0,
+          'total_visits': 0,
           'total_spent': 0.0,
           'no_show_count': 0,
-          'last_visit': null as String?,
+          'last_visit_at': null as String?,
           'phone': a['customer_phone'] as String?,
         },
       );
       final status = a['status'] as String?;
       if (status == 'completed') {
-        agg[name]!['visit_count'] = (agg[name]!['visit_count'] as int) + 1;
+        agg[name]!['total_visits'] = (agg[name]!['total_visits'] as int) + 1;
         agg[name]!['total_spent'] = (agg[name]!['total_spent'] as double) +
             ((a['price'] as num?)?.toDouble() ?? 0);
         final starts = a['starts_at'] as String;
-        final cur = agg[name]!['last_visit'] as String?;
+        final cur = agg[name]!['last_visit_at'] as String?;
         if (cur == null || starts.compareTo(cur) > 0) {
-          agg[name]!['last_visit'] = starts;
+          agg[name]!['last_visit_at'] = starts;
         }
       } else if (status == 'no_show') {
         agg[name]!['no_show_count'] =
@@ -716,9 +719,9 @@ abstract final class DemoData {
         'client_name': name,
         'phone': a['phone'] ??
             '+5233${(1000000 + name.hashCode.abs() % 9000000)}',
-        'visit_count': a['visit_count'],
+        'total_visits': a['total_visits'],
         'total_spent': spent,
-        'last_visit': a['last_visit'],
+        'last_visit_at': a['last_visit_at'],
         'no_show_count': a['no_show_count'],
         'loyalty_points': loyalty,
         'tags': tags,
@@ -733,8 +736,8 @@ abstract final class DemoData {
 
     // Sort by last_visit desc (matches the real query's default).
     result.sort((a, b) {
-      final av = a['last_visit'] as String? ?? '';
-      final bv = b['last_visit'] as String? ?? '';
+      final av = a['last_visit_at'] as String? ?? '';
+      final bv = b['last_visit_at'] as String? ?? '';
       return bv.compareTo(av);
     });
 
@@ -913,7 +916,7 @@ abstract final class DemoData {
       'trigger_type': triggers[i % triggers.length],
       'channel': 'whatsapp',
       'status': i % 11 == 0 ? 'failed' : 'sent',
-      'sent_at': iso(now.subtract(Duration(hours: i * 6))),
+      'created_at': iso(now.subtract(Duration(hours: i * 6))),
     });
   }
 

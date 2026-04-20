@@ -27,7 +27,7 @@ final _messageLogProvider = FutureProvider.autoDispose
       .from(BCTables.automatedMessageLog)
       .select()
       .eq('business_id', bizId)
-      .order('sent_at', ascending: false)
+      .order('created_at', ascending: false)
       .limit(50);
   return List<Map<String, dynamic>>.from(rows as List);
 });
@@ -670,7 +670,7 @@ class _LogRow extends StatelessWidget {
           Expanded(
             flex: 2,
             child: Text(
-              fmtDate(entry['sent_at']),
+              fmtDate(entry['created_at']),
               style: theme.textTheme.bodySmall
                   ?.copyWith(color: kWebTextHint),
             ),
