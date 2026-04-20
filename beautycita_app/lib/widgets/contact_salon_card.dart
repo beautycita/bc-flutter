@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -110,7 +111,7 @@ class ContactSalonCard extends StatelessWidget {
     if (photoUrl != null && photoUrl.isNotEmpty) {
       return CircleAvatar(
         radius: 24,
-        backgroundImage: NetworkImage(photoUrl),
+        backgroundImage: CachedNetworkImageProvider(photoUrl),
         backgroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
       );
     }

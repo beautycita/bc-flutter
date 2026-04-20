@@ -1,3 +1,4 @@
+import 'package:beautycita/widgets/cached_image.dart';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -304,7 +305,7 @@ class _BCImagePickerBodyState extends State<_BCImagePickerBody> {
                           // Thumbnail
                           ClipRRect(
                             borderRadius: BorderRadius.circular(8),
-                            child: Image.network(
+                            child: CachedImage(
                               item.thumbnailUrl ?? item.url,
                               fit: BoxFit.cover,
                               errorBuilder: (_, _, _) => Container(
