@@ -51,6 +51,36 @@ void main() {
         '+523221234567',
       );
     });
+    test('already normalized number stays unchanged', () {
+      // Idempotent: normalizing an already-normalized number round-trips.
+      expect(
+        ContactMatchService.normalizePhone('+523221234567'),
+        '+523221234567',
+      );
+    });
+    test('empty input returns bare + (caller must treat < 10 as invalid)', () {
+      // The function doesn't guard empty input; the callsite in _parsePhoneList
+      // and readContacts filters on `phone.length >= 10` after normalizing.
+      expect(ContactMatchService.normalizePhone(''), '+');
+    });
+    test('non-digit garbage returns bare + (strips everything)', () {
+      expect(ContactMatchService.normalizePhone('abc'), '+');
+      expect(ContactMatchService.normalizePhone('not-a-phone'), '+');
+    });
+  });
+
+  group('ContactEntry', () {
+    test('holds displayName + phones as given (no filtering at constructor)', () {
+      // Filtering to >=10 digits happens in readContacts(), not the constructor.
+      // This pins the contract: ContactEntry is a dumb value object.
+      const entry = ContactEntry(
+        displayName: 'Mi Estilista',
+        phones: ['+523221234567', '+15551234567'],
+      );
+      expect(entry.displayName, 'Mi Estilista');
+      expect(entry.phones, ['+523221234567', '+15551234567']);
+      expect(entry.phones.length, 2);
+    });
   });
 
   group('matchContacts', () {
