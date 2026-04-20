@@ -12,6 +12,8 @@ import 'dart:typed_data';
 
 import 'package:web/web.dart' as web;
 
+import '../utils/base64url.dart';
+
 /// Result from a WebAuthn registration ceremony.
 class WebAuthnRegistrationResult {
   final String credentialId;
@@ -69,8 +71,8 @@ class WebAuthnService {
     required String userName,
     required String userDisplayName,
   }) async {
-    final challengeBytes = _base64urlToUint8List(challenge);
-    final userIdBytes = _base64urlToUint8List(userId);
+    final challengeBytes = base64urlDecode(challenge);
+    final userIdBytes = base64urlDecode(userId);
 
     // Build the PublicKeyCredentialCreationOptions via JS object literals
     final options = <String, Object?>{
@@ -111,7 +113,7 @@ class WebAuthnService {
 
     // Extract credential ID
     final rawId = credObj.getProperty<JSArrayBuffer>('rawId'.toJS);
-    final credentialId = _uint8ListToBase64url(rawId.toDart.asUint8List());
+    final credentialId = base64urlEncode(rawId.toDart.asUint8List());
 
     // Extract attestation response
     final response = credObj.getProperty<JSObject>('response'.toJS);
@@ -136,8 +138,8 @@ class WebAuthnService {
 
     return WebAuthnRegistrationResult(
       credentialId: credentialId,
-      attestationObject: _uint8ListToBase64url(attestBytes),
-      clientDataJSON: _uint8ListToBase64url(clientDataBytes),
+      attestationObject: base64urlEncode(attestBytes),
+      clientDataJSON: base64urlEncode(clientDataBytes),
     );
   }
 
@@ -149,7 +151,7 @@ class WebAuthnService {
     required String challenge,
     required String rpId,
   }) async {
-    final challengeBytes = _base64urlToUint8List(challenge);
+    final challengeBytes = base64urlDecode(challenge);
 
     final options = <String, Object?>{
       'publicKey': <String, Object?>{
@@ -172,7 +174,7 @@ class WebAuthnService {
 
     // Extract credential ID
     final rawId = credObj.getProperty<JSArrayBuffer>('rawId'.toJS);
-    final credentialId = _uint8ListToBase64url(rawId.toDart.asUint8List());
+    final credentialId = base64urlEncode(rawId.toDart.asUint8List());
 
     // Extract assertion response
     final response = credObj.getProperty<JSObject>('response'.toJS);
@@ -190,88 +192,11 @@ class WebAuthnService {
 
     return WebAuthnLoginResult(
       credentialId: credentialId,
-      authenticatorData: _uint8ListToBase64url(authDataBytes),
-      clientDataJSON: _uint8ListToBase64url(clientDataBytes),
-      signature: _uint8ListToBase64url(sigBytes),
+      authenticatorData: base64urlEncode(authDataBytes),
+      clientDataJSON: base64urlEncode(clientDataBytes),
+      signature: base64urlEncode(sigBytes),
     );
   }
 
-  // ── Base64url helpers ──────────────────────────────────────────────────────
-
-  static Uint8List _base64urlToUint8List(String str) {
-    // Restore standard base64
-    String s = str.replaceAll('-', '+').replaceAll('_', '/');
-    while (s.length % 4 != 0) {
-      s += '=';
-    }
-    // Use dart:convert to decode
-    final decoded = _base64Decode(s);
-    return decoded;
-  }
-
-  static String _uint8ListToBase64url(Uint8List bytes) {
-    final encoded = _base64Encode(bytes);
-    return encoded
-        .replaceAll('+', '-')
-        .replaceAll('/', '_')
-        .replaceAll('=', '');
-  }
-
-  /// Manual base64 decode (avoiding import of dart:convert to keep clean).
-  static Uint8List _base64Decode(String input) {
-    const alphabet =
-        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-    final output = <int>[];
-    final buf = <int>[];
-
-    for (int i = 0; i < input.length; i++) {
-      final c = input[i];
-      if (c == '=') break;
-      final idx = alphabet.indexOf(c);
-      if (idx == -1) continue;
-      buf.add(idx);
-      if (buf.length == 4) {
-        output.add((buf[0] << 2) | (buf[1] >> 4));
-        output.add(((buf[1] & 0x0F) << 4) | (buf[2] >> 2));
-        output.add(((buf[2] & 0x03) << 6) | buf[3]);
-        buf.clear();
-      }
-    }
-    if (buf.length == 2) {
-      output.add((buf[0] << 2) | (buf[1] >> 4));
-    } else if (buf.length == 3) {
-      output.add((buf[0] << 2) | (buf[1] >> 4));
-      output.add(((buf[1] & 0x0F) << 4) | (buf[2] >> 2));
-    }
-
-    return Uint8List.fromList(output);
-  }
-
-  /// Manual base64 encode.
-  static String _base64Encode(Uint8List bytes) {
-    const alphabet =
-        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-    final buf = StringBuffer();
-    int i = 0;
-    while (i < bytes.length) {
-      final b0 = bytes[i++];
-      buf.write(alphabet[b0 >> 2]);
-      if (i < bytes.length) {
-        final b1 = bytes[i++];
-        buf.write(alphabet[((b0 & 0x03) << 4) | (b1 >> 4)]);
-        if (i < bytes.length) {
-          final b2 = bytes[i++];
-          buf.write(alphabet[((b1 & 0x0F) << 2) | (b2 >> 6)]);
-          buf.write(alphabet[b2 & 0x3F]);
-        } else {
-          buf.write(alphabet[(b1 & 0x0F) << 2]);
-          buf.write('=');
-        }
-      } else {
-        buf.write(alphabet[(b0 & 0x03) << 4]);
-        buf.write('==');
-      }
-    }
-    return buf.toString();
-  }
+  // base64url helpers moved to lib/utils/base64url.dart for testability.
 }

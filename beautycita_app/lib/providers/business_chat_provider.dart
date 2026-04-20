@@ -7,6 +7,7 @@
 /// providers handle the client-side streaming + optimistic writes.
 library;
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/chat_thread.dart';
@@ -89,7 +90,10 @@ final businessTotalUnreadProvider = StreamProvider<int>((ref) {
 
 const int _maxMessageLength = 2000;
 
-String _sanitizeMessage(String raw) {
+/// Strip angle-bracketed tags, trim whitespace, cap at 2000 chars. Exposed
+/// for unit tests — callers should still go through [SendBusinessMessageNotifier].
+@visibleForTesting
+String sanitizeBusinessMessage(String raw) {
   var cleaned = raw.replaceAll(RegExp(r'<[^>]*>'), '');
   cleaned = cleaned.trim();
   if (cleaned.length > _maxMessageLength) {
@@ -105,7 +109,7 @@ class SendBusinessMessageNotifier extends StateNotifier<AsyncValue<void>> {
   SendBusinessMessageNotifier() : super(const AsyncValue.data(null));
 
   Future<bool> send(String threadId, String text) async {
-    final clean = _sanitizeMessage(text);
+    final clean = sanitizeBusinessMessage(text);
     if (clean.isEmpty) return false;
     state = const AsyncValue.loading();
     try {
