@@ -49,9 +49,22 @@ serve(async (req) => {
 
     // ===== CREATE =====
     if (action === "create") {
-      // Rate limit: 10 per hour per IP (create has no auth)
+      // Rate limit: 10 per hour per IP.
       const ip = getClientIp(req);
       if (!checkRateLimit(`qr_create_${ip}`, 10, 3600000)) return json({ error: "Too many QR sessions. Try again later." }, 429);
+
+      // Additional per-user cap if the caller is authenticated (prevents
+      // IP-hopping abuse once a user is known). 1 create per minute per user.
+      const authHdr = req.headers.get("Authorization") ?? "";
+      if (authHdr) {
+        const userToken = authHdr.replace("Bearer ", "");
+        try {
+          const { data: { user: authedUser } } = await supabase.auth.getUser(userToken);
+          if (authedUser && !checkRateLimit(`qr_create_user_${authedUser.id}`, 1, 60000)) {
+            return json({ error: "Too many QR sessions. Wait a moment." }, 429);
+          }
+        } catch (_) { /* token invalid — fall through to IP-only rate limit */ }
+      }
       // Generate unique code (retry on collision)
       let code = "";
       for (let i = 0; i < 5; i++) {

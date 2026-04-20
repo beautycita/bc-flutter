@@ -440,7 +440,8 @@ serve(async (req) => {
 
       if (credErr) throw credErr;
       if (!cred) {
-        return json({ error: "Credential not found" }, 404);
+        // Generic message to prevent credential_id enumeration.
+        return json({ error: "Authentication failed" }, 401);
       }
 
       // Decode clientDataJSON

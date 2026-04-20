@@ -58,12 +58,20 @@ class _BizCalendarSyncPageState extends ConsumerState<BizCalendarSyncPage> {
           _googleError = data['sync_error'] as String?;
         });
       }
-    } catch (_) {
-      // Silently fail — status check is best-effort
+    } catch (e) {
+      // Status probe is best-effort — log it so a real connectivity / RLS
+      // break surfaces in Sentry instead of being invisible.
+      debugPrint('[calendar-sync] status check failed: $e');
     }
   }
 
   Future<void> _connectGoogle() async {
+    // Show pre-connect checklist so the owner sees what they're agreeing to
+    // BEFORE Google's "manage your calendar events" consent screen spooks
+    // them. Google will still show its own consent; this dialog pre-arms.
+    final confirmed = await _showPreConnectChecklist();
+    if (confirmed != true) return;
+
     setState(() => _isConnecting = true);
     try {
       final response = await BCSupabase.client.functions.invoke(
@@ -85,6 +93,85 @@ class _BizCalendarSyncPageState extends ConsumerState<BizCalendarSyncPage> {
     } finally {
       if (mounted) setState(() => _isConnecting = false);
     }
+  }
+
+  Future<bool?> _showPreConnectChecklist() {
+    bool hasAccount = false;
+    bool readySync = false;
+    bool understandsBiDi = false;
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setInner) {
+            final allChecked = hasAccount && readySync && understandsBiDi;
+            return AlertDialog(
+                  title: const Text('Antes de conectar Google Calendar'),
+                  content: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 420),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Esta integracion sincroniza citas de BeautyCita '
+                          'con Google Calendar en dos direcciones. Necesitas '
+                          'permisos de lectura y escritura.',
+                        ),
+                        const SizedBox(height: 12),
+                        CheckboxListTile(
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          controlAffinity: ListTileControlAffinity.leading,
+                          value: hasAccount,
+                          onChanged: (v) => setInner(() => hasAccount = v ?? false),
+                          title: const Text('Tengo una cuenta de Google activa'),
+                        ),
+                        CheckboxListTile(
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          controlAffinity: ListTileControlAffinity.leading,
+                          value: readySync,
+                          onChanged: (v) => setInner(() => readySync = v ?? false),
+                          title: const Text('Quiero que mis citas se sincronicen'),
+                        ),
+                        CheckboxListTile(
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          controlAffinity: ListTileControlAffinity.leading,
+                          value: understandsBiDi,
+                          onChanged: (v) => setInner(() => understandsBiDi = v ?? false),
+                          title: const Text(
+                            'Entiendo que BeautyCita podra leer y escribir '
+                            'eventos en mi calendario',
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Google te mostrara "manage your calendar events". '
+                          'Eso es normal — acepta para continuar.',
+                          style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.6),
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(false),
+                      child: const Text('Cancelar'),
+                    ),
+                    FilledButton(
+                      onPressed: allChecked ? () => Navigator.of(ctx).pop(true) : null,
+                      child: const Text('Continuar a Google'),
+                    ),
+                  ],
+                );
+          },
+        );
+      },
+    );
   }
 
   Future<void> _disconnectGoogle() async {
