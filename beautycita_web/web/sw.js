@@ -16,9 +16,23 @@
 //
 // Versioned by VERSION; changing it busts both caches on next activate.
 
-const VERSION = 'bc-2026-04-19-01';
+const VERSION = 'bc-2026-04-20-02';
 const SHELL = `bc-shell-${VERSION}`;
 const RUNTIME = `bc-runtime-${VERSION}`;
+
+// Paths we explicitly do NOT cache. Flutter's main bundle + bootstrap
+// MUST always come from the network on initial load — the previous
+// version of this SW cached them aggressively and mid-boot activation
+// aborted main.dart.js fetches, crashing every page.
+const NEVER_CACHE_PATHS = [
+  '/main.dart.js',
+  '/main.dart.wasm',
+  '/main.dart.mjs',
+  '/flutter_bootstrap.js',
+  '/flutter.js',
+  '/flutter_service_worker.js',
+  '/version.json',
+];
 
 const SHELL_FILES = [
   '/',
@@ -34,9 +48,15 @@ const SHELL_FILES = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(SHELL).then((cache) =>
-      // addAll fails atomic — use Promise.all so a single 404 doesn't kill the install
+      // addAll is atomic — use Promise.all so a single 404 doesn't kill the install.
       Promise.all(SHELL_FILES.map((u) => cache.add(u).catch(() => {})))
-    ).then(() => self.skipWaiting())
+    )
+    // NOTE: intentionally NOT calling skipWaiting() here. The previous
+    // version did, which — combined with clients.claim() in activate —
+    // caused the SW to intercept in-flight main.dart.js fetches during
+    // the current page's boot, aborting them with net::ERR_ABORTED and
+    // crashing every page. Now the SW waits for normal next-navigation
+    // activation, which is the well-behaved pattern.
   );
 });
 
@@ -48,7 +68,10 @@ self.addEventListener('activate', (event) => {
           .filter((k) => k !== SHELL && k !== RUNTIME)
           .map((k) => caches.delete(k))
       )
-    ).then(() => self.clients.claim())
+    )
+    // NOTE: intentionally NOT calling self.clients.claim(). Same reason
+    // as skipWaiting above — we don't want to hijack pages that are
+    // mid-boot. The new SW activates on the next full navigation.
   );
 });
 
@@ -67,6 +90,15 @@ self.addEventListener('fetch', (event) => {
     url.hostname.includes('hcaptcha.com') ||
     url.hostname.includes('googleapis.com')
   ) {
+    return;
+  }
+
+  // Never cache Flutter's main bundle or bootstrap. Versioned by
+  // content hash at deploy time, so the browser's own HTTP cache
+  // handles freshness correctly without our intervention. Previous
+  // version cached these and deploy-time updates took 24h+ to reach
+  // users (cache-first serve-forever pattern).
+  if (url.origin === self.location.origin && NEVER_CACHE_PATHS.includes(url.pathname)) {
     return;
   }
 
