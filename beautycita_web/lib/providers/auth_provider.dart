@@ -493,6 +493,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
     _sessionPingTimer = null;
   }
 
+  int _sessionPingFailures = 0;
+
   Future<void> _checkSessionValidity() async {
     if (!BCSupabase.isInitialized || state.user == null) {
       _stopSessionPing();
@@ -503,10 +505,24 @@ class AuthNotifier extends StateNotifier<AuthState> {
       if (response.user == null) {
         debugPrint('Session ping: user null — signing out');
         await signOut();
+        return;
       }
-    } catch (e) {
-      debugPrint('Session ping: revoked or expired — signing out ($e)');
+      _sessionPingFailures = 0;
+    } on AuthException catch (e) {
+      // Explicit auth failure = session actually revoked/expired. Sign out.
+      debugPrint('Session ping: auth error — signing out (${e.message})');
       await signOut();
+    } catch (e) {
+      // Network hiccup (offline, timeout, DNS, 5xx). Do NOT sign out —
+      // keep the local session and retry on the next tick. After several
+      // consecutive failures, stop checking to avoid log noise; the next
+      // user action will re-trigger auth if the session is truly gone.
+      _sessionPingFailures++;
+      debugPrint('Session ping: transient failure $_sessionPingFailures ($e)');
+      if (_sessionPingFailures >= 5) {
+        debugPrint('Session ping: 5 transient failures — pausing pings');
+        _stopSessionPing();
+      }
     }
   }
 

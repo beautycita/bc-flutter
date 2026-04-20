@@ -306,24 +306,22 @@ serve(async (req) => {
         return json({ error: "Invalid ceremony type" }, 400);
       }
 
-      // Verify the challenge matches one we issued
-      const { data: challengeRow, error: chalErr } = await supabase
+      // Atomically claim the challenge row — DELETE ... RETURNING guarantees
+      // exactly one concurrent caller wins. Prevents a concurrent-replay race
+      // between challenge lookup and single-use deletion.
+      const { data: claimedRows, error: chalErr } = await supabase
         .from("webauthn_challenges")
-        .select("id, challenge")
+        .delete()
         .eq("user_id", user.id)
         .eq("type", "register")
         .eq("challenge", clientData.challenge)
         .gt("expires_at", new Date().toISOString())
-        .limit(1)
-        .maybeSingle();
+        .select("id");
 
       if (chalErr) throw chalErr;
-      if (!challengeRow) {
-        return json({ error: "Challenge not found or expired" }, 400);
+      if (!claimedRows || claimedRows.length === 0) {
+        return json({ error: "Challenge not found, expired, or already used" }, 400);
       }
-
-      // Delete the used challenge
-      await supabase.from("webauthn_challenges").delete().eq("id", challengeRow.id);
 
       // Parse attestation object
       const attestBytes = base64urlDecode(attestation_object);
@@ -453,23 +451,21 @@ serve(async (req) => {
         return json({ error: "Invalid ceremony type" }, 400);
       }
 
-      // Verify the challenge matches
-      const { data: challengeRow, error: chalErr } = await supabase
+      // Atomically claim the challenge row — DELETE ... RETURNING guarantees
+      // exactly one concurrent caller wins. Prevents a concurrent-replay race
+      // between challenge lookup and single-use deletion.
+      const { data: claimedRows, error: chalErr } = await supabase
         .from("webauthn_challenges")
-        .select("id, challenge")
+        .delete()
         .eq("type", "login")
         .eq("challenge", clientData.challenge)
         .gt("expires_at", new Date().toISOString())
-        .limit(1)
-        .maybeSingle();
+        .select("id");
 
       if (chalErr) throw chalErr;
-      if (!challengeRow) {
-        return json({ error: "Challenge not found or expired" }, 400);
+      if (!claimedRows || claimedRows.length === 0) {
+        return json({ error: "Challenge not found, expired, or already used" }, 400);
       }
-
-      // Delete the used challenge
-      await supabase.from("webauthn_challenges").delete().eq("id", challengeRow.id);
 
       // Parse authenticator data
       const authDataBytes = base64urlDecode(authenticator_data);
