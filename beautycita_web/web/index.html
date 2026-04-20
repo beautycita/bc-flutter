@@ -784,5 +784,22 @@ window.addEventListener('flutter-first-frame', function(){
 });
 </script>
 <script src="flutter_bootstrap.js" async></script>
+
+<!-- BeautyCita custom SW: caches app shell + R2 images so the browser
+     storage panel is no longer empty. Flutter's bundled service worker
+     is a self-unregistering stub on current Flutter versions. -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' })
+      .then(function (reg) {
+        console.debug('[BC SW] registered', reg.scope);
+      })
+      .catch(function (err) {
+        console.warn('[BC SW] register failed', err);
+      });
+  });
+}
+</script>
 </body>
 </html>
