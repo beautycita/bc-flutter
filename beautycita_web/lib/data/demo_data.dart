@@ -824,6 +824,221 @@ abstract final class DemoData {
     ];
   }
 
+  // ── Marketing automations ──────────────────────────────────────────────
+  // Five automation triggers from policies.md (post-appointment, review
+  // request, no-show followup, birthday, inactive client). Each has a
+  // template, delay window, and is_active flag.
+
+  static List<Map<String, dynamic>> get marketingAutomations {
+    final now = DateTime.now();
+    String iso(DateTime d) => d.toUtc().toIso8601String();
+    return [
+      {
+        'id': 'ma-demo-001',
+        'business_id': businessId,
+        'trigger_type': 'post_appointment',
+        'trigger_label': 'Despues de la cita',
+        'channel': 'whatsapp',
+        'delay_hours': 4,
+        'is_active': true,
+        'template_es': 'Hola {{nombre}}, gracias por visitarnos hoy! Esperamos que te haya encantado tu {{servicio}}. Cuentanos como te fue: {{link}}',
+        'sent_count': 124,
+        'created_at': iso(now.subtract(const Duration(days: 90))),
+      },
+      {
+        'id': 'ma-demo-002',
+        'business_id': businessId,
+        'trigger_type': 'review_request',
+        'trigger_label': 'Solicitar resena',
+        'channel': 'whatsapp',
+        'delay_hours': 24,
+        'is_active': true,
+        'template_es': 'Hola {{nombre}}, esperamos que estes disfrutando tu {{servicio}}. Nos ayudarias con una resena de 5 estrellas? {{link}}',
+        'sent_count': 98,
+        'created_at': iso(now.subtract(const Duration(days: 90))),
+      },
+      {
+        'id': 'ma-demo-003',
+        'business_id': businessId,
+        'trigger_type': 'no_show_followup',
+        'trigger_label': 'Seguimiento no-show',
+        'channel': 'whatsapp',
+        'delay_hours': 1,
+        'is_active': true,
+        'template_es': 'Hola {{nombre}}, vimos que no pudiste asistir a tu cita. Quieres reagendar? Tienes prioridad: {{link}}',
+        'sent_count': 17,
+        'created_at': iso(now.subtract(const Duration(days: 60))),
+      },
+      {
+        'id': 'ma-demo-004',
+        'business_id': businessId,
+        'trigger_type': 'birthday',
+        'trigger_label': 'Cumpleanos',
+        'channel': 'whatsapp',
+        'delay_hours': 0,
+        'is_active': false,
+        'template_es': 'Feliz cumpleanos {{nombre}}! Te regalamos un 15% de descuento este mes. Reserva: {{link}}',
+        'sent_count': 0,
+        'created_at': iso(now.subtract(const Duration(days: 30))),
+      },
+      {
+        'id': 'ma-demo-005',
+        'business_id': businessId,
+        'trigger_type': 'inactive_client',
+        'trigger_label': 'Cliente inactivo',
+        'channel': 'whatsapp',
+        'delay_hours': 1440, // 60 days
+        'is_active': true,
+        'template_es': 'Hola {{nombre}}, te extranamos! Han pasado mas de 60 dias desde tu ultima visita. Te esperamos: {{link}}',
+        'sent_count': 31,
+        'created_at': iso(now.subtract(const Duration(days: 80))),
+      },
+    ];
+  }
+
+  static List<Map<String, dynamic>> get marketingLog {
+    final now = DateTime.now();
+    String iso(DateTime d) => d.toUtc().toIso8601String();
+    final names = ['Maria Lopez', 'Sofia Rodriguez', 'Camila Hernandez',
+        'Valeria Garcia', 'Renata Flores', 'Mariana Diaz', 'Ana Rivera',
+        'Daniela Cruz', 'Lucia Sanchez', 'Fernanda Ruiz'];
+    final triggers = ['post_appointment', 'review_request', 'inactive_client',
+        'no_show_followup', 'post_appointment', 'review_request'];
+    return List.generate(20, (i) => {
+      'id': 'mlog-$i',
+      'business_id': businessId,
+      'automation_id': 'ma-demo-00${(i % 5) + 1}',
+      'recipient_name': names[i % names.length],
+      'recipient_phone': '+5233${(1000000 + i * 7919)}',
+      'trigger_type': triggers[i % triggers.length],
+      'channel': 'whatsapp',
+      'status': i % 11 == 0 ? 'failed' : 'sent',
+      'sent_at': iso(now.subtract(Duration(hours: i * 6))),
+    });
+  }
+
+  // ── Orders (POS) ───────────────────────────────────────────────────────
+  // 6 orders covering the full lifecycle: pending → shipped → delivered,
+  // plus one disputed and one cancelled. Mix of products + prices.
+  static List<Map<String, dynamic>> get orders {
+    final now = DateTime.now();
+    String iso(DateTime d) => d.toUtc().toIso8601String();
+    return [
+      {
+        'id': 'ord-demo-001',
+        'business_id': businessId,
+        'buyer_id': 'c0000001-0000-4000-8000-000000000001',
+        'product_name': 'Mascarilla Capilar Olaplex No.3',
+        'product_id': 'prod-demo-001',
+        'quantity': 1,
+        'unit_price': 580.0,
+        'total_amount': 580.0,
+        'commission_amount': 58.0,
+        'status': 'pending',
+        'payment_method': 'card',
+        'shipping_address': 'Calle Reforma 234, Col. Centro, Puerto Vallarta, Jal., 48300',
+        'tracking_number': null,
+        'buyer_name': 'Maria Lopez',
+        'buyer_phone': '+523221112233',
+        'created_at': iso(now.subtract(const Duration(hours: 6))),
+      },
+      {
+        'id': 'ord-demo-002',
+        'business_id': businessId,
+        'buyer_id': 'c0000001-0000-4000-8000-000000000002',
+        'product_name': 'Tinte Wella Koleston 7/0',
+        'product_id': 'prod-demo-002',
+        'quantity': 2,
+        'unit_price': 240.0,
+        'total_amount': 480.0,
+        'commission_amount': 48.0,
+        'status': 'shipped',
+        'payment_method': 'saldo',
+        'shipping_address': 'Av. Mexico 1502, Col. Versalles, Puerto Vallarta, Jal., 48310',
+        'tracking_number': 'EST123456789MX',
+        'buyer_name': 'Sofia Rodriguez',
+        'buyer_phone': '+523224445566',
+        'created_at': iso(now.subtract(const Duration(days: 2))),
+      },
+      {
+        'id': 'ord-demo-003',
+        'business_id': businessId,
+        'buyer_id': 'c0000001-0000-4000-8000-000000000003',
+        'product_name': 'Kit Manicure Profesional OPI',
+        'product_id': 'prod-demo-003',
+        'quantity': 1,
+        'unit_price': 1250.0,
+        'total_amount': 1250.0,
+        'commission_amount': 125.0,
+        'status': 'delivered',
+        'payment_method': 'card',
+        'shipping_address': 'Calle Constitucion 45, Col. Emiliano Zapata, Puerto Vallarta, Jal., 48380',
+        'tracking_number': 'EST987654321MX',
+        'buyer_name': 'Camila Hernandez',
+        'buyer_phone': '+523227778899',
+        'created_at': iso(now.subtract(const Duration(days: 8))),
+        'delivered_at': iso(now.subtract(const Duration(days: 4))),
+      },
+      {
+        'id': 'ord-demo-004',
+        'business_id': businessId,
+        'buyer_id': 'c0000001-0000-4000-8000-000000000004',
+        'product_name': 'Plancha BaByliss Pro Nano Titanium',
+        'product_id': 'prod-demo-004',
+        'quantity': 1,
+        'unit_price': 2400.0,
+        'total_amount': 2400.0,
+        'commission_amount': 240.0,
+        'status': 'delivered',
+        'payment_method': 'card',
+        'shipping_address': 'Blvd. Francisco Medina Ascencio 2500, Hotel Zone, PV, Jal., 48330',
+        'tracking_number': 'EST456789123MX',
+        'buyer_name': 'Valeria Garcia',
+        'buyer_phone': '+523221234567',
+        'created_at': iso(now.subtract(const Duration(days: 14))),
+        'delivered_at': iso(now.subtract(const Duration(days: 11))),
+      },
+      {
+        'id': 'ord-demo-005',
+        'business_id': businessId,
+        'buyer_id': 'c0000001-0000-4000-8000-000000000005',
+        'product_name': 'Champu Redken All Soft 1L',
+        'product_id': 'prod-demo-005',
+        'quantity': 1,
+        'unit_price': 720.0,
+        'total_amount': 720.0,
+        'commission_amount': 72.0,
+        'status': 'disputed',
+        'payment_method': 'card',
+        'shipping_address': 'Calle Hidalgo 88, Col. Centro, Puerto Vallarta, Jal., 48300',
+        'tracking_number': 'EST111222333MX',
+        'buyer_name': 'Renata Flores',
+        'buyer_phone': '+523228889900',
+        'created_at': iso(now.subtract(const Duration(days: 5))),
+        'dispute_reason': 'Producto llego abierto y derramado',
+      },
+      {
+        'id': 'ord-demo-006',
+        'business_id': businessId,
+        'buyer_id': 'c0000001-0000-4000-8000-000000000006',
+        'product_name': 'Set Brochas de Maquillaje Real Techniques',
+        'product_id': 'prod-demo-006',
+        'quantity': 1,
+        'unit_price': 890.0,
+        'total_amount': 890.0,
+        'commission_amount': 89.0,
+        'status': 'cancelled',
+        'payment_method': 'card',
+        'shipping_address': 'Calle Aldama 12, Col. 5 de Diciembre, Puerto Vallarta, Jal., 48350',
+        'tracking_number': null,
+        'buyer_name': 'Mariana Diaz',
+        'buyer_phone': '+523224567890',
+        'created_at': iso(now.subtract(const Duration(days: 3))),
+        'cancelled_at': iso(now.subtract(const Duration(days: 2))),
+      },
+    ];
+  }
+
   // ── Payments (derived from completed/no-show appointments) ─────────────
 
   static List<Map<String, dynamic>> get payments {

@@ -1310,9 +1310,18 @@ class _SecurityTabState extends State<_SecurityTab> {
     );
     if (amount == null) return;
     try {
+      // Idempotency key: admin + target + exact signed amount + minute-level
+      // timestamp. Stops the same Apply click from double-crediting if the
+      // button is tapped twice or the dialog is dismissed and reopened within
+      // the same minute with the same amount.
+      final me = BCSupabase.client.auth.currentUser?.id ?? 'unknown';
+      final ts = DateTime.now().toUtc().toIso8601String().substring(0, 16);
+      final idemKey = 'admin:$me:${widget.user.id}:${amount.toStringAsFixed(2)}:$ts';
       await BCSupabase.client.rpc('increment_saldo', params: {
         'p_user_id': widget.user.id,
         'p_amount': amount,
+        'p_reason': 'admin_adjustment',
+        'p_idempotency_key': idemKey,
       });
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

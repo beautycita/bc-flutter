@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
 import '../../config/breakpoints.dart';
 import '../../config/web_theme.dart';
 import '../../providers/business_portal_provider.dart';
+import '../../providers/demo_providers.dart';
 import '../../widgets/web_design_system.dart';
 
 // ── CLABE bank code lookup (top 30 Mexican banks) ──────────────────────────
@@ -355,12 +356,14 @@ class _BizBankingPageState extends ConsumerState<BizBankingPage> {
   @override
   Widget build(BuildContext context) {
     final bizAsync = ref.watch(currentBusinessProvider);
+    final isDemo = ref.watch(isDemoProvider);
 
     return bizAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('Error: $e')),
       data: (biz) {
         if (biz == null) return const Center(child: Text('Sin negocio'));
+        if (isDemo) return const _BankingDemoPlaceholder();
         return _buildContent(context, biz);
       },
     );
@@ -1049,6 +1052,65 @@ class _BulletLine extends StatelessWidget {
           ),
           Expanded(child: Text(text, style: theme.textTheme.bodySmall)),
         ],
+      ),
+    );
+  }
+}
+
+class _BankingDemoPlaceholder extends StatelessWidget {
+  const _BankingDemoPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 540),
+        child: WebCard(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 80, height: 80,
+                decoration: BoxDecoration(
+                  color: kWebPrimary.withValues(alpha: 0.08),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.account_balance_outlined, size: 40, color: kWebPrimary),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                "Configuracion Bancaria",
+                style: theme.textTheme.headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.w700, color: kWebTextPrimary),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                "Aqui registras la cuenta bancaria que recibe tus pagos. "
+                "Necesitas CLABE, RFC del titular y una identificacion oficial. "
+                "Verificacion automatica en menos de 24 horas.",
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: kWebTextSecondary,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ShaderMask(
+                shaderCallback: (b) => kWebBrandGradient.createShader(b),
+                child: Text(
+                  "Sin comisiones por dispersion. Pagos directos a tu cuenta.",
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -3,12 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita_core/supabase.dart';
 
 import '../../config/web_theme.dart';
+import '../../data/demo_data.dart';
 import '../../providers/business_portal_provider.dart';
+import '../../providers/demo_providers.dart';
 
 // ── Providers ────────────────────────────────────────────────────────────────
 
 final _automatedMessagesProvider = FutureProvider.autoDispose
     .family<List<Map<String, dynamic>>, String>((ref, bizId) async {
+  if (ref.watch(isDemoProvider)) return DemoData.marketingAutomations;
   final rows = await BCSupabase.client
       .from(BCTables.automatedMessages)
       .select()
@@ -19,6 +22,7 @@ final _automatedMessagesProvider = FutureProvider.autoDispose
 
 final _messageLogProvider = FutureProvider.autoDispose
     .family<List<Map<String, dynamic>>, String>((ref, bizId) async {
+  if (ref.watch(isDemoProvider)) return DemoData.marketingLog;
   final rows = await BCSupabase.client
       .from(BCTables.automatedMessageLog)
       .select()

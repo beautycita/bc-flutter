@@ -4,7 +4,9 @@ import 'package:beautycita_core/supabase.dart';
 
 import '../../config/breakpoints.dart';
 import '../../config/web_theme.dart';
+import '../../data/demo_data.dart';
 import '../../providers/business_portal_provider.dart';
+import '../../providers/demo_providers.dart';
 
 // ── Providers ────────────────────────────────────────────────────────────────
 
@@ -14,6 +16,7 @@ final _selectedOrderProvider =
 
 final _ordersProvider = FutureProvider.autoDispose
     .family<List<Map<String, dynamic>>, String>((ref, bizId) async {
+  if (ref.watch(isDemoProvider)) return DemoData.orders;
   final rows = await BCSupabase.client
       .from(BCTables.orders)
       .select()

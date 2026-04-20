@@ -9,7 +9,9 @@ import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
 import '../../config/breakpoints.dart';
 import '../../config/web_theme.dart';
 import '../../providers/business_portal_provider.dart';
+import '../../providers/demo_providers.dart';
 import '../../widgets/photo_studio.dart';
+import '../../widgets/web_design_system.dart';
 
 /// Business portfolio page — template selector + live preview builder.
 ///
@@ -21,14 +23,76 @@ class BizPortfolioPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final bizAsync = ref.watch(currentBusinessProvider);
+    final isDemo = ref.watch(isDemoProvider);
 
     return bizAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('Error: $e')),
       data: (biz) {
         if (biz == null) return const Center(child: Text('Sin negocio'));
+        if (isDemo) return const _PortfolioDemoPlaceholder();
         return _PortfolioContent(biz: biz);
       },
+    );
+  }
+}
+
+class _PortfolioDemoPlaceholder extends StatelessWidget {
+  const _PortfolioDemoPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 540),
+        child: WebCard(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 80, height: 80,
+                decoration: BoxDecoration(
+                  color: kWebPrimary.withValues(alpha: 0.08),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.photo_library_outlined,
+                    size: 40, color: kWebPrimary),
+              ),
+              const SizedBox(height: 20),
+              Text('Portafolio Visual',
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w700, color: kWebTextPrimary)),
+              const SizedBox(height: 12),
+              Text(
+                'Construye tu pagina publica en beautycita.com/p/tu-salon. '
+                'Elige tema (portfolio, team-builder, storefront, gallery, '
+                'local), sube fotos antes/despues, publica con un toque. '
+                'Los motores de busqueda indexan tu pagina — visibilidad '
+                'gratis.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: kWebTextSecondary,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ShaderMask(
+                shaderCallback: (b) => kWebBrandGradient.createShader(b),
+                child: Text(
+                  'Salones con portafolio visual reciben 4x mas reservas.',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

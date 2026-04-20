@@ -293,7 +293,13 @@ serve(async (req) => {
           console.log(`[STRIPE-WEBHOOK] Booking ${bookingId} cancelled — crediting $${amount} to saldo for user ${userId}`);
 
           if (userId) {
-            await supabase.rpc("increment_saldo", { p_user_id: userId, p_amount: amount });
+            await supabase.rpc("increment_saldo", {
+              p_user_id: userId,
+              p_amount: amount,
+              p_reason: "stripe_refund_cancelled_booking",
+              // Stripe event IDs are globally unique — safe idempotency key
+              p_idempotency_key: `stripe:${event.id}`,
+            });
             // TODO: Send notification to user about saldo credit
           }
           break;
@@ -314,7 +320,12 @@ serve(async (req) => {
           }).eq("id", bookingId);
 
           if (userId) {
-            await supabase.rpc("increment_saldo", { p_user_id: userId, p_amount: amount });
+            await supabase.rpc("increment_saldo", {
+              p_user_id: userId,
+              p_amount: amount,
+              p_reason: "stripe_refund_expired_booking",
+              p_idempotency_key: `stripe:${event.id}`,
+            });
           }
           break;
         }
