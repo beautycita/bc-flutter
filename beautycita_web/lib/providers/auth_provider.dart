@@ -52,6 +52,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   /// Cached role to avoid repeated DB queries during navigation.
   String? _cachedRole;
+  DateTime? _cachedRoleAt;
+  static const Duration _roleCacheTtl = Duration(minutes: 5);
 
   /// Periodic timer that validates the session is still active.
   Timer? _sessionPingTimer;
@@ -209,6 +211,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> signOut() async {
     if (!BCSupabase.isInitialized) return;
     _cachedRole = null;
+    _cachedRoleAt = null;
     _stopSessionPing();
     state = state.copyWith(isLoading: true, clearError: true);
     try {
@@ -226,7 +229,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
   /// Caches the result so subsequent calls (router redirects) are instant.
   /// Pass [forceRefresh] = true from admin/business contexts to re-fetch.
   Future<String?> getUserRole({bool forceRefresh = false}) async {
-    if (!forceRefresh && _cachedRole != null && state.user != null) {
+    final cacheStillFresh = _cachedRoleAt != null &&
+        DateTime.now().difference(_cachedRoleAt!) < _roleCacheTtl;
+    if (!forceRefresh &&
+        _cachedRole != null &&
+        cacheStillFresh &&
+        state.user != null) {
       return _cachedRole;
     }
     if (!BCSupabase.isInitialized || state.user == null) return null;
@@ -237,6 +245,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           .eq('id', state.user!.id)
           .maybeSingle();
       _cachedRole = data?['role'] as String?;
+      _cachedRoleAt = DateTime.now();
       return _cachedRole;
     } catch (e) {
       debugPrint('getUserRole error: $e');

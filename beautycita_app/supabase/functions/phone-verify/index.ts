@@ -158,12 +158,16 @@ Deno.serve(async (req) => {
       return json({ error: "Valid phone number required" }, 400);
     }
 
-    // Rate limit: max 3 codes per phone in 15 minutes
+    // Rate limit: max 3 pending (unverified) codes per phone in 15 minutes.
+    // Only count codes the user hasn't successfully consumed — otherwise a
+    // user who verifies once and needs to re-send (e.g. changed phone, then
+    // returned) would be locked out for the rest of the 15-min window.
     const { count } = await db
       .from("phone_verification_codes")
       .select("*", { count: "exact", head: true })
       .eq("user_id", user.id)
       .eq("phone", phone)
+      .eq("verified", false)
       .gte("created_at", new Date(Date.now() - 15 * 60 * 1000).toISOString());
 
     console.log(`[phone-verify] Rate limit check: ${count ?? 0} codes in 15min`);
