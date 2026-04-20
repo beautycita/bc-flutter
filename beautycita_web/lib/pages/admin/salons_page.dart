@@ -612,8 +612,6 @@ class _DiscoveredTab extends ConsumerWidget {
               null: 'Todas',
               'google_maps': 'Google Maps',
               'denue': 'DENUE',
-              'facebook': 'Facebook',
-              'bing': 'Bing',
               'manual': 'Manual',
             },
             onChanged: (value) {
@@ -1347,6 +1345,12 @@ class _SegmentsSummaryBar extends StatelessWidget {
       title: Text(
         'Inteligencia de Mercado',
         style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+      ),
+      subtitle: Text(
+        'Segmentacion automatica por ciudad, categoria y canal — vista solo lectura',
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+        ),
       ),
       children: const [SalonSegmentsDashboard()],
     );

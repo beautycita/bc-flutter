@@ -174,6 +174,10 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
 
                 // ── Notifications ──
                 _buildNotificationsSection(cs, ext),
+                const SizedBox(height: AppConstants.paddingLG),
+
+                // ── Privacidad ──
+                _buildPrivacySection(cs, ext),
                 const SizedBox(height: AppConstants.paddingXXL),
         ],
       ),
@@ -209,27 +213,12 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
                 ),
           ),
           const SizedBox(height: AppConstants.paddingXS),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Personaliza tu experiencia',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onPrimary,
-                        fontWeight: FontWeight.w800,
-                      ),
+          Text(
+            'Personaliza tu experiencia',
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onPrimary,
+                  fontWeight: FontWeight.w800,
                 ),
-              ),
-              if (!_analyticsLoading)
-                Switch.adaptive(
-                  value: _analyticsOn,
-                  onChanged: _toggleAnalytics,
-                  activeThumbColor: Colors.white,
-                  activeTrackColor: Colors.white.withValues(alpha: 0.3),
-                  inactiveThumbColor: Colors.white.withValues(alpha: 0.5),
-                  inactiveTrackColor: Colors.white.withValues(alpha: 0.1),
-                ),
-            ],
           ),
         ],
       ),
@@ -936,6 +925,93 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
   // ══════════════════════════════════════════════════════════════════════════
   // 6. Notifications Section
   // ══════════════════════════════════════════════════════════════════════════
+
+  Widget _buildPrivacySection(ColorScheme cs, BCThemeExtension ext) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'PRIVACIDAD',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: cs.primary,
+                letterSpacing: 1.2,
+                fontWeight: FontWeight.w700,
+                fontSize: 9,
+              ),
+        ),
+        const SizedBox(height: AppConstants.paddingSM),
+        Container(
+          decoration: BoxDecoration(
+            color: cs.surface,
+            borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+            border: Border.all(color: ext.cardBorderColor),
+            boxShadow: [
+              BoxShadow(
+                color: Theme.of(context).shadowColor.withValues(alpha: 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppConstants.paddingMD,
+              vertical: 12,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: cs.primary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.insights_outlined, size: 16, color: cs.primary),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Analisis de actividad',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Usamos tus patrones de uso para mejorar recomendaciones y detectar fraude. Puedes apagarlo cuando quieras.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: cs.onSurface.withValues(alpha: 0.55),
+                              fontSize: 11,
+                              height: 1.3,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                if (_analyticsLoading)
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else
+                  Switch.adaptive(
+                    value: _analyticsOn,
+                    onChanged: _toggleAnalytics,
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
   Widget _buildNotificationsSection(ColorScheme cs, BCThemeExtension ext) {
     // Entries: key, label, icon, canTurnOff
