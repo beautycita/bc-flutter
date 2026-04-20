@@ -1,0 +1,14 @@
+[Unit]
+Description=Run BeautyCita reconciliation watchdog every 15 minutes
+
+[Timer]
+# 15 minutes after boot, then every 15 minutes. Randomized 30s delay so
+# multiple environments don't thunder at the edge fn simultaneously.
+OnBootSec=5min
+OnUnitActiveSec=15min
+RandomizedDelaySec=30sec
+AccuracySec=1min
+Unit=reconciliation-watchdog.service
+
+[Install]
+WantedBy=timers.target
