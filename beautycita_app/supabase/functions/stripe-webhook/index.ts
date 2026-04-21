@@ -58,6 +58,30 @@ serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+    // ── Idempotency guard ──────────────────────────────────────────────
+    // Stripe retries on 5xx (exponential backoff, up to 3 days). Without
+    // this, a retry re-runs calculate_payout_with_debt and double-decrements
+    // salon_debts FIFO; debt_payments duplicates; chargeback debt rows
+    // duplicate. INSERT-then-409 = canonical idempotency for webhooks.
+    {
+      const { error: dedupErr } = await supabase
+        .from("stripe_webhook_events")
+        .insert({ event_id: event.id, event_type: event.type });
+      if (dedupErr) {
+        // Postgres unique_violation = already processed — return 200 so Stripe stops retrying.
+        // deno-lint-ignore no-explicit-any
+        if ((dedupErr as any).code === "23505") {
+          console.log(`[STRIPE-WEBHOOK] Duplicate event ${event.id} (${event.type}) — skipping`);
+          return new Response(JSON.stringify({ received: true, duplicate: true }), {
+            status: 200,
+            headers: { ...corsHeaders(req, "stripe-signature"), "Content-Type": "application/json" },
+          });
+        }
+        // Any other error: log but continue. Don't block payment processing on a logging failure.
+        console.error(`[STRIPE-WEBHOOK] dedup insert error (continuing):`, dedupErr);
+      }
+    }
+
     console.log(`[STRIPE-WEBHOOK] Processing event: ${event.type}`);
 
     switch (event.type) {
@@ -713,6 +737,35 @@ serve(async (req) => {
             console.error(`[STRIPE-WEBHOOK] Tax reversal failed: ${e.message}`)
           );
 
+          // Reverse BC's commission. On a chargeback Stripe reverses the
+          // ENTIRE charge including application_fee_amount — BC actually
+          // loses the commission too, but the original commission_records
+          // row still claims it as collected. Insert an offsetting entry so
+          // ledgers match reality. Unique(appointment_id, source) makes this
+          // safe to retry (the dedup table also catches retries).
+          if (booking.business_id) {
+            const { data: origCommission } = await supabase
+              .from("commission_records")
+              .select("amount, rate")
+              .eq("appointment_id", booking.id)
+              .eq("source", "appointment")
+              .maybeSingle();
+            if (origCommission && Number(origCommission.amount) > 0) {
+              await supabase.from("commission_records").insert({
+                business_id: booking.business_id,
+                appointment_id: booking.id,
+                amount: -Number(origCommission.amount),
+                rate: origCommission.rate,
+                source: "chargeback_reversal",
+                period_month: new Date().getMonth() + 1,
+                period_year: new Date().getFullYear(),
+                status: "collected",
+              }).then(null, (e: Error) =>
+                console.error(`[STRIPE-WEBHOOK] Commission reversal failed: ${e.message}`)
+              );
+            }
+          }
+
           // Record in payments table
           const { data: existingRefund } = await supabase
             .from("payments")
@@ -761,6 +814,32 @@ serve(async (req) => {
               }).then(null, (e: Error) =>
                 console.error(`[STRIPE-WEBHOOK] Order debt creation failed: ${e.message}`)
               );
+            }
+
+            // Reverse BC's product commission (parity with appointment branch above).
+            // Stripe reverses the application_fee on chargeback — record the offset
+            // so commission_records reflects reality.
+            if (order.business_id) {
+              const { data: origProductCommission } = await supabase
+                .from("commission_records")
+                .select("amount, rate")
+                .eq("order_id", order.id)
+                .eq("source", "product_sale")
+                .maybeSingle();
+              if (origProductCommission && Number(origProductCommission.amount) > 0) {
+                await supabase.from("commission_records").insert({
+                  business_id: order.business_id,
+                  order_id: order.id,
+                  amount: -Number(origProductCommission.amount),
+                  rate: origProductCommission.rate,
+                  source: "chargeback_reversal",
+                  period_month: new Date().getMonth() + 1,
+                  period_year: new Date().getFullYear(),
+                  status: "collected",
+                }).then(null, (e: Error) =>
+                  console.error(`[STRIPE-WEBHOOK] Order commission reversal failed: ${e.message}`)
+                );
+              }
             }
 
             console.log(`[STRIPE-WEBHOOK] Product order ${order.id} refunded externally, debt created`);
