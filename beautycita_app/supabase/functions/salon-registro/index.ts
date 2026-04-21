@@ -9,6 +9,7 @@
 // =============================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendInfobipWhatsApp } from "../_shared/infobip.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -1031,10 +1032,20 @@ Deno.serve(async (req: Request) => {
         }
         console.log(`[SALON-REG] OTP record inserted for ${phone}`);
 
-        // Try WhatsApp first, SMS fallback — fire and don't wait for completion
-        // The DB record is already saved so verify_otp will work even if we get killed
+        // Channel preference: Infobip (whitelisted phones only) → bpi WA → SMS.
+        // Infobip is sandbox until prod sender registered; whitelist gates exposure.
         let channel = "sms";
         try {
+          const otpBody = `BeautyCita - Tu codigo es: ${otp}\nValido por 10 min. No lo compartas.`;
+          const infobipResult = await sendInfobipWhatsApp(phone, otpBody);
+          if (infobipResult.sent) {
+            channel = "infobip-wa";
+            await supabase.from("phone_verification_codes")
+              .update({ channel: "infobip-wa" })
+              .eq("phone", phone)
+              .eq("code", otpHash);
+            return json({ sent: true, channel });
+          }
           const waResult = await sendWhatsApp(phone, otp);
           if (waResult.sent) {
             channel = "whatsapp";

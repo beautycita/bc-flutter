@@ -11,6 +11,7 @@
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendInfobipWhatsApp } from "../_shared/infobip.ts";
 
 async function hashOtp(otp: string): Promise<string> {
   const data = new TextEncoder().encode(otp);
@@ -194,9 +195,21 @@ Deno.serve(async (req) => {
       return json({ sent: true, channel: recentSend.channel, expires_in: OTP_EXPIRY_MINUTES * 60, deduplicated: true });
     }
 
-    // Try WhatsApp first (25s timeout per step)
-    console.log(`[phone-verify] Trying WhatsApp for ${phone.slice(0, 6)}***`);
-    let result = await sendWhatsApp(phone, otp);
+    // Channel preference: Infobip (whitelisted phones only) → bpi WA → Twilio SMS.
+    // Infobip is sandbox until prod sender registered; whitelist gates exposure.
+    let result: { sent: boolean; channel: string };
+    const otpBody = `BeautyCita - Tu codigo es: ${otp}\nValido por ${OTP_EXPIRY_MINUTES} min. No lo compartas.`;
+    const infobipResult = await sendInfobipWhatsApp(phone, otpBody);
+    if (infobipResult.sent) {
+      console.log(`[phone-verify] OTP sent via Infobip WA to ${phone.slice(0, 6)}***`);
+      result = { sent: true, channel: "infobip-wa" };
+    } else {
+      if (infobipResult.reason && infobipResult.reason !== "not_whitelisted" && infobipResult.reason !== "not_configured") {
+        console.warn(`[phone-verify] Infobip skipped (${infobipResult.reason}); falling back`);
+      }
+      console.log(`[phone-verify] Trying bpi WhatsApp for ${phone.slice(0, 6)}***`);
+      result = await sendWhatsApp(phone, otp);
+    }
 
     // If WA failed, fall back to Twilio Programmable SMS (NOT Twilio Verify — we send our OWN code)
     if (!result.sent && TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN) {
