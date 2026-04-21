@@ -122,6 +122,18 @@ Deno.serve(async (req) => {
       return json({ error: "Appointment not found" }, 404, req);
     }
 
+    // Atomic notify-once claim (cancel is terminal — never cleared).
+    const { data: claimed } = await supabase
+      .from("appointments")
+      .update({ cancel_notified_at: new Date().toISOString() })
+      .eq("id", appointment_id)
+      .is("cancel_notified_at", null)
+      .select("id");
+    if (!claimed || claimed.length === 0) {
+      console.log(`[CANCEL] ${appointment_id} already notified, skipping`);
+      return json({ success: true, skipped: "already_notified" }, 200, req);
+    }
+
     const salonName = (appt as any).businesses?.name ?? "Salon";
     const { date, time } = formatDateEs(appt.starts_at);
     const staffName = appt.staff_name || "";

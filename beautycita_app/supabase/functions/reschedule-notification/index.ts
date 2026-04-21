@@ -128,6 +128,21 @@ Deno.serve(async (req) => {
       return json({ error: "Appointment not found" }, 404, req);
     }
 
+    // Atomic notify-once claim. If reschedule_notified_at is already set,
+    // a previous invocation handled it (caller retry / double-click).
+    // The trigger clear_reschedule_notified_on_starts_change resets this
+    // when starts_at actually changes, so a NEW reschedule re-notifies.
+    const { data: claimed } = await supabase
+      .from("appointments")
+      .update({ reschedule_notified_at: new Date().toISOString() })
+      .eq("id", appointment_id)
+      .is("reschedule_notified_at", null)
+      .select("id");
+    if (!claimed || claimed.length === 0) {
+      console.log(`[RESCHEDULE] ${appointment_id} already notified, skipping`);
+      return json({ success: true, skipped: "already_notified" }, 200, req);
+    }
+
     const salonName =
       (appt as any).businesses?.name ?? "Salon";
     const { date, time } = formatDateEs(appt.starts_at);

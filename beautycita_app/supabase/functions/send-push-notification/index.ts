@@ -267,13 +267,14 @@ async function sendFcmNotification(
       const errText = await response.text();
       console.error("[FCM v1] Send failed:", response.status, errText);
 
-      // If token is invalid/unregistered, clear it from DB
+      // If token is invalid/unregistered, clear it from BOTH profiles and businesses
+      // (salon owners have their own fcm_token on businesses table). Match by token
+      // only — extremely unlikely two accounts share the same FCM token, and even
+      // if they did the token is dead so clearing both is correct.
       if (errText.includes("UNREGISTERED") || errText.includes("INVALID_ARGUMENT")) {
-        console.log("[FCM v1] Clearing stale token");
-        await supabase
-          .from("profiles")
-          .update({ fcm_token: null })
-          .eq("fcm_token", fcmToken);
+        console.log("[FCM v1] Clearing stale token from profiles + businesses");
+        await supabase.from("profiles").update({ fcm_token: null }).eq("fcm_token", fcmToken);
+        await supabase.from("businesses").update({ fcm_token: null }).eq("fcm_token", fcmToken);
       }
 
       return false;
@@ -447,23 +448,36 @@ Deno.serve(async (req) => {
     let recipientPhone: string | null = null;
     let notificationContent: NotificationContent;
 
-    // Custom notification (direct to user or business)
+    // Custom notification (direct to user or business). Skip FCM token if it's
+    // older than 30 days — likely stale (user reinstalled / changed device).
+    // Force WA fallback in that case.
+    const FCM_STALE_MS = 30 * 24 * 60 * 60 * 1000;
+    const isFcmFresh = (updatedAt: string | null | undefined): boolean => {
+      if (!updatedAt) return false;
+      return Date.now() - new Date(updatedAt).getTime() < FCM_STALE_MS;
+    };
     if (custom_title && custom_body) {
       if (user_id) {
         const { data: profile } = await supabase
           .from("profiles")
-          .select("fcm_token, phone")
+          .select("fcm_token, fcm_updated_at, phone")
           .eq("id", user_id)
           .single();
-        fcmToken = profile?.fcm_token;
+        fcmToken = isFcmFresh(profile?.fcm_updated_at) ? profile?.fcm_token : null;
+        if (profile?.fcm_token && !fcmToken) {
+          console.log(`[FCM] Token for user ${user_id} is stale (>30d), forcing WA`);
+        }
         recipientPhone = profile?.phone || null;
       } else if (business_id) {
         const { data: business } = await supabase
           .from("businesses")
-          .select("fcm_token, phone")
+          .select("fcm_token, fcm_updated_at, phone")
           .eq("id", business_id)
           .single();
-        fcmToken = business?.fcm_token;
+        fcmToken = isFcmFresh(business?.fcm_updated_at) ? business?.fcm_token : null;
+        if (business?.fcm_token && !fcmToken) {
+          console.log(`[FCM] Token for business ${business_id} is stale (>30d), forcing WA`);
+        }
         recipientPhone = business?.phone || null;
       }
 
