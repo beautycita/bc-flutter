@@ -575,7 +575,7 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
     }
 
     ref.invalidate(searchDiscoveredSalonsProvider(_searchKey));
-    ref.invalidate(pipelineFunnelStatsProvider);
+    ref.invalidate(pipelineFunnelStatsProvider(_searchKey));
 
     if (mounted) {
       _exitSelection();
@@ -592,9 +592,10 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
     }
 
     final colors = Theme.of(context).colorScheme;
-    final statsAsync = ref.watch(pipelineFunnelStatsProvider);
-    // Set params before watching so the provider can read them
+    // Set params first so both pipelineFunnelStatsProvider and
+    // searchDiscoveredSalonsProvider see the current filter chain on this frame.
     ref.read(pipelineSearchParamsProvider.notifier).state = _searchParams;
+    final statsAsync = ref.watch(pipelineFunnelStatsProvider(_searchKey));
     final leadsAsync = ref.watch(searchDiscoveredSalonsProvider(_searchKey));
 
     return Stack(

@@ -1129,9 +1129,36 @@ final rpTrackingProvider = FutureProvider<List<Map<String, dynamic>>>((ref) asyn
 });
 
 /// Aggregates discovered_salons by status for the funnel metrics header.
-/// Uses parallel count queries (indexed) instead of loading all 35k+ rows.
-final pipelineFunnelStatsProvider = FutureProvider<Map<String, int>>((ref) async {
+/// Keyed on the same search-key string as [searchDiscoveredSalonsProvider]
+/// so unique filter combos are cached separately and the provider only rebuilds
+/// when the key changes — not on every widget rebuild. Reads the current
+/// filter map from [pipelineSearchParamsProvider] at call time.
+/// Calls `pipeline_funnel_stats_filtered` RPC which mirrors the scalar
+/// predicates of `search_discovered_salons`.
+final pipelineFunnelStatsProvider =
+    FutureProvider.family<Map<String, int>, String>((ref, _) async {
+  final params = ref.read(pipelineSearchParamsProvider);
   final client = SupabaseClientService.client;
+
+  final rpcParams = <String, dynamic>{
+    'p_query': (params['query'] ?? '') as String,
+    if (params['city_filter'] != null) 'p_city_filter': params['city_filter'],
+    if (params['country_filter'] != null) 'p_country_filter': params['country_filter'],
+    if (params['state_filter'] != null) 'p_state_filter': params['state_filter'],
+    if (params['has_whatsapp'] != null) 'p_has_whatsapp': params['has_whatsapp'],
+    if (params['has_interest'] != null) 'p_has_interest': params['has_interest'],
+    if (params['source_filter'] != null) 'p_source_filter': params['source_filter'],
+    if (params['p_assigned_rp_id'] != null) 'p_assigned_rp_id': params['p_assigned_rp_id'],
+    if (params['p_rp_status_filter'] != null) 'p_rp_status_filter': params['p_rp_status_filter'],
+    if (params['p_pin_lat'] != null) 'p_pin_lat': params['p_pin_lat'],
+    if (params['p_pin_lng'] != null) 'p_pin_lng': params['p_pin_lng'],
+    if (params['p_radius_km'] != null) 'p_radius_km': params['p_radius_km'],
+  };
+
+  final response =
+      await client.rpc('pipeline_funnel_stats_filtered', params: rpcParams);
+  final raw = (response as Map?) ?? const <String, dynamic>{};
+
   const statuses = [
     'discovered',
     'selected',
@@ -1140,19 +1167,10 @@ final pipelineFunnelStatsProvider = FutureProvider<Map<String, int>>((ref) async
     'declined',
     'unreachable',
   ];
-
-  final results = await Future.wait([
-    for (final status in statuses)
-      client
-          .from(BCTables.discoveredSalons)
-          .select('id')
-          .eq('status', status)
-          .count(),
-  ]);
-
   final counts = <String, int>{};
-  for (var i = 0; i < statuses.length; i++) {
-    counts[statuses[i]] = results[i].count;
+  for (final s in statuses) {
+    final v = raw[s];
+    counts[s] = (v is int) ? v : (v is num ? v.toInt() : 0);
   }
   return counts;
 });
