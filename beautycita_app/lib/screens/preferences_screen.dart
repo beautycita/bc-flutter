@@ -157,6 +157,10 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
                 _buildPreferenceDials(prefsState, cs, ext),
                 const SizedBox(height: AppConstants.paddingLG),
 
+                // ── Privacidad (LFPDPPP — must be immediately visible) ──
+                _buildPrivacySection(cs, ext),
+                const SizedBox(height: AppConstants.paddingLG),
+
                 // ── Live Map + Radius ──
                 _buildLiveMap(prefsState, cs, ext),
                 const SizedBox(height: AppConstants.paddingLG),
@@ -174,10 +178,6 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
 
                 // ── Notifications ──
                 _buildNotificationsSection(cs, ext),
-                const SizedBox(height: AppConstants.paddingLG),
-
-                // ── Privacidad ──
-                _buildPrivacySection(cs, ext),
                 const SizedBox(height: AppConstants.paddingXXL),
         ],
       ),
@@ -898,7 +898,7 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
             ),
             rowToggle(
               icon: Icons.accessible_outlined,
-              label: 'Necesito acceso accesible',
+              label: 'Necesito ingreso accesible',
               subtitle: 'Solo muestra salones con rampa, acceso silla de ruedas',
               value: prefs.accessibilityRequired,
               onChanged: (v) => updateServicePreferences(
