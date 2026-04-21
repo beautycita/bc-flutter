@@ -16,7 +16,8 @@ ENV_FILE="/var/www/beautycita.com/bc-flutter/supabase-docker/.env"
 
 run_watchdog() {
   ssh www-bc "
-    set -a; source ${ENV_FILE}; set +a
+    ANON_KEY=\$(grep '^ANON_KEY=' ${ENV_FILE} | head -1 | cut -d= -f2-)
+    CRON_SECRET=\$(grep '^CRON_SECRET=' ${ENV_FILE} | head -1 | cut -d= -f2-)
     curl -s -X POST \
       -H \"apikey: \${ANON_KEY}\" \
       -H \"x-cron-secret: \${CRON_SECRET}\" \
