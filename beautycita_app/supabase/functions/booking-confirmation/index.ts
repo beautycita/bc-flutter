@@ -10,6 +10,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { resolveNotificationText } from "../_shared/notification_templates.ts";
 import { sendWhatsAppWithRetry } from "../_shared/wa_queue.ts";
 import { corsHeaders as dynamicCors } from "../_shared/cors.ts";
+import { checkRateLimit } from "../_shared/rate-limit.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -92,6 +93,9 @@ Deno.serve(async (req) => {
       return json({ error: "Invalid token" }, 401);
     }
     callerId = user.id;
+    if (!checkRateLimit(`bcfm:${user.id}`, 20, 60_000)) {
+      return json({ error: "Too many requests" }, 429);
+    }
   }
 
   try {

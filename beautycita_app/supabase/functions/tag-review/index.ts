@@ -4,6 +4,7 @@
 // snippet_quality_score for fast retrieval by curate-results.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { checkRateLimit } from "../_shared/rate-limit.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -112,6 +113,14 @@ Deno.serve(async (req: Request) => {
   if (authError || !user) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  // Tag-review calls AI — rate limit to control cost per user
+  if (!checkRateLimit(`tag:${user.id}`, 20, 60_000)) {
+    return new Response(JSON.stringify({ error: "Too many requests" }), {
+      status: 429,
       headers: { "Content-Type": "application/json" },
     });
   }

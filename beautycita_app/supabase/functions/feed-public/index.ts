@@ -10,6 +10,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { requireFeature } from "../_shared/check-toggle.ts";
 import { cacheGet, cacheSet } from "../_shared/redis.ts";
 import { corsHeaders, handleCorsPreflightIfOptions } from "../_shared/cors.ts";
+import { checkRateLimit, ipKey } from "../_shared/rate-limit.ts";
 
 let _req: Request;
 
@@ -125,6 +126,11 @@ Deno.serve(async (req: Request) => {
 
   if (req.method !== "GET") {
     return json({ error: "Method not allowed" }, 405, req);
+  }
+
+  // Public endpoint — IP-based rate limit to prevent scraping/DoS
+  if (!checkRateLimit(`feed:${ipKey(req)}`, 60, 60_000)) {
+    return json({ error: "Too many requests" }, 429, req);
   }
 
   // Server-side toggle enforcement

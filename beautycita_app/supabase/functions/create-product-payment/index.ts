@@ -11,6 +11,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@14.21.0?target=deno";
 import { requireFeature } from "../_shared/check-toggle.ts";
 import { corsHeaders, handleCorsPreflightIfOptions } from "../_shared/cors.ts";
+import { checkRateLimit } from "../_shared/rate-limit.ts";
 
 
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
@@ -58,6 +59,10 @@ serve(async (req) => {
 
     if (authError || !user) {
       return json({ error: "Unauthorized" }, 401, req);
+    }
+
+    if (!checkRateLimit(`pay:${user.id}`, 5, 60_000)) {
+      return json({ error: "Too many payment attempts. Please wait." }, 429, req);
     }
 
     const body: ProductPaymentRequest = await req.json();

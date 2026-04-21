@@ -8,6 +8,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@14.14.0";
+import { checkRateLimit } from "../_shared/rate-limit.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -43,6 +44,10 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) {
       return json({ error: "Not authenticated" }, 401, corsHeaders);
+    }
+
+    if (!checkRateLimit(`gift:${user.id}`, 5, 60_000)) {
+      return json({ error: "Too many requests" }, 429, corsHeaders);
     }
 
     const body = await req.json();

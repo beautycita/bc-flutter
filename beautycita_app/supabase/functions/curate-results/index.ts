@@ -11,6 +11,7 @@ import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-
 import { requireFeature } from "../_shared/check-toggle.ts";
 import { cacheGet, cacheSet } from "../_shared/redis.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+import { checkRateLimit, principalKey } from "../_shared/rate-limit.ts";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -281,6 +282,12 @@ serve(async (req) => {
       if (authError) {
         console.warn("[curate-results] Auth soft-fail:", authError.message);
       }
+    }
+
+    // Rate limit — heavy query, used as the booking-engine entry. Soft-auth
+    // means principalKey falls back to last-16 of token / IP for anon.
+    if (!checkRateLimit(`curate:${principalKey(req)}`, 30, 60_000)) {
+      return json({ error: "Too many requests" }, 429);
     }
 
     // Feature toggle check

@@ -7,6 +7,7 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { checkRateLimit } from "../_shared/rate-limit.ts";
 
 const ALLOWED_ORIGINS = [
   "https://beautycita.com",
@@ -60,6 +61,10 @@ serve(async (req) => {
 
     if (authError || !user) {
       return json({ error: "Unauthorized" }, 401);
+    }
+
+    if (!checkRateLimit(`reg:${user.id}`, 3, 3600_000)) {
+      return json({ error: "Rate limit: max 3 registrations per hour" }, 429);
     }
 
     const body: RegisterBusinessRequest = await req.json();

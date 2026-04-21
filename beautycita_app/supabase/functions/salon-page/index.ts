@@ -9,6 +9,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders, handleCorsPreflightIfOptions } from "../_shared/cors.ts";
+import { checkRateLimit, ipKey } from "../_shared/rate-limit.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -22,6 +23,11 @@ serve(async (req) => {
 
   if (!slug) {
     return new Response("Not found", { status: 404 });
+  }
+
+  // Public endpoint — IP-based rate limit
+  if (!checkRateLimit(`salon:${ipKey(req)}`, 60, 60_000)) {
+    return new Response("Too many requests", { status: 429 });
   }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);

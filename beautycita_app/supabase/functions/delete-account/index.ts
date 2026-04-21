@@ -17,6 +17,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { checkRateLimit } from "../_shared/rate-limit.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -48,6 +49,11 @@ serve(async (req) => {
 
   const { data: { user: caller }, error: authErr } = await supabase.auth.getUser(token);
   if (authErr || !caller) return json({ error: "Invalid token" }, 401);
+
+  // Destructive endpoint — strict per-admin throttle
+  if (!checkRateLimit(`del:${caller.id}`, 3, 3600_000)) {
+    return json({ error: "Rate limit: max 3 deletions per hour" }, 429);
+  }
 
   const { data: callerProfile } = await supabase
     .from("profiles")

@@ -10,6 +10,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { requireFeature } from "../_shared/check-toggle.ts";
 import { corsHeaders as dynamicCors } from "../_shared/cors.ts";
 import { processRefund } from "../_shared/refund.ts";
+import { checkRateLimit } from "../_shared/rate-limit.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -40,6 +41,10 @@ serve(async (req) => {
 
     if (authError || !user) {
       return json({ error: "Unauthorized" }, 401);
+    }
+
+    if (!checkRateLimit(`disp:${user.id}`, 10, 60_000)) {
+      return json({ error: "Too many requests" }, 429);
     }
 
     // Admin role check

@@ -15,6 +15,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { requireFeature } from "../_shared/check-toggle.ts";
 import { corsHeaders, handleCorsPreflightIfOptions } from "../_shared/cors.ts";
+import { checkRateLimit } from "../_shared/rate-limit.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -398,6 +399,13 @@ Deno.serve(async (req) => {
     if (authErr || !user) {
       return new Response(JSON.stringify({ error: "Invalid token" }), {
         status: 401,
+        headers: { ...corsHeaders(req), "Content-Type": "application/json" },
+      });
+    }
+    // Non-service callers can't fan out unbounded pushes
+    if (!checkRateLimit(`push:${user.id}`, 30, 60_000)) {
+      return new Response(JSON.stringify({ error: "Too many requests" }), {
+        status: 429,
         headers: { ...corsHeaders(req), "Content-Type": "application/json" },
       });
     }

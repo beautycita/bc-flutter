@@ -20,6 +20,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders as dynamicCors } from "../_shared/cors.ts";
+import { checkRateLimit, ipKey } from "../_shared/rate-limit.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -114,6 +115,10 @@ serve(async (req) => {
     const body: Body = await req.json();
     if (!body?.business_id) {
       return json({ ok: false, reason: "business_not_found" as const }, 400, corsHeaders);
+    }
+
+    if (!checkRateLimit(`pic:${body.business_id}:${ipKey(req)}`, 10, 60_000)) {
+      return json({ ok: false, reason: "rate_limit" as const }, 429, corsHeaders);
     }
 
     // 1. Load business + active hold status

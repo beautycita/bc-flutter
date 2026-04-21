@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders, handleCorsPreflightIfOptions } from "../_shared/cors.ts";
+import { checkRateLimit } from "../_shared/rate-limit.ts";
 
 
 // --- Helpers for search_place ---
@@ -71,6 +72,13 @@ serve(async (req) => {
       );
     }
     const userId = user.id;
+
+    if (!checkRateLimit(`scrape:${userId}`, 5, 3600_000)) {
+      return new Response(
+        JSON.stringify({ error: "Rate limit: max 5 scrapes per hour" }),
+        { status: 429, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
+      );
+    }
 
     const body = await req.json();
     const { action } = body;

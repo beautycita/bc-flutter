@@ -11,6 +11,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { checkRateLimit } from "../_shared/rate-limit.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -49,6 +50,11 @@ serve(async (req) => {
 
   const userId = body.user_id;
   if (!userId) return json({ error: "user_id required" }, 400);
+
+  // Heavy operation — at most one export per user per 24h
+  if (!checkRateLimit(`export:${userId}`, 1, 86_400_000)) {
+    return json({ error: "Export already generated in last 24h" }, 429);
+  }
 
   const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
 

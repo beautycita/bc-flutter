@@ -9,6 +9,7 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { checkRateLimit } from "../_shared/rate-limit.ts";
 
 const ALLOWED_ORIGINS = [
   "https://beautycita.com",
@@ -228,6 +229,11 @@ serve(async (req) => {
 
     if (authError || !user) {
       return json({ error: "No autenticado" }, 401);
+    }
+
+    // Vision API costs money — strict per-user limit
+    if (!checkRateLimit(`verify:${user.id}`, 5, 3600_000)) {
+      return json({ error: "Rate limit: max 5 verifications per hour" }, 429);
     }
 
     const body = await req.json();

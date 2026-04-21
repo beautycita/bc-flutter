@@ -8,6 +8,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { requireFeature } from "../_shared/check-toggle.ts";
+import { checkRateLimit } from "../_shared/rate-limit.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -78,6 +79,10 @@ Deno.serve(async (req: Request) => {
 
   if (authError || !user) {
     return json({ error: "Unauthorized" }, 401);
+  }
+
+  if (!checkRateLimit(`gcal:${user.id}`, 5, 60_000)) {
+    return json({ error: "Too many requests" }, 429);
   }
 
   try {
