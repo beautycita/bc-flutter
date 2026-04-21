@@ -535,7 +535,13 @@ class _ProfileTab extends StatelessWidget {
             value: (auth['phone'] as String?) ??
                 (p['phone'] as String?) ??
                 '—',
-            trailing: _VerifiedBadge(verifiedAt: auth['phone_confirmed_at']),
+            // Source of truth: profiles.phone_verified_at (written by our
+            // WA-OTP phone-verify edge function). auth.users.phone_confirmed_at
+            // is only populated by Supabase's native OTP, which we don't use.
+            // Fall back to auth for users migrated from the native flow.
+            trailing: _VerifiedBadge(
+              verifiedAt: p['phone_verified_at'] ?? auth['phone_confirmed_at'],
+            ),
           ),
         ]),
       ),
