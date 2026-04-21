@@ -119,11 +119,17 @@ serve(async (req) => {
     }).catch((e) => console.error("[ARCO] data-export trigger failed:", e));
   }
 
-  // For 'opposition' to 'behavioral_analytics': flip the user's analytics_opt_out flag immediately
+  // For 'opposition' to 'behavioral_analytics': flip the user's opted_out_analytics
+  // flag immediately. (Column name is opted_out_analytics — the original from
+  // 60045 compliance_gaps migration. A duplicate analytics_opt_out column was
+  // briefly created earlier today and has since been dropped.)
   if (requestType === "opposition" && details.processing_type === "behavioral_analytics") {
     await supabase
       .from("profiles")
-      .update({ analytics_opt_out: true })
+      .update({
+        opted_out_analytics: true,
+        opted_out_analytics_at: new Date().toISOString(),
+      })
       .eq("id", user.id);
   }
 

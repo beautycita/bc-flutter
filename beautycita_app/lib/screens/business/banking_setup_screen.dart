@@ -986,6 +986,8 @@ class _BankingSetupScreenState extends ConsumerState<BankingSetupScreen> {
         },
       );
 
+      if (!mounted) return;
+
       if (response.status != 200) {
         final errorMsg =
             (response.data as Map<String, dynamic>?)?['error'] as String? ??
@@ -1008,6 +1010,7 @@ class _BankingSetupScreenState extends ConsumerState<BankingSetupScreen> {
       });
     } catch (e) {
       if (kDebugMode) debugPrint('BankingSetup: submit error: $e');
+      if (!mounted) return;
       setState(() {
         _submitError = ToastService.friendlyError(e);
         _submitting = false;
