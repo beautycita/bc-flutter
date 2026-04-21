@@ -24,6 +24,16 @@ const MAX_ATTEMPTS = 3;
 const SENTINEL_USER_ID = "00000000-0000-0000-0000-000000000000";
 const APK_URL = "https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/apk/beautycita.apk";
 
+// SHA-256 hash for OTP storage. Matches phone-verify so leaked
+// phone_verification_codes rows can't be replayed against either flow.
+async function hashOtp(otp: string): Promise<string> {
+  const data = new TextEncoder().encode(otp);
+  const hash = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(hash))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 const ALLOWED_ORIGINS = [
   "https://beautycita.com",
   "https://www.beautycita.com",
@@ -1007,10 +1017,11 @@ Deno.serve(async (req: Request) => {
         const otp = generateOtp();
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
+        const otpHash = await hashOtp(otp);
         const { error: insertErr } = await supabase.from("phone_verification_codes").insert({
           user_id: SENTINEL_USER_ID,
           phone,
-          code: otp,
+          code: otpHash,
           channel: "sms",
           expires_at: expiresAt,
         });
@@ -1030,7 +1041,7 @@ Deno.serve(async (req: Request) => {
             await supabase.from("phone_verification_codes")
               .update({ channel: "whatsapp" })
               .eq("phone", phone)
-              .eq("code", otp);
+              .eq("code", otpHash);
           } else {
             console.log(`[SALON-REG] WA failed for ${phone}, falling back to SMS`);
             const smsResult = await sendSms(phone, otp);
@@ -1114,8 +1125,8 @@ Deno.serve(async (req: Request) => {
             console.error(`[SALON-REG] Twilio verify error: ${e}`);
           }
         } else {
-          // WA OTP — verify against our stored code
-          verified = record.code === code;
+          // WA OTP — verify hashed code (matches phone-verify pattern)
+          verified = record.code === await hashOtp(code);
         }
 
         if (!verified) {

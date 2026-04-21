@@ -139,6 +139,20 @@ serve(async (req) => {
       return json({ error: "Este negocio aun no ha completado su verificacion bancaria" }, 400);
     }
 
+    // Platform rule: salon cannot transact without RFC. This catches the case
+    // where RFC was nulled AFTER banking_complete was set — banking flag stays
+    // true, but per platform mandate we still must refuse the charge. The
+    // is_verified flag drops via revoke_verification_on_requirement_loss but
+    // payment-time enforcement is a separate gate so curate-bypass paths
+    // (direct booking links, existing carts) don't slip through.
+    if (!business.rfc) {
+      console.warn(`[PAYMENT] RFC missing on business ${business.id} — refusing charge`);
+      return json({
+        error: "Este negocio no tiene RFC vigente y no puede recibir pagos en linea.",
+        code: "RFC_REQUIRED",
+      }, 400);
+    }
+
     if (!business.stripe_account_id) {
       return json({ error: "Este negocio no tiene pagos en linea configurados" }, 400);
     }

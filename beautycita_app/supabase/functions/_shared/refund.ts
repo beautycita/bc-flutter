@@ -21,6 +21,13 @@ export interface RefundParams {
   paymentMethod?: string | null;
   reason: string;
   idempotencyKey: string;
+  /**
+   * Skip the 3% processing-fee deduction. Use when BC's commission was already
+   * collected at original payment time (Stripe Connect application_fee) and the
+   * caller is passing in the post-commission amount. Otherwise BC double-takes.
+   * Default false (deduct fee — appropriate for product/dispute refunds).
+   */
+  skipProcessingFee?: boolean;
 }
 
 async function readProcessingFeeRate(supabase: SupabaseClient): Promise<number> {
@@ -46,9 +53,10 @@ export async function processRefund(params: RefundParams): Promise<RefundResult>
   const {
     supabase, buyerId, businessId, grossAmount,
     appointmentId, orderId, paymentMethod, reason, idempotencyKey,
+    skipProcessingFee,
   } = params;
 
-  const feeRate = await readProcessingFeeRate(supabase);
+  const feeRate = skipProcessingFee ? 0 : await readProcessingFeeRate(supabase);
   const processingFee = Math.round(grossAmount * feeRate * 100) / 100;
   const saldoCredit = Math.round((grossAmount - processingFee) * 100) / 100;
 

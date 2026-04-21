@@ -144,13 +144,14 @@ serve(async (req) => {
     console.log(`  Refund to customer: $${refundAmount}`);
     console.log(`  Provider keeps: $${providerPayout}`);
 
-    // Process the refund: saldo credit to buyer + debt to seller
+    // Process the refund: saldo credit to buyer + debt to seller.
+    // refundAmount is already net of platformFee (deducted at line 135 above)
+    // because BC's commission was collected at original payment time via
+    // Stripe Connect application_fee. Pass skipProcessingFee so processRefund
+    // doesn't double-take a second 3% slice.
     let refundResult = null;
     if (refundAmount > 0) {
       try {
-        // Note: processRefund applies its own 3% fee. Since we already calculated
-        // refundAmount = totalPaid - deposit - platformFee, pass refundAmount as gross
-        // with commissionRate 0 (fee already deducted).
         refundResult = await processRefund({
           supabase,
           buyerId: appointment.user_id,
@@ -159,6 +160,7 @@ serve(async (req) => {
           appointmentId: appointment_id,
           reason: `no_show_${appointment_id}`,
           idempotencyKey: `noshow-refund-${appointment_id}`,
+          skipProcessingFee: true,
         });
 
         console.log(`[NO-SHOW] Refund processed: saldo $${refundResult.saldoCredit}, debt $${refundResult.debtCreated}`);
@@ -203,19 +205,20 @@ serve(async (req) => {
       metadata: { reason: "no_show" },
     });
 
-    // Record refund
+    // Record refund (saldo-only — no Stripe refund involved per platform policy,
+    // so stripe_charge_id and stripe_refund_id are intentionally null).
     if (refundAmount > 0) {
       paymentRecords.push({
         appointment_id,
         stripe_payment_intent_id: appointment.payment_intent_id,
-        stripe_charge_id: stripeRefund?.charge as string | undefined,
+        stripe_charge_id: null,
         amount: -Math.round(refundAmount * 100), // negative for refund
         currency: "mxn",
         status: "succeeded",
         type: "refund",
         metadata: {
           reason: "no_show",
-          stripe_refund_id: stripeRefund?.id,
+          refund_method: "saldo",
         },
       });
     }
@@ -292,7 +295,7 @@ serve(async (req) => {
       platform_fee: platformFee,
       refund_amount: refundAmount,
       provider_payout: providerPayout,
-      stripe_refund_id: stripeRefund?.id ?? null,
+      refund_method: "saldo",
     }, 200, req);
 
   } catch (err) {

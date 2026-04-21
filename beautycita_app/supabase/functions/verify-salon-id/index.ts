@@ -216,9 +216,11 @@ serve(async (req) => {
     return new Response("ok", { headers: corsHeaders(req) });
   }
 
-  try {
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  // Hoisted so the catch handler can reset stuck-pending state
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  let business_id: string | undefined;
 
+  try {
     // Auth check
     const authHeader = req.headers.get("authorization") ?? "";
     const token = authHeader.replace("Bearer ", "");
@@ -228,7 +230,9 @@ serve(async (req) => {
       return json({ error: "No autenticado" }, 401);
     }
 
-    const { business_id, beneficiary_name } = await req.json();
+    const body = await req.json();
+    business_id = body.business_id;
+    const beneficiary_name = body.beneficiary_name;
 
     if (!business_id || !beneficiary_name) {
       return json({ error: "business_id y beneficiary_name son requeridos" }, 400);
@@ -350,7 +354,25 @@ serve(async (req) => {
 
   } catch (err) {
     console.error("[VERIFY-ID] Error:", err);
-    return json({ error: "Error interno al verificar identificacion" }, 500);
+    // Reset stuck-pending state so the salon can retry. Without this,
+    // an upstream failure (Vision API timeout, OAuth token fetch, etc.)
+    // leaves id_verification_status='pending' forever and the owner
+    // has no way to re-trigger verification.
+    if (business_id) {
+      try {
+        await supabase
+          .from("businesses")
+          .update({ id_verification_status: "rejected" })
+          .eq("id", business_id)
+          .eq("id_verification_status", "pending");
+      } catch (resetErr) {
+        console.error("[VERIFY-ID] Failed to reset pending status:", resetErr);
+      }
+    }
+    return json({
+      error: "Error interno al verificar identificacion. Intenta de nuevo.",
+      retryable: true,
+    }, 500);
   }
 });
 

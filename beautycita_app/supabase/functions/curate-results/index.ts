@@ -293,7 +293,29 @@ serve(async (req) => {
       return json({ error: "This feature is currently disabled" }, 403);
     }
 
-    const body: CurateRequest = await req.json();
+    // Body parse — capture raw text on failure so we can see what's malformed
+    // (was throwing SyntaxError "position 2" on every call without context).
+    let body: CurateRequest;
+    try {
+      body = await req.json();
+    } catch (e) {
+      let raw = "<unreadable>";
+      try { raw = await req.clone().text(); } catch { /* body already consumed */ }
+      const ct = req.headers.get("content-type") ?? "";
+      const ua = req.headers.get("user-agent") ?? "";
+      console.error(
+        "curate-results: bad JSON body",
+        JSON.stringify({
+          err: (e as Error).message,
+          contentType: ct,
+          ua,
+          rawHead: raw.slice(0, 200),
+          rawLen: raw.length,
+          bytePrefix: Array.from(new TextEncoder().encode(raw.slice(0, 8))),
+        }),
+      );
+      return json({ error: "Invalid JSON body" }, 400);
+    }
     const {
       service_type,
       user_id,

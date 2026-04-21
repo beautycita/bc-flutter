@@ -1,6 +1,10 @@
 // stripe-connect-onboard edge function
 // Manages Stripe Connect Express accounts for salon providers.
 // Actions: create-account, get-onboard-link, get-account-status, dashboard-link
+//
+// Platform rule: a salon without a valid RFC cannot transact. This function
+// refuses to create a Stripe account unless businesses.rfc is populated
+// (and the DB-level trigger has already validated its format).
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders, handleCorsPreflightIfOptions } from "../_shared/cors.ts";
@@ -11,7 +15,9 @@ const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
 const STRIPE_API = "https://api.stripe.com/v1";
 const APP_URL = Deno.env.get("APP_URL") ?? "https://beautycita.com";
 
-
+// MCC 7230 = Barber and Beauty Shops. Fixed for all BeautyCita accounts.
+const BEAUTYCITA_MCC = "7230";
+const PRODUCT_DESCRIPTION = "Servicios de belleza y salón agendados vía BeautyCita";
 
 function json(body: unknown, status = 200, req?: Request) {
   return new Response(JSON.stringify(body), {
@@ -65,6 +71,141 @@ function checkRateLimit(key: string, limit: number, windowMs: number): boolean {
   return true;
 }
 
+function formatMxPhone(raw: string | null | undefined): string | undefined {
+  if (!raw) return undefined;
+  const digits = raw.replace(/[^\d]/g, "");
+  if (digits.length < 10) return undefined;
+  return `+${digits.startsWith("52") ? "" : "52"}${digits}`;
+}
+
+/**
+ * Builds the complete Stripe account creation params from a business record.
+ * Assumes business.rfc is present and format-valid (DB trigger enforces format).
+ * RFC length determines entity type: 12 chars = PM (company), 13 chars = PF (individual).
+ */
+function buildStripeAccountParams(
+  business: Record<string, unknown>,
+  ownerEmail: string | null,
+): Record<string, string> {
+  const rfc = (business.rfc as string).toUpperCase();
+  const isPM = rfc.length === 12;
+  const businessType = isPM ? "company" : "individual";
+  const phone = formatMxPhone(
+    (business.phone as string) || (business.whatsapp as string),
+  );
+
+  const params: Record<string, string> = {
+    type: "express",
+    country: "MX",
+    "capabilities[card_payments][requested]": "true",
+    "capabilities[transfers][requested]": "true",
+    business_type: businessType,
+    "metadata[business_id]": business.id as string,
+    "metadata[platform]": "beautycita",
+    "metadata[rfc]": rfc,
+    "metadata[tax_regime]": (business.tax_regime as string) ?? "",
+  };
+
+  // Business profile (applies to both PF and PM)
+  if (business.name) {
+    params["business_profile[name]"] = business.name as string;
+  }
+  params["business_profile[mcc]"] = BEAUTYCITA_MCC;
+  params["business_profile[product_description]"] = PRODUCT_DESCRIPTION;
+  if (business.website) {
+    params["business_profile[url]"] = business.website as string;
+  } else if (business.slug) {
+    params["business_profile[url]"] = `${APP_URL}/${business.slug}`;
+  }
+  if (phone) {
+    params["business_profile[support_phone]"] = phone;
+  }
+  if (business.email) {
+    params["business_profile[support_email]"] = business.email as string;
+  } else if (ownerEmail) {
+    params["business_profile[support_email]"] = ownerEmail;
+  }
+
+  if (isPM) {
+    // Persona Moral — company fields
+    params["company[tax_id]"] = rfc;
+    if (business.name) params["company[name]"] = business.name as string;
+    if (phone) params["company[phone]"] = phone;
+    if (business.address) {
+      params["company[address][line1]"] = business.address as string;
+      params["company[address][city]"] = (business.city as string) || "";
+      params["company[address][state]"] = (business.state as string) || "";
+      params["company[address][country]"] =
+        (business.country as string) || "MX";
+    }
+  } else {
+    // Persona Física — individual fields
+    params["individual[id_number]"] = rfc;
+    if (business.beneficiary_name) {
+      const parts = (business.beneficiary_name as string).trim().split(/\s+/);
+      if (parts.length >= 2) {
+        params["individual[first_name]"] = parts[0];
+        params["individual[last_name]"] = parts.slice(1).join(" ");
+      } else if (parts.length === 1) {
+        params["individual[first_name]"] = parts[0];
+      }
+    }
+    if (phone) params["individual[phone]"] = phone;
+    if (ownerEmail) params["individual[email]"] = ownerEmail;
+    if (business.address) {
+      params["individual[address][line1]"] = business.address as string;
+      params["individual[address][city]"] = (business.city as string) || "";
+      params["individual[address][state]"] = (business.state as string) || "";
+      params["individual[address][country]"] =
+        (business.country as string) || "MX";
+    }
+  }
+
+  return params;
+}
+
+/**
+ * Creates the Stripe Connect account and attaches CLABE (if banking is verified).
+ * Persists stripe_account_id back to the businesses row.
+ */
+async function createStripeAccount(
+  business: Record<string, unknown>,
+  ownerEmail: string | null,
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+): Promise<string> {
+  const params = buildStripeAccountParams(business, ownerEmail);
+  const account = await stripePost("/accounts", params);
+
+  if (business.banking_complete && business.clabe) {
+    try {
+      await stripePost(`/accounts/${account.id}/external_accounts`, {
+        "external_account[object]": "bank_account",
+        "external_account[country]": "MX",
+        "external_account[currency]": "mxn",
+        "external_account[account_number]": business.clabe as string,
+        "external_account[account_holder_name]":
+          (business.beneficiary_name as string) ??
+          (business.name as string) ??
+          "",
+      });
+    } catch (e) {
+      // Non-fatal: Stripe onboarding can still collect this info manually.
+      console.warn("Failed to prefill CLABE:", e);
+    }
+  }
+
+  await supabase
+    .from("businesses")
+    .update({
+      stripe_account_id: account.id,
+      stripe_onboarding_status: "pending",
+    })
+    .eq("id", business.id as string);
+
+  return account.id;
+}
+
 Deno.serve(async (req: Request) => {
   const _pre = handleCorsPreflightIfOptions(req);
   if (_pre) return _pre;
@@ -108,7 +249,9 @@ Deno.serve(async (req: Request) => {
     // Fetch business data + verify ownership
     const { data: business, error: bizError } = await supabase
       .from("businesses")
-      .select("id, name, phone, whatsapp, address, stripe_account_id, owner_id, clabe, bank_name, beneficiary_name, banking_complete")
+      .select(
+        "id, name, phone, whatsapp, email, website, slug, address, city, state, country, rfc, tax_regime, stripe_account_id, owner_id, clabe, bank_name, beneficiary_name, banking_complete",
+      )
       .eq("id", businessId)
       .single();
 
@@ -121,8 +264,34 @@ Deno.serve(async (req: Request) => {
       return json({ error: "Not authorized for this business" }, 403, req);
     }
 
+    // Platform rule: salon cannot transact without RFC. Refuse Stripe
+    // account creation / onboarding link when RFC is missing. Status checks
+    // and dashboard links remain available so an already-onboarded salon
+    // isn't locked out by a future RFC nullification.
+    const needsRfc = action === "create-account" || action === "get-onboard-link";
+    if (needsRfc && !business.rfc) {
+      return json(
+        {
+          error: "RFC_REQUIRED",
+          message:
+            "Captura tu RFC antes de configurar Stripe. Es requisito legal para operar en BeautyCita.",
+        },
+        400,
+        req,
+      );
+    }
+
+    // Look up owner email from auth.users for Stripe autofill (individual[email]).
+    // Only needed when we actually build account params.
+    let ownerEmail: string | null = null;
+    if (needsRfc) {
+      const { data: ownerUser } = await supabase.auth.admin.getUserById(
+        business.owner_id,
+      );
+      ownerEmail = ownerUser?.user?.email ?? null;
+    }
+
     if (action === "create-account") {
-      // Check if already has Stripe account
       if (business.stripe_account_id) {
         return json({
           account_id: business.stripe_account_id,
@@ -130,130 +299,16 @@ Deno.serve(async (req: Request) => {
         }, 200, req);
       }
 
-      // Create Stripe Express account
-      const params: Record<string, string> = {
-        type: "express",
-        country: "MX", // Mexico
-        "capabilities[card_payments][requested]": "true",
-        "capabilities[transfers][requested]": "true",
-        "business_type": "individual",
-        "metadata[business_id]": businessId,
-        "metadata[platform]": "beautycita",
-      };
-
-      // Pre-fill business info if available
-      if (business.name) {
-        params["business_profile[name]"] = business.name;
-      }
-      if (business.phone || business.whatsapp) {
-        // Note: Stripe requires phone in E.164 format without +
-        const phone = (business.phone || business.whatsapp).replace(/[^\d]/g, "");
-        if (phone.length >= 10) {
-          params["individual[phone]"] = `+${phone.startsWith("52") ? "" : "52"}${phone}`;
-        }
-      }
-
-      // Pre-fill beneficiary name from banking info
-      if (business.beneficiary_name) {
-        const parts = business.beneficiary_name.trim().split(/\s+/);
-        if (parts.length >= 2) {
-          params["individual[first_name]"] = parts[0];
-          params["individual[last_name]"] = parts.slice(1).join(" ");
-        } else if (parts.length === 1) {
-          params["individual[first_name]"] = parts[0];
-        }
-      }
-
-      const account = await stripePost("/accounts", params);
-
-      // Pre-fill CLABE as external bank account if banking is verified
-      if (business.banking_complete && business.clabe) {
-        try {
-          await stripePost(`/accounts/${account.id}/external_accounts`, {
-            "external_account[object]": "bank_account",
-            "external_account[country]": "MX",
-            "external_account[currency]": "mxn",
-            "external_account[account_number]": business.clabe,
-            "external_account[account_holder_name]": business.beneficiary_name ?? business.name ?? "",
-          });
-        } catch (e) {
-          // Non-fatal: Stripe onboarding can still collect this info manually
-          console.warn("Failed to prefill CLABE:", e);
-        }
-      }
-
-      // Store Stripe account ID in business record
-      await supabase
-        .from("businesses")
-        .update({
-          stripe_account_id: account.id,
-          stripe_onboarding_status: "pending",
-        })
-        .eq("id", businessId);
-
-      return json({
-        account_id: account.id,
-        created: true,
-      }, 200, req);
+      const accountId = await createStripeAccount(business, ownerEmail, supabase);
+      return json({ account_id: accountId, created: true }, 200, req);
     }
 
     if (action === "get-onboard-link") {
-      // Create or use existing account
       let accountId = business.stripe_account_id;
-
       if (!accountId) {
-        // Create account first
-        const params: Record<string, string> = {
-          type: "express",
-          country: "MX",
-          "capabilities[card_payments][requested]": "true",
-          "capabilities[transfers][requested]": "true",
-          "business_type": "individual",
-          "metadata[business_id]": businessId,
-          "metadata[platform]": "beautycita",
-        };
-
-        if (business.name) {
-          params["business_profile[name]"] = business.name;
-        }
-        if (business.beneficiary_name) {
-          const parts = business.beneficiary_name.trim().split(/\s+/);
-          if (parts.length >= 2) {
-            params["individual[first_name]"] = parts[0];
-            params["individual[last_name]"] = parts.slice(1).join(" ");
-          } else if (parts.length === 1) {
-            params["individual[first_name]"] = parts[0];
-          }
-        }
-
-        const account = await stripePost("/accounts", params);
-        accountId = account.id;
-
-        // Pre-fill CLABE if banking is verified
-        if (business.banking_complete && business.clabe) {
-          try {
-            await stripePost(`/accounts/${accountId}/external_accounts`, {
-              "external_account[object]": "bank_account",
-              "external_account[country]": "MX",
-              "external_account[currency]": "mxn",
-              "external_account[account_number]": business.clabe,
-              "external_account[account_holder_name]": business.beneficiary_name ?? business.name ?? "",
-            });
-          } catch (e) {
-            console.warn("Failed to prefill CLABE:", e);
-          }
-        }
-
-        await supabase
-          .from("businesses")
-          .update({
-            stripe_account_id: accountId,
-            stripe_onboarding_status: "pending",
-          })
-          .eq("id", businessId);
+        accountId = await createStripeAccount(business, ownerEmail, supabase);
       }
 
-      // Create Account Link for onboarding
       const accountLink = await stripePost("/account_links", {
         account: accountId,
         refresh_url: `${APP_URL}/stripe/refresh?business_id=${businessId}`,
@@ -278,10 +333,8 @@ Deno.serve(async (req: Request) => {
         }, 200, req);
       }
 
-      // Fetch account from Stripe
       const account = await stripeGet(`/accounts/${business.stripe_account_id}`);
 
-      // Determine onboarding status
       let status = "pending";
       if (account.charges_enabled && account.payouts_enabled) {
         status = "complete";
@@ -289,7 +342,6 @@ Deno.serve(async (req: Request) => {
         status = "pending_verification";
       }
 
-      // Update status in database
       await supabase
         .from("businesses")
         .update({
@@ -313,9 +365,8 @@ Deno.serve(async (req: Request) => {
         return json({ error: "No Stripe account linked" }, 400, req);
       }
 
-      // Create login link for Express dashboard
       const loginLink = await stripePost(
-        `/accounts/${business.stripe_account_id}/login_links`
+        `/accounts/${business.stripe_account_id}/login_links`,
       );
 
       return json({

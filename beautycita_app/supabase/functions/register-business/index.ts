@@ -265,9 +265,14 @@ serve(async (req) => {
       console.error("[REGISTER-BIZ] Failed to set has_schedule/has_services:", flagsError);
     }
 
-    // 5. Link discovered salon if provided (only if not already registered)
+    // 5. Link discovered salon if provided (only if not already registered).
+    // Use .select() so we can detect when the WHERE filter excluded the row
+    // (i.e. a concurrent registrant beat us to it). Without this check, the
+    // second registrant silently ends up with an unlinked business while
+    // thinking they claimed the listing.
+    let discoveredLinkConflict = false;
     if (discovered_salon_id) {
-      const { error: linkError } = await supabase
+      const { data: linked, error: linkError } = await supabase
         .from("discovered_salons")
         .update({
           status: "registered",
@@ -275,10 +280,18 @@ serve(async (req) => {
           registered_at: new Date().toISOString(),
         })
         .eq("id", discovered_salon_id)
-        .neq("status", "registered");
+        .neq("status", "registered")
+        .select("id");
 
       if (linkError) {
         console.warn("[REGISTER-BIZ] Failed to link discovered salon:", linkError);
+      } else if (!linked || linked.length === 0) {
+        // Row exists but was already registered by someone else — flag it
+        // so the client can show a "claimed by another business" message.
+        // We do NOT roll back the business creation; the user still has a
+        // valid standalone salon record, just not linked to the discovered listing.
+        discoveredLinkConflict = true;
+        console.warn(`[REGISTER-BIZ] Discovered salon ${discovered_salon_id} already claimed`);
       } else {
         console.log(`[REGISTER-BIZ] Linked discovered salon ${discovered_salon_id}`);
       }
@@ -295,6 +308,7 @@ serve(async (req) => {
         id: staff.id,
         name: `${staff.first_name} ${staff.last_name || ""}`.trim(),
       },
+      discovered_link_conflict: discoveredLinkConflict,
       next_steps: [
         "Add your services with prices",
         "Configure deposit requirements",
