@@ -157,10 +157,6 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
                 _buildPreferenceDials(prefsState, cs, ext),
                 const SizedBox(height: AppConstants.paddingLG),
 
-                // ── Privacidad (LFPDPPP — must be immediately visible) ──
-                _buildPrivacySection(cs, ext),
-                const SizedBox(height: AppConstants.paddingLG),
-
                 // ── Live Map + Radius ──
                 _buildLiveMap(prefsState, cs, ext),
                 const SizedBox(height: AppConstants.paddingLG),
@@ -189,6 +185,7 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
   // ══════════════════════════════════════════════════════════════════════════
 
   Widget _buildHeroBanner(ColorScheme cs, BCThemeExtension ext) {
+    final onBrand = Theme.of(context).colorScheme.onPrimary;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 800),
       curve: Curves.easeInOut,
@@ -207,7 +204,7 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
           Text(
             'MI ESTILO',
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
+                  color: onBrand.withValues(alpha: 0.7),
                   letterSpacing: 1.0,
                   fontWeight: FontWeight.w600,
                 ),
@@ -216,9 +213,77 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
           Text(
             'Personaliza tu experiencia',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onPrimary,
+                  color: onBrand,
                   fontWeight: FontWeight.w800,
                 ),
+          ),
+          const SizedBox(height: AppConstants.paddingMD),
+          // Analytics opt-out (LFPDPPP) — lives inside the hero so consent
+          // is visible before any data-collection-adjacent setting.
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppConstants.paddingSM,
+              vertical: AppConstants.paddingSM,
+            ),
+            decoration: BoxDecoration(
+              color: onBrand.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+              border: Border.all(color: onBrand.withValues(alpha: 0.15)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.insights_outlined, size: 16,
+                    color: onBrand.withValues(alpha: 0.85)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Análisis de actividad',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: onBrand,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                            ),
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        'Usamos tus patrones de uso para mejorar recomendaciones y detectar fraude. Puedes apagarlo cuando quieras.',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: onBrand.withValues(alpha: 0.7),
+                              fontSize: 10,
+                              height: 1.3,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 6),
+                if (_analyticsLoading)
+                  SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: onBrand,
+                    ),
+                  )
+                else
+                  Transform.scale(
+                    scale: 0.85,
+                    child: Switch(
+                      value: _analyticsOn,
+                      onChanged: _toggleAnalytics,
+                      activeThumbColor: onBrand,
+                      activeTrackColor: onBrand.withValues(alpha: 0.35),
+                      inactiveThumbColor: onBrand.withValues(alpha: 0.6),
+                      inactiveTrackColor: onBrand.withValues(alpha: 0.15),
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+              ],
+            ),
           ),
         ],
       ),
@@ -925,93 +990,6 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
   // ══════════════════════════════════════════════════════════════════════════
   // 6. Notifications Section
   // ══════════════════════════════════════════════════════════════════════════
-
-  Widget _buildPrivacySection(ColorScheme cs, BCThemeExtension ext) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'PRIVACIDAD',
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: cs.primary,
-                letterSpacing: 1.2,
-                fontWeight: FontWeight.w700,
-                fontSize: 9,
-              ),
-        ),
-        const SizedBox(height: AppConstants.paddingSM),
-        Container(
-          decoration: BoxDecoration(
-            color: cs.surface,
-            borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-            border: Border.all(color: ext.cardBorderColor),
-            boxShadow: [
-              BoxShadow(
-                color: Theme.of(context).shadowColor.withValues(alpha: 0.03),
-                blurRadius: 10,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppConstants.paddingMD,
-              vertical: 12,
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: cs.primary.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(Icons.insights_outlined, size: 16, color: cs.primary),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Analisis de actividad',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                            ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Usamos tus patrones de uso para mejorar recomendaciones y detectar fraude. Puedes apagarlo cuando quieras.',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: cs.onSurface.withValues(alpha: 0.55),
-                              fontSize: 11,
-                              height: 1.3,
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                if (_analyticsLoading)
-                  const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                else
-                  Switch.adaptive(
-                    value: _analyticsOn,
-                    onChanged: _toggleAnalytics,
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 
   Widget _buildNotificationsSection(ColorScheme cs, BCThemeExtension ext) {
     // Entries: key, label, icon, canTurnOff
