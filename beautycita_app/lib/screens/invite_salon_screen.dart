@@ -1,4 +1,5 @@
 import 'package:beautycita/widgets/cached_image.dart';
+import 'package:beautycita/widgets/salon_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -640,9 +641,9 @@ class _ContactMatchCard extends StatelessWidget {
                       width: 50,
                       height: 50,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => _defaultAvatar(),
+                      errorBuilder: (_, _, _) => _defaultAvatar(match.salonId),
                     )
-                  : _defaultAvatar(),
+                  : _defaultAvatar(match.salonId),
             ),
             const SizedBox(width: 12),
 
@@ -719,15 +720,21 @@ class _ContactMatchCard extends StatelessWidget {
     );
   }
 
-  Widget _defaultAvatar() {
-    return Container(
+  Widget _defaultAvatar(String? seed) {
+    return Image.network(
+      salonDefaultAvatarUrl(seed),
       width: 50,
       height: 50,
-      decoration: BoxDecoration(
-        color: waGreen.withValues(alpha: 0.15),
-        shape: BoxShape.circle,
+      fit: BoxFit.cover,
+      errorBuilder: (_, _, _) => Container(
+        width: 50,
+        height: 50,
+        decoration: BoxDecoration(
+          color: waGreen.withValues(alpha: 0.15),
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(Icons.store, color: waGreen, size: 24),
       ),
-      child: const Icon(Icons.store, color: waGreen, size: 24),
     );
   }
 }
@@ -764,9 +771,9 @@ class _SalonCard extends StatelessWidget {
                       width: 50,
                       height: 50,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => _defaultAvatar(),
+                      errorBuilder: (_, _, _) => _defaultAvatar(salon.id),
                     )
-                  : _defaultAvatar(),
+                  : _defaultAvatar(salon.id),
             ),
             const SizedBox(width: 12),
 
@@ -849,15 +856,21 @@ class _SalonCard extends StatelessWidget {
     );
   }
 
-  Widget _defaultAvatar() {
-    return Container(
+  Widget _defaultAvatar(String? seed) {
+    return Image.network(
+      salonDefaultAvatarUrl(seed),
       width: 50,
       height: 50,
-      decoration: BoxDecoration(
-        color: waGreen.withValues(alpha: 0.15),
-        shape: BoxShape.circle,
+      fit: BoxFit.cover,
+      errorBuilder: (_, _, _) => Container(
+        width: 50,
+        height: 50,
+        decoration: BoxDecoration(
+          color: waGreen.withValues(alpha: 0.15),
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(Icons.store, color: waGreen, size: 24),
       ),
-      child: const Icon(Icons.store, color: waGreen, size: 24),
     );
   }
 }

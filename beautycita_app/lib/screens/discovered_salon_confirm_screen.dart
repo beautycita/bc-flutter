@@ -1,4 +1,5 @@
 import 'package:beautycita/widgets/cached_image.dart';
+import 'package:beautycita/widgets/salon_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -131,7 +132,14 @@ class _DiscoveredSalonConfirmScreenState
                         fit: BoxFit.cover,
                         errorBuilder: (_, _, _) => _defaultAvatar(),
                       )
-                    : _defaultAvatar(),
+                    : Image.network(
+                        salonDefaultAvatarUrl(
+                            widget.salonData['id'] as String?),
+                        width: 100,
+                        height: 100,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => _defaultAvatar(),
+                      ),
               ),
               const SizedBox(height: 16),
 

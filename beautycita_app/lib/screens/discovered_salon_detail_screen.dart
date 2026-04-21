@@ -1,4 +1,5 @@
 import 'package:beautycita/widgets/cached_image.dart';
+import 'package:beautycita/widgets/salon_avatar.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -165,7 +166,13 @@ class _DiscoveredSalonDetailScreenState extends ConsumerState<DiscoveredSalonDet
                                     fit: BoxFit.cover,
                                     errorBuilder: (_, _, _) => _defaultAvatar(),
                                   )
-                                : _defaultAvatar(),
+                                : Image.network(
+                                    salonDefaultAvatarUrl(widget.salon.id),
+                                    width: 104,
+                                    height: 104,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, _, _) => _defaultAvatar(),
+                                  ),
                           ),
                         ),
                       ),

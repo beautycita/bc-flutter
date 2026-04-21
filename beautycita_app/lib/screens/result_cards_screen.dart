@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:beautycita/widgets/cached_image.dart';
+import 'package:beautycita/widgets/salon_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter/services.dart';
@@ -1344,7 +1345,13 @@ class _NearbySalonCardState extends State<_NearbySalonCard>
                           fit: BoxFit.cover,
                           errorBuilder: (_, _, _) => _defaultAvatar(),
                         )
-                      : _defaultAvatar(),
+                      : Image.network(
+                          salonDefaultAvatarUrl(widget.salon.id),
+                          width: 54,
+                          height: 54,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => _defaultAvatar(),
+                        ),
                 ),
               ),
               const SizedBox(width: 14),
