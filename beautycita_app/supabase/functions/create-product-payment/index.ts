@@ -85,7 +85,9 @@ serve(async (req) => {
           name,
           stripe_account_id,
           onboarding_complete,
-          is_active
+          is_active,
+          banking_complete,
+          rfc
         )
       `)
       .eq("id", product_id)
@@ -106,6 +108,8 @@ serve(async (req) => {
       stripe_account_id: string | null;
       onboarding_complete: boolean;
       is_active: boolean;
+      banking_complete: boolean;
+      rfc: string | null;
     };
 
     // Verify business is active
@@ -116,6 +120,22 @@ serve(async (req) => {
     // Verify business is fully onboarded
     if (!business.onboarding_complete) {
       return json({ error: "This business is not yet accepting online payments" }, 400, req);
+    }
+
+    // Banking gate parity with create-payment-intent
+    if (!business.banking_complete) {
+      return json({ error: "Este negocio aun no ha completado su verificacion bancaria" }, 400, req);
+    }
+
+    // Platform rule: salon cannot transact without RFC. Same gate as
+    // create-payment-intent (build 60074). Closes the gap where products
+    // could be purchased from no-RFC salons while bookings could not.
+    if (!business.rfc) {
+      console.warn(`[PRODUCT-PAYMENT] RFC missing on business ${business.id} — refusing charge`);
+      return json({
+        error: "Este negocio no tiene RFC vigente y no puede recibir pagos en linea.",
+        code: "RFC_REQUIRED",
+      }, 400, req);
     }
 
     if (!business.stripe_account_id) {

@@ -90,6 +90,28 @@ serve(async (req) => {
 
     console.log(`[DISPUTE-REFUND] Dispute ${dispute_id}: $${refundAmount}, type=${isOrderDispute ? "order" : "appointment"}`);
 
+    // ── Atomic compare-and-swap on refund_status ──────────────────────
+    // Two rapid admin clicks could both pass the read-then-update check
+    // above and double-refund. Mark refund_status='processing' BEFORE
+    // calling processRefund. The .eq('refund_status', 'pending') filter
+    // ensures only one writer wins. The downstream processRefund itself
+    // is idempotent via increment_saldo's idempotencyKey, but mutating
+    // status first prevents wasted work and makes intent clear.
+    const { data: lockedRows, error: lockErr } = await supabase
+      .from("disputes")
+      .update({ refund_status: "processing" })
+      .eq("id", dispute_id)
+      .eq("refund_status", "pending")
+      .select("id");
+    if (lockErr) {
+      console.error("[DISPUTE-REFUND] Lock error:", lockErr);
+      return json({ error: "Failed to acquire lock on dispute" }, 500);
+    }
+    if (!lockedRows || lockedRows.length === 0) {
+      // Another caller beat us to it
+      return json({ success: true, already_processed: true });
+    }
+
     // Look up original order payment method to decide whether commission reversal applies
     let orderPaymentMethod: string | null = null;
     if (isOrderDispute && dispute.order_id) {

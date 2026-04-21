@@ -283,7 +283,32 @@ Deno.serve(async (req: Request) => {
       const productName = order.product_name ?? "producto";
 
       try {
-        // 5a. Refund: saldo credit to buyer + debt to seller (never card)
+        // 5a. Atomic status flip BEFORE refund. If two cron passes race, only
+        // one wins (status was 'paid' for the winner; 'refunded' afterwards
+        // blocks the loser). Without this, processRefund's saldo idempotency
+        // protects the buyer credit but salon_debts has no UNIQUE constraint,
+        // so a retry creates duplicate debt rows.
+        const { data: claimed, error: claimErr } = await supabase
+          .from("orders")
+          .update({
+            status: "refunded",
+            refunded_at: new Date().toISOString(),
+          })
+          .eq("id", order.id)
+          .eq("status", "paid")
+          .select("id");
+
+        if (claimErr) {
+          console.error(`[ORDER-FOLLOWUP] Failed to claim order ${shortId}:`, claimErr.message);
+          refundErrors++;
+          continue;
+        }
+        if (!claimed || claimed.length === 0) {
+          console.log(`[ORDER-FOLLOWUP] Order ${shortId} already refunded by another pass — skipping`);
+          continue;
+        }
+
+        // 5b. Refund: saldo credit to buyer + debt to seller (never card)
         const result = await processRefund({
           supabase,
           buyerId: order.buyer_id,
@@ -299,21 +324,6 @@ Deno.serve(async (req: Request) => {
           `[ORDER-FOLLOWUP] Refund for ${shortId}: saldo $${result.saldoCredit}, ` +
           `debt $${result.debtCreated}, BC fee $${result.processingFee}`
         );
-
-        // 5b. Update order status
-        const { error: updateErr } = await supabase
-          .from("orders")
-          .update({
-            status: "refunded",
-            refunded_at: new Date().toISOString(),
-          })
-          .eq("id", order.id);
-
-        if (updateErr) {
-          console.error(`[ORDER-FOLLOWUP] Failed to update order ${shortId}:`, updateErr.message);
-          refundErrors++;
-          continue;
-        }
 
         // 5e. Notify buyer
         await sendPush(
