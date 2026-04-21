@@ -1,5 +1,6 @@
 import 'package:beautycita_core/supabase.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../config/breakpoints.dart';
@@ -435,6 +436,12 @@ class _AdminIntelligencePageState extends State<AdminIntelligencePage> {
             ],
           ),
         ),
+        OutlinedButton.icon(
+          onPressed: () => context.go('/admin/intelligence/users'),
+          icon: const Icon(Icons.people_outline, size: 18),
+          label: Text(isMobile ? 'Usuarios' : 'Ver usuarios'),
+        ),
+        const SizedBox(width: 12),
         WebGradientButton(
           onPressed: _computing ? null : _runCompute,
           isLoading: _computing,
