@@ -16,6 +16,7 @@ import 'disputes_screen.dart';
 import 'bookings_screen.dart';
 import 'reviews_screen.dart';
 import 'admin_chat_screen.dart';
+import 'admin_intelligence_screen.dart';
 
 /// Index of the currently selected admin tab.
 final adminTabProvider = StateProvider<int>((ref) => 0);
@@ -35,6 +36,7 @@ class AdminShellScreen extends ConsumerWidget {
     _AdminTab(icon: Icons.directions_walk, label: 'RP Tracking', section: 'Gestion'),
     _AdminTab(icon: Icons.receipt_long, label: 'Retenciones SAT', section: 'Finanzas'),
     _AdminTab(icon: Icons.bar_chart, label: 'Executive', section: 'Finanzas'),
+    _AdminTab(icon: Icons.psychology_outlined, label: 'Inteligencia', section: 'Finanzas'),
   ];
 
   /// Tabs visible ONLY to superadmin — system config.
@@ -211,6 +213,8 @@ class _AdminContent extends ConsumerWidget {
         return const AdminTaxReportsScreen();
       case 'Executive':
         return const AdminExecutiveDashboardScreen();
+      case 'Inteligencia':
+        return const AdminIntelligenceScreen();
       case 'Motor':
         return const AdminEngineScreen();
       case 'Sistema':
