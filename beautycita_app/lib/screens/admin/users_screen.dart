@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita/config/fonts.dart';
 import 'package:intl/intl.dart';
@@ -136,8 +137,12 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
         return 'IPA (iOS)';
       case 'exe':
         return 'EXE (Windows)';
+      case 'unknown':
+      case null:
+      case '':
+        return 'Desconocido';
       default:
-        return source ?? 'Desconocido';
+        return source;
     }
   }
 
@@ -1348,31 +1353,56 @@ class _DetailRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: iconColor),
-        const SizedBox(width: 8),
-        Text(
-          label,
-          style: GoogleFonts.nunito(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey.shade500,
+    // Label on one line, full value underneath — lets phone numbers, emails,
+    // birthdays, and IDs display in full without truncation. Long-press to
+    // copy. Replaces the prior Row + TextOverflow.ellipsis layout that cut
+    // off content on S10-width devices.
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 14, color: iconColor),
+              const SizedBox(width: 6),
+              Text(
+                label.toUpperCase(),
+                style: GoogleFonts.nunito(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.8,
+                  color: Colors.grey.shade500,
+                ),
+              ),
+            ],
           ),
-        ),
-        const Spacer(),
-        Flexible(
-          child: Text(
-            value,
-            style: GoogleFonts.nunito(
-              fontSize: 13,
-              color: valueColor,
+          const SizedBox(height: 2),
+          Padding(
+            padding: const EdgeInsets.only(left: 20),
+            child: GestureDetector(
+              onLongPress: () async {
+                await Clipboard.setData(ClipboardData(text: value));
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Copiado: $label'),
+                    duration: const Duration(seconds: 1),
+                  ),
+                );
+              },
+              child: SelectableText(
+                value,
+                style: GoogleFonts.nunito(
+                  fontSize: 14,
+                  color: valueColor,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ),
-            textAlign: TextAlign.end,
-            overflow: TextOverflow.ellipsis,
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
