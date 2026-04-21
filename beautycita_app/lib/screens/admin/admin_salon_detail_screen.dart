@@ -1321,15 +1321,11 @@ class _SalonDetailBody extends ConsumerWidget {
         ),
         const SizedBox(height: AppConstants.paddingSM),
 
-        // -- Edit RFC --
-        actionBtn(
-          label: 'Editar RFC',
-          icon: Icons.receipt_long_outlined,
-          outlined: true,
-          fg: colors.primary,
-          onPressed: () => onEditField('rfc', 'RFC', salon['rfc'] as String?),
-        ),
-        const SizedBox(height: AppConstants.paddingSM),
+        // RFC edit intentionally NOT exposed. RFC is a legal identity field
+        // and admin-editable is a policy hole (audit trail, tax implications).
+        // If a salon legitimately needs an RFC change, assess via support ticket
+        // then apply directly in the DB with reason logged. Do not restore
+        // this button without explicit BC approval.
 
         // -- Edit Email --
         actionBtn(
