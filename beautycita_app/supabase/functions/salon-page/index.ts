@@ -71,15 +71,18 @@ serve(async (req) => {
     .eq("is_active", true)
     .in("position", ["owner", "stylist"]);
 
-  // Fetch portfolio photos (published to feed)
+  // Fetch portfolio photos (published to feed).
+  // Include staff_id so the public page can surface a per-stylist gallery
+  // link on each staff card. hidden_from_staff_view only affects the
+  // stylist's own view; the salon portfolio shows everything.
   const { data: photos } = await supabase
     .from("portfolio_photos")
-    .select("id, before_url, after_url, service_name, caption, created_at")
+    .select("id, staff_id, before_url, after_url, service_name, caption, created_at")
     .eq("business_id", biz.id)
     .eq("is_complete", true)
     .or("publish_to_feed.is.null,publish_to_feed.eq.true")
     .order("created_at", { ascending: false })
-    .limit(20);
+    .limit(200);
 
   // Fetch reviews
   const { data: reviews } = await supabase
@@ -139,6 +142,7 @@ function buildPage(
     const name = `${s.first_name} ${s.last_name ?? ""}`.trim();
     const exp = s.experience_years > 0 ? `${s.experience_years} años exp.` : "Nuevo";
     const safeAvatarUrl = (s.avatar_url || '').replace(/[()'"\\]/g, '');
+    const stylistPhotoCount = (photos ?? []).filter(p => p.staff_id === s.id).length;
     return `
       <div class="staff-card">
         <div class="staff-avatar" ${safeAvatarUrl ? `style="background-image:url(${safeAvatarUrl})"` : ""}>
@@ -147,6 +151,7 @@ function buildPage(
         <div class="staff-name">${esc(name)}</div>
         <div class="staff-meta">${esc(s.position === "owner" ? "Propietario" : "Estilista")} · ${exp}</div>
         ${s.bio ? `<div class="staff-bio">${esc(s.bio).substring(0, 80)}</div>` : ""}
+        ${stylistPhotoCount > 0 ? `<a class="staff-gallery-link" href="javascript:void(0)" data-staff-id="${esc(s.id)}" data-staff-name="${esc(name)}">Galería (${stylistPhotoCount})</a>` : ""}
       </div>
     `;
   }).join("");
@@ -243,6 +248,17 @@ ${biz.photo_url ? `<meta name="twitter:image" content="${escUrl(biz.photo_url)}"
   .staff-meta { font-size: 11px; color: var(--muted); }
   .staff-bio { font-size: 11px; color: var(--muted); margin-top: 4px; font-style: italic; }
   .staff-scroll { overflow-x: auto; white-space: nowrap; padding-bottom: 8px; }
+  .staff-gallery-link { display:inline-block; margin-top:6px; font-size:11px; color:var(--primary); text-decoration:none; border:1px solid var(--primary); padding:3px 10px; border-radius:10px; cursor:pointer; }
+  .staff-gallery-link:hover { background:var(--primary); color:white; }
+  .gallery-modal { position:fixed; inset:0; background:rgba(0,0,0,0.85); display:none; z-index:200; overflow-y:auto; padding:60px 16px 20px; }
+  .gallery-modal.open { display:block; }
+  .gallery-modal-header { position:fixed; top:0; left:0; right:0; background:rgba(0,0,0,0.95); color:white; padding:14px 16px; display:flex; align-items:center; justify-content:space-between; z-index:201; }
+  .gallery-modal-title { font-weight:700; font-size:15px; }
+  .gallery-modal-close { background:none; border:none; color:white; font-size:24px; cursor:pointer; padding:0 8px; line-height:1; }
+  .gallery-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; max-width:720px; margin:0 auto; }
+  .gallery-pair { display:grid; grid-template-columns:1fr 1fr; gap:2px; grid-column:span 2; }
+  .gallery-pair img, .gallery-pair video { width:100%; aspect-ratio:1; object-fit:cover; border-radius:6px; background:#111; }
+  .gallery-caption { grid-column:span 2; color:#ddd; font-size:11px; text-align:center; padding:2px 0 6px; }
   .photo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .photo-pair { position: relative; }
   .photo-pair img { width: 100%; border-radius: 10px; display: block; }
@@ -334,6 +350,62 @@ ${biz.photo_url ? `<meta name="twitter:image" content="${escUrl(biz.photo_url)}"
   <a href="${bookUrl}" class="cta-book">📅 Reservar</a>
   ${waLink ? `<a href="${escUrl(waLink)}" class="cta-wa" target="_blank">💬 WhatsApp</a>` : ""}
 </div>
+
+<!-- Per-stylist gallery modal — opens when a staff card's "Galería" link is tapped -->
+<div class="gallery-modal" id="galleryModal" onclick="if(event.target===this)closeGallery()">
+  <div class="gallery-modal-header">
+    <div class="gallery-modal-title" id="galleryTitle">Galería</div>
+    <button class="gallery-modal-close" onclick="closeGallery()" aria-label="Cerrar">×</button>
+  </div>
+  <div class="gallery-grid" id="galleryGrid"></div>
+</div>
+
+<script>
+// All portfolio photos for this salon, pre-rendered server-side. Filter by
+// staff_id when a stylist's Galería link is tapped. Videos detected by
+// extension — after_url can be mp4/webm/mov for video portfolio pieces.
+const __SALON_PHOTOS = ${JSON.stringify((photos ?? []).map(p => ({
+  id: p.id, staff_id: p.staff_id,
+  before_url: p.before_url, after_url: p.after_url,
+  service_name: p.service_name, created_at: p.created_at,
+})))};
+const __isVideo = (u) => u && /\\.(mp4|webm|mov)(\\?|$)/i.test(u);
+const __escAttr = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+function openGallery(staffId, staffName) {
+  const pics = __SALON_PHOTOS.filter(p => p.staff_id === staffId);
+  document.getElementById('galleryTitle').textContent = 'Galería — ' + staffName;
+  const grid = document.getElementById('galleryGrid');
+  grid.innerHTML = pics.length === 0
+    ? '<div style="color:#ccc;text-align:center;grid-column:span 2;padding:40px">Sin fotos publicadas</div>'
+    : pics.map(p => {
+        const afterCell = p.after_url
+          ? (__isVideo(p.after_url)
+              ? '<video src="' + __escAttr(p.after_url) + '" controls playsinline muted preload="metadata"></video>'
+              : '<img src="' + __escAttr(p.after_url) + '" loading="lazy">')
+          : '<div style="aspect-ratio:1;background:#222;border-radius:6px"></div>';
+        const beforeCell = p.before_url
+          ? '<img src="' + __escAttr(p.before_url) + '" loading="lazy">'
+          : '<div style="aspect-ratio:1;background:#222;border-radius:6px"></div>';
+        const cap = p.service_name ? '<div class="gallery-caption">' + __escAttr(p.service_name) + '</div>' : '';
+        return '<div class="gallery-pair">' + beforeCell + afterCell + cap + '</div>';
+      }).join('');
+  document.getElementById('galleryModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeGallery() {
+  document.getElementById('galleryModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// Wire up the Galería links on staff cards
+document.querySelectorAll('.staff-gallery-link').forEach(a => {
+  a.addEventListener('click', () => {
+    openGallery(a.getAttribute('data-staff-id'), a.getAttribute('data-staff-name'));
+  });
+});
+</script>
 
 </body>
 </html>`;
