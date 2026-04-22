@@ -32,6 +32,7 @@ interface RegisterBusinessRequest {
   name: string;
   phone?: string;
   whatsapp?: string;
+  rfc?: string;
   address?: string;
   city?: string;
   state?: string;
@@ -42,6 +43,10 @@ interface RegisterBusinessRequest {
   discovered_salon_id?: string; // Link to discovered_salons record
   photo_url?: string; // Business photo (e.g. from discovered salon)
 }
+
+// SAT RFC: 12 chars (persona moral) or 13 chars (persona fisica).
+// 3-4 uppercase letters + 6 digits (YYMMDD) + 3 alphanumeric homoclave.
+const RFC_REGEX = /^[A-ZÑ&]{3,4}\d{6}[A-Z\d]{3}$/;
 
 let _req: Request;
 
@@ -68,10 +73,18 @@ serve(async (req) => {
     }
 
     const body: RegisterBusinessRequest = await req.json();
-    const { name, phone, whatsapp, address, city, state, lat, lng, service_categories, owner_name, discovered_salon_id, photo_url } = body;
+    const { name, phone, whatsapp, rfc, address, city, state, lat, lng, service_categories, owner_name, discovered_salon_id, photo_url } = body;
 
     if (!name || name.trim().length < 2) {
       return json({ error: "Business name is required (minimum 2 characters)" }, 400);
+    }
+
+    const normalizedRfc = rfc?.trim().toUpperCase().replace(/\s+/g, "") ?? "";
+    if (!normalizedRfc || !RFC_REGEX.test(normalizedRfc)) {
+      return json({
+        error: "RFC is required and must be a valid SAT RFC (12 or 13 chars).",
+        code: "RFC_REQUIRED",
+      }, 400);
     }
 
     // Check if user already has a business
@@ -117,6 +130,7 @@ serve(async (req) => {
       name: name.trim(),
       phone: phone?.trim() || null,
       whatsapp: whatsapp?.trim() || phone?.trim() || null,
+      rfc: normalizedRfc,
       address: address?.trim() || null,
       city: city?.trim() || "Guadalajara",
       state: state?.trim() || "Jalisco",

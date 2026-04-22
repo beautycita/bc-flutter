@@ -37,6 +37,7 @@ class _SalonOnboardingScreenState
   final _nameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController(text: '+52 ');
   final _emailCtrl = TextEditingController();
+  final _rfcCtrl = TextEditingController();
   final _addressCtrl = TextEditingController();
   final _detailsCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
@@ -223,6 +224,7 @@ class _SalonOnboardingScreenState
     _nameCtrl.dispose();
     _phoneCtrl.dispose();
     _emailCtrl.dispose();
+    _rfcCtrl.dispose();
     _addressCtrl.dispose();
     _detailsCtrl.dispose();
     _scrollCtrl.dispose();
@@ -230,10 +232,26 @@ class _SalonOnboardingScreenState
     super.dispose();
   }
 
+  /// RFC validator: 12 chars (persona moral) or 13 chars (persona fisica),
+  /// 3-4 uppercase letters + 6 digits (YYMMDD) + 3 alphanumeric homoclave.
+  /// Accepts inputs with mixed case + whitespace; normalization happens
+  /// before the check.
+  static final _rfcRegex = RegExp(
+    r'^[A-ZÑ&]{3,4}\d{6}[A-Z\d]{3}$',
+    caseSensitive: false,
+  );
+
+  bool _isRfcValid(String input) {
+    final trimmed = input.trim().toUpperCase().replaceAll(RegExp(r'\s+'), '');
+    if (trimmed.length != 12 && trimmed.length != 13) return false;
+    return _rfcRegex.hasMatch(trimmed);
+  }
+
   bool get _isValid =>
       _nameCtrl.text.trim().length >= 2 &&
       _phoneCtrl.text.replaceAll(RegExp(r'[^\d]'), '').length >= 10 &&
       _emailCtrl.text.trim().contains('@') &&
+      _isRfcValid(_rfcCtrl.text) &&
       _locationConfirmed &&
       _pickedLat != null;
 
@@ -574,10 +592,12 @@ class _SalonOnboardingScreenState
       // Call register-business edge function — creates business, staff,
       // schedule (Mon-Sat 9-7), role upgrade, and discovered salon link atomically.
       // Retry up to 3 times with 2-second delays on failure.
+      final rfc = _rfcCtrl.text.trim().toUpperCase().replaceAll(RegExp(r'\s+'), '');
       final requestBody = {
         'name': _nameCtrl.text.trim(),
         'phone': phone,
         'whatsapp': phone,
+        'rfc': rfc,
         'address': fullAddress,
         'city': ?city,
         'state': ?state,
@@ -851,6 +871,47 @@ class _SalonOnboardingScreenState
                         keyboardType: TextInputType.emailAddress,
                         onChanged: (_) => setState(() {}),
                       ),
+                      const SizedBox(height: 14),
+
+                      // RFC (required — needed for Stripe + SAT compliance)
+                      _StyledField(
+                        controller: _rfcCtrl,
+                        label: 'RFC (obligatorio)',
+                        hint: 'Ej: ABCD910515XYZ',
+                        icon: Icons.assignment_ind_outlined,
+                        textCapitalization: TextCapitalization.characters,
+                        onChanged: (_) => setState(() {}),
+                      ),
+                      if (_rfcCtrl.text.isNotEmpty &&
+                          !_isRfcValid(_rfcCtrl.text)) ...[
+                        const SizedBox(height: 6),
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4),
+                          child: Text(
+                            'RFC inválido — 12 o 13 caracteres (letras + fecha + homoclave).',
+                            style: GoogleFonts.nunito(
+                              fontSize: 11,
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                          ),
+                        ),
+                      ] else ...[
+                        const SizedBox(height: 4),
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4),
+                          child: Text(
+                            'Requerido para configurar pagos y cumplir con SAT. Con RFC te retenemos solo 2.5% ISR + 8% IVA.',
+                            style: GoogleFonts.nunito(
+                              fontSize: 11,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.55),
+                              height: 1.3,
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 16),
