@@ -526,17 +526,26 @@ class _SalonOnboardingScreenState
       final rawPhone = _phoneCtrl.text.replaceAll(RegExp(r'[^\d+]'), '');
       final phone = rawPhone.startsWith('+') ? rawPhone : '+52$rawPhone';
 
-      // Check phone uniqueness before calling edge function
+      // Check phone uniqueness before calling edge function.
+      // Exclude the current user's own businesses so a user who is re-entering
+      // the onboarding flow (e.g. after suspend+reactivate, or after an admin
+      // onboarding reset) is NOT blocked by their own existing row — that
+      // case is handled downstream by register-business returning
+      // "You already have a registered business" + the business id so the
+      // app can route them to their dashboard.
       final phoneDigits = phone.replaceAll(RegExp(r'[^\d]'), '');
       final last10 = phoneDigits.length > 10
           ? phoneDigits.substring(phoneDigits.length - 10)
           : phoneDigits;
-      final existingBiz = await SupabaseClientService.client
+      final currentUserId = SupabaseClientService.currentUserId;
+      var phoneQuery = SupabaseClientService.client
           .from(BCTables.businesses)
-          .select('id')
-          .or('phone.ilike.%$last10,whatsapp.ilike.%$last10')
-          .limit(1)
-          .maybeSingle();
+          .select('id, owner_id')
+          .or('phone.ilike.%$last10,whatsapp.ilike.%$last10');
+      if (currentUserId != null) {
+        phoneQuery = phoneQuery.neq('owner_id', currentUserId);
+      }
+      final existingBiz = await phoneQuery.limit(1).maybeSingle();
       if (existingBiz != null) {
         if (mounted) {
           ToastService.showError('Ya existe un salon con este numero de telefono');
@@ -588,6 +597,20 @@ class _SalonOnboardingScreenState
           );
           data = res.data as Map<String, dynamic>;
           if (data['error'] != null) {
+            // If the user already owns a business (suspend+reactivate,
+            // orphaned session, admin onboarding reset, etc.), route them
+            // to their business dashboard instead of trapping them in
+            // onboarding with a red error toast.
+            final existingBizId = data['business_id'] as String?;
+            if (existingBizId != null && mounted) {
+              ToastService.showSuccess('Ya tienes un salón registrado — abriendo tu panel…');
+              await Future.delayed(const Duration(milliseconds: 800));
+              if (mounted) {
+                setState(() => _submitting = false);
+                context.go('/business');
+              }
+              return;
+            }
             throw Exception(data['error'] as String);
           }
           break; // Success — exit retry loop
