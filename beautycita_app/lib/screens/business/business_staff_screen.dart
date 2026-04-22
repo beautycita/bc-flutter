@@ -1722,7 +1722,7 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
     final firstName = widget.staff['first_name'] as String? ?? '';
     final lastName = widget.staff['last_name'] as String? ?? '';
     final staffName = '$firstName $lastName'.trim();
-    final uploadUrl = 'https://beautycita.com/portfolio-upload?token=$qrToken';
+    final uploadUrl = 'https://beautycita.com/portfolio-upload.html?token=$qrToken';
 
     return Card(
       elevation: 0,

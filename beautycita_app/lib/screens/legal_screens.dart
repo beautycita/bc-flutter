@@ -825,11 +825,33 @@ const _termsSections = [
         'usan para entrenar modelos. Puedes eliminarlas cuando quieras.',
   ),
   _Section(
-    heading: '7. Tu contenido',
+    heading: '7. Tu contenido y medios subidos',
     body:
-        'Conservas la propiedad de fotos y resenas que subas. Nos otorgas licencia '
-        'limitada para mostrarlas dentro de la plataforma. No esta permitido subir '
-        'contenido ilegal u ofensivo.',
+        'Conservas la propiedad de fotos, videos y resenas que subas. '
+        'Al subir contenido (incluyendo antes/despues, videos de servicios y '
+        'cualquier otro material, sea tu o de tu cliente), declaras y garantizas '
+        'que:\n\n'
+        '• Tienes todos los derechos necesarios sobre el contenido y has '
+        'obtenido la autorizacion expresa de cualquier persona identificable en '
+        'el.\n'
+        '• Eres UNICAMENTE responsable del contenido subido y de las '
+        'consecuencias de su publicacion. BeautyCita no supervisa, aprueba ni '
+        'filtra cada subida.\n'
+        '• El contenido no infringe derechos de autor, privacidad, imagen, '
+        'marcas ni ninguna ley aplicable, y no es ilegal, difamatorio, '
+        'obsceno, de odio ni sexualmente explicito.\n\n'
+        'LICENCIA QUE NOS OTORGAS: Nos concedes una licencia mundial, no '
+        'exclusiva, transferible, sublicenciable, libre de regalias y '
+        'perpetua para usar, reproducir, modificar, adaptar, publicar, '
+        'traducir, distribuir, exhibir y mostrar dicho contenido dentro y '
+        'fuera de la plataforma, incluyendo — sin limitarse a — la app, el '
+        'sitio web, materiales de marketing, redes sociales y comunicaciones '
+        'promocionales. Puedes retirar tu contenido visible en cualquier '
+        'momento, y dejaremos de usarlo activamente en nuevas campanas; las '
+        'copias ya distribuidas pueden permanecer.\n\n'
+        'REMOCION Y REPORTE: Si crees que se subio contenido que viola estos '
+        'terminos o tus derechos, reportalo a legal@beautycita.com y '
+        'actuaremos con diligencia.',
   ),
   _Section(
     heading: '8. Disputas y resolucion de conflictos',

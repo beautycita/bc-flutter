@@ -29,10 +29,15 @@ const pinAttempts = new Map<string, { failures: number; lockedUntil: number }>()
 const MAX_PIN_FAILURES = 5;
 const LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
 
-// ── Valid image signatures ──
+// ── Valid media signatures ──
 const JPEG_MAGIC = [0xFF, 0xD8, 0xFF];
 const PNG_MAGIC = [0x89, 0x50, 0x4E, 0x47];
-const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB
+// MP4 / MOV / QuickTime containers all start with 4-byte size then "ftyp"
+const MP4_FTYP_MAGIC = [0x66, 0x74, 0x79, 0x70]; // "ftyp" at offset 4
+// WebM / Matroska
+const WEBM_MAGIC = [0x1A, 0x45, 0xDF, 0xA3];
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;   // 10 MB
+const MAX_VIDEO_BYTES = 500 * 1024 * 1024;  // 500 MB (we compress bucket-side later)
 
 serve(async (req) => {
   const url = new URL(req.url);
@@ -95,11 +100,14 @@ serve(async (req) => {
       // Successful verification — clear any tracked failures
       pinAttempts.delete(token);
 
-      // Return staff info + pending photos
+      // Return staff info + pending photos.
+      // Exclude rows hidden by the stylist — they stay in the salon portfolio
+      // (salon owns the work), but are not shown in the stylist's gallery.
       const { data: pending } = await supabase
         .from("portfolio_photos")
         .select("id, before_url, after_url, service_name, client_name, is_complete, publish_to_feed, created_at")
         .eq("staff_id", staff.id)
+        .eq("hidden_from_staff_view", false)
         .order("created_at", { ascending: false })
         .limit(20);
 
@@ -112,7 +120,7 @@ serve(async (req) => {
       }, 200, corsHeaders);
     }
 
-    // ── Upload photo ──
+    // ── Upload photo or video ──
     if (action === "upload") {
       const staffId = body.staff_id;
       const photoId = body.photo_id; // null for new, existing ID to add after
@@ -120,6 +128,9 @@ serve(async (req) => {
       const isBefore = body.is_before ?? true;
       const serviceName = body.service_name;
       const clientName = body.client_name;
+      // Optional hint from the client — "after_only" creates a complete
+      // pair with just an after image (client refused before).
+      const afterOnly = body.after_only === true;
 
       if (!staffId || !imageBase64) {
         return json({ error: "staff_id and image required" }, 400, corsHeaders);
@@ -134,22 +145,42 @@ serve(async (req) => {
 
       if (!staff) return json({ error: "Staff not found" }, 404, corsHeaders);
 
-      // Decode and validate image
+      // Decode and detect media type by magic bytes
       const bytes = Uint8Array.from(atob(imageBase64), (c) => c.charCodeAt(0));
-
-      if (bytes.length > MAX_IMAGE_BYTES) {
-        return json({ error: "Imagen demasiado grande (max 10MB)" }, 400, corsHeaders);
-      }
-
       const isJpeg = bytes.length >= 3 && bytes[0] === JPEG_MAGIC[0] && bytes[1] === JPEG_MAGIC[1] && bytes[2] === JPEG_MAGIC[2];
       const isPng = bytes.length >= 4 && bytes[0] === PNG_MAGIC[0] && bytes[1] === PNG_MAGIC[1] && bytes[2] === PNG_MAGIC[2] && bytes[3] === PNG_MAGIC[3];
-      if (!isJpeg && !isPng) {
-        return json({ error: "Formato de imagen no valido" }, 400, corsHeaders);
+      const isMp4 = bytes.length >= 8 && bytes[4] === MP4_FTYP_MAGIC[0] && bytes[5] === MP4_FTYP_MAGIC[1] && bytes[6] === MP4_FTYP_MAGIC[2] && bytes[7] === MP4_FTYP_MAGIC[3];
+      const isWebm = bytes.length >= 4 && bytes[0] === WEBM_MAGIC[0] && bytes[1] === WEBM_MAGIC[1] && bytes[2] === WEBM_MAGIC[2] && bytes[3] === WEBM_MAGIC[3];
+      const isVideo = isMp4 || isWebm;
+      const isImage = isJpeg || isPng;
+
+      if (!isImage && !isVideo) {
+        return json({ error: "Formato no valido (JPEG, PNG, MP4, WebM)" }, 400, corsHeaders);
       }
 
-      const ext = isPng ? "png" : "jpg";
-      const contentType = isPng ? "image/png" : "image/jpeg";
-      const filename = `${staffId}/${Date.now()}_${isBefore ? "before" : "after"}.${ext}`;
+      const cap = isVideo ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
+      if (bytes.length > cap) {
+        const mb = Math.floor(cap / 1024 / 1024);
+        return json({
+          error: isVideo
+            ? `Video demasiado grande (max ${mb}MB). Recorta en tu telefono antes de subir.`
+            : `Imagen demasiado grande (max ${mb}MB)`,
+        }, 400, corsHeaders);
+      }
+
+      // Videos can only attach as "after" (no before-video concept in the
+      // brand spec). If is_before=true with a video, treat it as after.
+      const effectiveIsBefore = isVideo ? false : isBefore;
+
+      let ext: string;
+      let contentType: string;
+      if (isJpeg) { ext = "jpg"; contentType = "image/jpeg"; }
+      else if (isPng) { ext = "png"; contentType = "image/png"; }
+      else if (isMp4) { ext = "mp4"; contentType = "video/mp4"; }
+      else { ext = "webm"; contentType = "video/webm"; }
+
+      const kind = isVideo ? "video" : (effectiveIsBefore ? "before" : "after");
+      const filename = `${staffId}/${Date.now()}_${kind}.${ext}`;
 
       const { error: uploadError } = await supabase.storage
         .from("staff-media")
@@ -166,8 +197,8 @@ serve(async (req) => {
       const imageUrl = supabase.storage.from("staff-media").getPublicUrl(filename).data.publicUrl;
 
       if (photoId) {
-        // Adding after photo to existing pair
-        const updates: Record<string, unknown> = isBefore
+        // Adding after media to existing pair
+        const updates: Record<string, unknown> = effectiveIsBefore
           ? { before_url: imageUrl }
           : { after_url: imageUrl, is_complete: true, completed_at: new Date().toISOString() };
 
@@ -179,20 +210,22 @@ serve(async (req) => {
           .update(updates)
           .eq("id", photoId);
 
-        return json({ photo_id: photoId, url: imageUrl, is_complete: !isBefore }, 200, corsHeaders);
+        return json({ photo_id: photoId, url: imageUrl, is_complete: !effectiveIsBefore }, 200, corsHeaders);
       } else {
-        // New photo pair
+        // New pair. after_only + image OR any video creates a complete row
+        // with just the after slot filled — no "before" will be added.
+        const completeImmediately = isVideo || afterOnly || !effectiveIsBefore;
         const { data: photo } = await supabase
           .from("portfolio_photos")
           .insert({
             staff_id: staffId,
             business_id: staff.business_id,
-            before_url: isBefore ? imageUrl : null,
-            after_url: isBefore ? null : imageUrl,
+            before_url: effectiveIsBefore ? imageUrl : null,
+            after_url: effectiveIsBefore ? null : imageUrl,
             service_name: serviceName,
             client_name: clientName,
-            is_complete: !isBefore,
-            completed_at: isBefore ? null : new Date().toISOString(),
+            is_complete: completeImmediately,
+            completed_at: completeImmediately ? new Date().toISOString() : null,
           })
           .select("id")
           .single();
@@ -200,9 +233,23 @@ serve(async (req) => {
         return json({
           photo_id: photo?.id,
           url: imageUrl,
-          is_complete: !isBefore,
+          is_complete: completeImmediately,
+          is_video: isVideo,
         }, 200, corsHeaders);
       }
+    }
+
+    // ── Hide from stylist gallery (keeps it in salon portfolio) ──
+    if (action === "hide") {
+      const photoId = body.photo_id;
+      if (!photoId) return json({ error: "photo_id required" }, 400, corsHeaders);
+
+      await supabase
+        .from("portfolio_photos")
+        .update({ hidden_from_staff_view: true })
+        .eq("id", photoId);
+
+      return json({ photo_id: photoId, hidden: true }, 200, corsHeaders);
     }
 
     // ── Toggle feed publish ──
