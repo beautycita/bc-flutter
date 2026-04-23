@@ -10,6 +10,7 @@ import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 import '../../widgets/empty_state.dart';
 import 'business_closures_screen.dart';
+import 'business_qr_program_screen.dart';
 import 'business_shell_screen.dart';
 
 class BusinessSettingsScreen extends ConsumerStatefulWidget {
@@ -436,6 +437,31 @@ class _BusinessSettingsScreenState
               padding: const EdgeInsets.all(16),
               child: const BusinessClosuresSection(),
             ),
+
+            // ---------- QR Program (Free tier) ----------
+            if (ref.watch(featureTogglesProvider).isEnabled('enable_qr_free_tier')) ...[
+              const SizedBox(height: AppConstants.paddingLG),
+              Container(
+                decoration: _cardDecoration(colors),
+                clipBehavior: Clip.antiAlias,
+                child: ListTile(
+                  leading: Icon(Icons.qr_code_2_rounded, color: colors.primary),
+                  title: Text('Programa QR (Gratis)',
+                      style: GoogleFonts.poppins(
+                          fontSize: 14, fontWeight: FontWeight.w600)),
+                  subtitle: Text(
+                    'Registra clientes sin pagar comision. Requiere QR externo de BeautyCita.',
+                    style: GoogleFonts.nunito(fontSize: 12),
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const BusinessQrProgramScreen(),
+                    ),
+                  ),
+                ),
+              ),
+            ],
 
             // ---------- Policies ----------
             const SizedBox(height: AppConstants.paddingLG),

@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import 'package:beautycita_core/supabase.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
+import '../../widgets/walkin_pending_banner.dart';
 
 /// Returns true if the business owner already has a staff record in the list.
 bool _ownerHasStaffRecord(String? ownerId, List<Map<String, dynamic>> staff) {
@@ -112,6 +113,9 @@ class _BusinessCalendarScreenState
 
     return Column(
       children: [
+        // Pending walk-in banner (QR free-tier program) — only shows when rows exist
+        const WalkinPendingBanner(),
+
         // Summary card (day view only)
         if (_view == _CalView.day)
           _SummaryCard(

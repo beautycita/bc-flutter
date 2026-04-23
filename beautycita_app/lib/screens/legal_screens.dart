@@ -811,6 +811,45 @@ const _termsSections = [
         'cuales permaneceran en pleno vigor y efecto.',
   ),
   _Section(
+    heading: '4h. Programa QR de Registro de Clientes (Free Tier)',
+    body:
+        'BeautyCita ofrece un programa opcional que permite a los salones existentes registrar a sus '
+        'clientes preexistentes sin pagar comision a BeautyCita. El programa se compone de dos codigos QR:\n\n'
+        '(a) QR Interno — Registro de Clientes. El salon activa un codigo QR que sus clientes '
+        'preexistentes escanean para registrarse en BeautyCita como clientes del salon. Los clientes '
+        'asi registrados pueden reservar citas a traves del mismo codigo QR sin costo adicional para el '
+        'salon, siempre que el pago se realice fuera de la plataforma BeautyCita (efectivo, terminal '
+        'propia del salon, tarjeta de regalo del salon, o cualquier otro medio externo).\n\n'
+        '(b) QR Externo — BeautyCita / ExpressCita. El salon se compromete a mostrar prominentemente un '
+        'codigo QR de BeautyCita en la entrada de su establecimiento (tamano minimo 10 × 10 cm, visible '
+        'desde el exterior durante el horario de operacion). Este QR lleva al cliente al agente '
+        'inteligente de reservas de BeautyCita para reservar con ese salon preferentemente, o con '
+        'salones cercanos si el salon preferido no tiene disponibilidad.\n\n'
+        'Condiciones del programa:\n\n'
+        '1. La activacion del programa requiere aceptacion expresa de estos Terminos, el Aviso de '
+        'Privacidad y la Politica de Cookies.\n\n'
+        '2. El registro de clientes preexistentes esta disponible durante un periodo de 90 dias '
+        'calendario a partir de la fecha del primer movimiento del salon en la plataforma (primera '
+        'cita registrada, sea via BeautyCita o via QR interno). Despues de 90 dias, el QR interno '
+        'continua funcionando indefinidamente para los clientes ya registrados, pero los numeros '
+        'telefonicos no registrados seran redirigidos al proceso normal de alta en BeautyCita.\n\n'
+        '3. Las transacciones realizadas bajo este programa son externas a BeautyCita: no pasan por '
+        'nuestros sistemas de pago, no estan sujetas a retenciones de ISR o IVA por parte de '
+        'BeautyCita, y no se incluyen en los reportes mensuales al SAT emitidos por nosotros. El '
+        'salon es unico responsable del tratamiento fiscal de estos ingresos.\n\n'
+        '4. Las reservas realizadas por clientes a traves de la aplicacion o sitio web de BeautyCita, '
+        'aun si el cliente fue originalmente registrado mediante el QR interno, estaran sujetas a la '
+        'comision estandar del 3% y a las retenciones fiscales aplicables conforme a la legislacion '
+        'mexicana (ISR 2.5% e IVA 8%). Estas retenciones se enteran al SAT en nombre del salon y no '
+        'constituyen ingreso de BeautyCita.\n\n'
+        '5. El salon acepta mantener el QR externo visible durante todo el periodo de uso del '
+        'programa. BeautyCita se reserva el derecho de revocar el acceso al programa en caso de '
+        'incumplimiento verificable.\n\n'
+        'Opt-out del cliente: cualquier cliente registrado via QR interno puede solicitar la '
+        'cancelacion de sus datos escribiendo a soporte@beautycita.com. Los datos seran eliminados '
+        'en un plazo maximo de 30 dias conforme a la LFPDPPP.',
+  ),
+  _Section(
     heading: '5. Transporte',
     body:
         'La integracion con Uber es opcional. Al vincular tu cuenta, autorizas a '
