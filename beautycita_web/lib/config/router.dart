@@ -55,7 +55,6 @@ import '../pages/client/mis_citas_page.dart';
 import '../pages/client/reservar_page.dart';
 import '../pages/public/invite_public_page.dart';
 import '../pages/public/porque_page.dart';
-import '../pages/public/porque_cinema.dart';
 import '../pages/public/privacidad_page.dart';
 import '../pages/public/directory_national_page.dart';
 import '../pages/public/directory_state_page.dart';

@@ -7,7 +7,6 @@ import 'package:beautycita_core/theme.dart';
 
 import '../../config/router.dart';
 import '../../providers/auth_provider.dart';
-import '../../services/webauthn_service.dart';
 import 'auth_layout.dart';
 
 /// Registration page — name, email, password + OAuth.
@@ -25,7 +24,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true;
   bool _acceptedTerms = false;
-  bool _showPasskeyOffer = false;
 
   @override
   void dispose() {
@@ -50,12 +48,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       _nameController.text.trim(),
     );
     if (success && mounted) {
-      // If WebAuthn is supported, offer to add a passkey before navigating
-      if (WebAuthnService.isSupported()) {
-        setState(() => _showPasskeyOffer = true);
-      } else {
-        context.go(WebRoutes.verify);
-      }
+      // Passkey offer UI not yet wired — just proceed to verify.
+      // When/if the banner is added, gate it on WebAuthnService.isSupported().
+      context.go(WebRoutes.verify);
     }
   }
 

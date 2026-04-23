@@ -32,7 +32,6 @@ class _DirectoryCityPageState extends State<DirectoryCityPage> {
   String _stateName = '';
   int _totalDiscovered = 0;
   List<String> _topCategories = [];
-  double? _avgRating;
   bool _loading = true;
   String? _error;
 
@@ -249,7 +248,6 @@ class _DirectoryCityPageState extends State<DirectoryCityPage> {
     final address = biz['address'] as String? ?? '';
     final rating = (biz['average_rating'] as num?)?.toDouble() ?? 0;
     final reviews = (biz['total_reviews'] as num?)?.toInt() ?? 0;
-    final phone = biz['phone'] as String?;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -367,12 +365,6 @@ class _DirectoryCityPageState extends State<DirectoryCityPage> {
     final size = isMobile ? 64.0 : 88.0;
     return Container(width: size, height: size, decoration: BoxDecoration(color: const Color(0xFFF0EBE6), borderRadius: BorderRadius.circular(10)),
       child: Icon(Icons.storefront_rounded, color: _textSecondary.withValues(alpha: 0.3), size: 30));
-  }
-
-  Widget _placeholderSmall(bool isMobile) {
-    final size = isMobile ? 52.0 : 68.0;
-    return Container(width: size, height: size, decoration: BoxDecoration(color: const Color(0xFFF0EBE6), borderRadius: BorderRadius.circular(8)),
-      child: Icon(Icons.storefront_rounded, color: _textSecondary.withValues(alpha: 0.3), size: 24));
   }
 
   Widget _buildInviteCta(bool isMobile) {

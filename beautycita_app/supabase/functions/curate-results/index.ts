@@ -301,14 +301,16 @@ serve(async (req) => {
       return json({ error: "This feature is currently disabled" }, 403);
     }
 
-    // Body parse — capture raw text on failure so we can see what's malformed
-    // (was throwing SyntaxError "position 2" on every call without context).
+    // Body parse — read text first (idempotent) then JSON.parse, so the raw
+    // body is always available for logging on failure. Previous version
+    // called req.json() first and then tried req.clone().text() in the
+    // catch — but clone() after consumption returns an already-disturbed
+    // stream, so logs only showed the "<unreadable>" fallback string.
     let body: CurateRequest;
+    const rawText = await req.text();
     try {
-      body = await req.json();
+      body = JSON.parse(rawText) as CurateRequest;
     } catch (e) {
-      let raw = "<unreadable>";
-      try { raw = await req.clone().text(); } catch { /* body already consumed */ }
       const ct = req.headers.get("content-type") ?? "";
       const ua = req.headers.get("user-agent") ?? "";
       console.error(
@@ -317,9 +319,9 @@ serve(async (req) => {
           err: (e as Error).message,
           contentType: ct,
           ua,
-          rawHead: raw.slice(0, 200),
-          rawLen: raw.length,
-          bytePrefix: Array.from(new TextEncoder().encode(raw.slice(0, 8))),
+          rawHead: rawText.slice(0, 200),
+          rawLen: rawText.length,
+          bytePrefix: Array.from(new TextEncoder().encode(rawText.slice(0, 8))),
         }),
       );
       return json({ error: "Invalid JSON body" }, 400);

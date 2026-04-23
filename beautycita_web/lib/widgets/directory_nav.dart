@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 const _bgColor = Color(0xFFFFFAF5);
-const _textPrimary = Color(0xFF1A1A1A);
 const _textSecondary = Color(0xFF666666);
-const _brandPink = Color(0xFFEC4899);
 const _brandGradient = LinearGradient(
   colors: [Color(0xFFEC4899), Color(0xFF9333EA), Color(0xFF3B82F6)],
 );
