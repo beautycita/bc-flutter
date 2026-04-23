@@ -4,7 +4,7 @@ import { corsHeaders, handleCorsPreflightIfOptions } from "../_shared/cors.ts";
 
 const WA_API_URL = Deno.env.get("BEAUTYPI_WA_URL") ?? "";
 const WA_API_TOKEN = Deno.env.get("BEAUTYPI_WA_TOKEN") ?? "";
-const BC_PHONE = "523221429800";
+const BC_PHONE = Deno.env.get("BC_ALERT_PHONE") ?? "";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
@@ -74,6 +74,14 @@ serve(async (req: Request) => {
       : "Visitante";
 
     const contactMessage = `*[beautycita.com]*\nMensaje de ${displayName}:\n${cleaned.substring(0, 500)}`;
+
+    if (!BC_PHONE) {
+      console.error("[send-contact] BC_ALERT_PHONE env var missing — contact message dropped");
+      return new Response(JSON.stringify({ sent: false, error: "Alert recipient not configured" }), {
+        status: 500,
+        headers: { ...corsHeaders(req), "Content-Type": "application/json" },
+      });
+    }
 
     const waRes = await fetch(`${WA_API_URL}/api/wa/send`, {
       method: "POST",

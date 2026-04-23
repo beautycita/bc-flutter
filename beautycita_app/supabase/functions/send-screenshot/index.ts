@@ -32,7 +32,7 @@ const corsHeaders = (req: Request) => ({
 
 const BEAUTYPI_WA_URL = Deno.env.get("BEAUTYPI_WA_URL") ?? "";
 const BEAUTYPI_WA_TOKEN = Deno.env.get("BEAUTYPI_WA_TOKEN") ?? "";
-const BC_PHONE = "523221429800";
+const BC_PHONE = Deno.env.get("BC_ALERT_PHONE") ?? "";
 
 let _req: Request;
 
@@ -88,6 +88,11 @@ Deno.serve(async (req) => {
       profile?.full_name || profile?.username || user.id.substring(0, 8);
     const screenshotCaption =
       caption || `Screenshot de ${userName} en BeautyCita`;
+
+    if (!BC_PHONE) {
+      console.error("[send-screenshot] BC_ALERT_PHONE env var missing — screenshot dropped");
+      return json({ sent: false, error: "Alert recipient not configured" }, 500);
+    }
 
     const waRes = await fetch(`${BEAUTYPI_WA_URL}/api/wa/send-image`, {
       method: "POST",

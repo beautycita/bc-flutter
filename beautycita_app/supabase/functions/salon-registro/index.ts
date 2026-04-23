@@ -15,9 +15,6 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const BEAUTYPI_WA_URL = Deno.env.get("BEAUTYPI_WA_URL") ?? "";
 const BEAUTYPI_WA_TOKEN = Deno.env.get("BEAUTYPI_WA_TOKEN") ?? "";
-const TWILIO_ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID") ?? "";
-const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN") ?? "";
-const TWILIO_VERIFY_SID = Deno.env.get("TWILIO_VERIFY_SID") ?? "";
 const HMAC_SECRET = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!; // Reuse service key as HMAC secret
 
 const OTP_EXPIRY_MINUTES = 10;
@@ -207,50 +204,6 @@ async function sendWhatsApp(
   } catch (e) {
     console.error(`[SALON-REG][WA] Error: ${e}`);
     return { sent: false, channel: "whatsapp" };
-  }
-}
-
-// ---------------------------------------------------------------------------
-// SMS fallback via Twilio Verify
-// ---------------------------------------------------------------------------
-
-async function sendSms(
-  phone: string,
-  code: string,
-): Promise<{ sent: boolean; channel: string }> {
-  try {
-    if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_VERIFY_SID) {
-      console.error("[SALON-REG][SMS] Twilio not configured");
-      return { sent: false, channel: "sms" };
-    }
-
-    // Use Twilio Verify API to send OTP via SMS
-    const url = `https://verify.twilio.com/v2/Services/${TWILIO_VERIFY_SID}/Verifications`;
-    const auth = btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
-
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${auth}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({
-        To: phone.startsWith("+") ? phone : `+${phone}`,
-        Channel: "sms",
-      }),
-    });
-
-    if (!res.ok) {
-      const err = await res.text();
-      console.error(`[SALON-REG][SMS] Twilio error: ${res.status} ${err}`);
-      return { sent: false, channel: "sms" };
-    }
-
-    console.log(`[SALON-REG][SMS] OTP sent via SMS to ${phone}`);
-    return { sent: true, channel: "sms" };
-  } catch (e) {
-    console.error(`[SALON-REG][SMS] Error: ${e}`);
-    return { sent: false, channel: "sms" };
   }
 }
 
@@ -1054,16 +1007,12 @@ Deno.serve(async (req: Request) => {
               .eq("phone", phone)
               .eq("code", otpHash);
           } else {
-            console.log(`[SALON-REG] WA failed for ${phone}, falling back to SMS`);
-            const smsResult = await sendSms(phone, otp);
-            if (!smsResult.sent) {
-              return json({ error: "No se pudo enviar el codigo. Intenta de nuevo." }, 500);
-            }
+            console.error(`[SALON-REG] WA send failed for ${phone} (Infobip + bpi both down)`);
+            return json({ error: "No se pudo enviar el codigo. Intenta de nuevo." }, 500);
           }
         } catch (e) {
           console.error(`[SALON-REG] Send error: ${e}`);
-          // DB record exists with our code — try SMS as last resort
-          await sendSms(phone, otp);
+          return json({ error: "No se pudo enviar el codigo. Intenta de nuevo." }, 500);
         }
 
         console.log(`[SALON-REG] OTP sent to ${phone} via ${channel}`);
@@ -1112,33 +1061,10 @@ Deno.serve(async (req: Request) => {
           .update({ attempts: record.attempts + 1 })
           .eq("id", record.id);
 
-        let verified = false;
-
-        if (record.channel === "sms") {
-          // Verify via Twilio Verify API
-          try {
-            const url = `https://verify.twilio.com/v2/Services/${TWILIO_VERIFY_SID}/VerificationCheck`;
-            const auth = btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
-            const res = await fetch(url, {
-              method: "POST",
-              headers: {
-                Authorization: `Basic ${auth}`,
-                "Content-Type": "application/x-www-form-urlencoded",
-              },
-              body: new URLSearchParams({
-                To: phone.startsWith("+") ? phone : `+${phone}`,
-                Code: code,
-              }),
-            });
-            const data = await res.json();
-            verified = data.status === "approved";
-          } catch (e) {
-            console.error(`[SALON-REG] Twilio verify error: ${e}`);
-          }
-        } else {
-          // WA OTP — verify hashed code (matches phone-verify pattern)
-          verified = record.code === await hashOtp(code);
-        }
+        // All OTPs are WA-delivered + locally-hashed now (Twilio removed 2026-04-23).
+        // Any legacy sms-channel row is accepted via the same hash path; we no
+        // longer roundtrip a verifier service.
+        const verified = record.code === await hashOtp(code);
 
         if (!verified) {
           return json(

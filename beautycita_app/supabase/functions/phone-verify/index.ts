@@ -38,9 +38,6 @@ const corsHeaders = (req: Request) => ({
 
 const BEAUTYPI_WA_URL = Deno.env.get("BEAUTYPI_WA_URL") ?? "";
 const BEAUTYPI_WA_TOKEN = Deno.env.get("BEAUTYPI_WA_TOKEN") ?? "";
-const TWILIO_ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID") ?? "";
-const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN") ?? "";
-const TWILIO_VERIFY_SID = Deno.env.get("TWILIO_VERIFY_SID") ?? "";
 const OTP_EXPIRY_MINUTES = 10;
 const MAX_ATTEMPTS = 3;
 
@@ -176,7 +173,7 @@ Deno.serve(async (req) => {
       return json({ error: "Demasiados intentos. Espera 15 minutos." }, 429);
     }
 
-    // Generate OTP upfront — same code for all channels (no Twilio Verify, use our code everywhere)
+    // Generate OTP upfront — same code for all channels, we control generation end-to-end
     const otp = generateOtp();
 
     // Check for recent send to this phone (dedup: if we sent in last 60s, don't send again)
@@ -195,8 +192,8 @@ Deno.serve(async (req) => {
       return json({ sent: true, channel: recentSend.channel, expires_in: OTP_EXPIRY_MINUTES * 60, deduplicated: true });
     }
 
-    // Channel preference: Infobip (whitelisted phones only) → bpi WA → Twilio SMS.
-    // Infobip is sandbox until prod sender registered; whitelist gates exposure.
+    // Channel preference: Infobip WhatsApp (whitelisted phones) → bpi WhatsApp.
+    // Twilio removed platform-wide 2026-04-23; Infobip is the authoritative provider.
     let result: { sent: boolean; channel: string };
     const otpBody = `BeautyCita - Tu codigo es: ${otp}\nValido por ${OTP_EXPIRY_MINUTES} min. No lo compartas.`;
     const infobipResult = await sendInfobipWhatsApp(phone, otpBody);
@@ -211,40 +208,11 @@ Deno.serve(async (req) => {
       result = await sendWhatsApp(phone, otp);
     }
 
-    // If WA failed, fall back to Twilio Programmable SMS (NOT Twilio Verify — we send our OWN code)
-    if (!result.sent && TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN) {
-      console.log(`[phone-verify] WA failed for ${phone.slice(0, 6)}***, falling back to SMS with same OTP`);
-      try {
-        // Use Twilio Programmable SMS (Messages API) — NOT Verify — so we control the code
-        const url = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
-        const auth = btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
-        const toNumber = phone.startsWith("+") ? phone : `+${phone}`;
-        const smsRes = await fetch(url, {
-          method: "POST",
-          headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({
-            To: toNumber,
-            From: Deno.env.get("TWILIO_FROM_NUMBER") ?? "+15005550006",
-            Body: `BeautyCita - Tu codigo de verificacion es: ${otp}\n\nValido por ${OTP_EXPIRY_MINUTES} minutos. No compartas este codigo.`,
-          }),
-        });
-        if (smsRes.ok) {
-          result = { sent: true, channel: "sms" };
-          console.log(`[phone-verify] OTP sent via SMS to ${phone.slice(0, 6)}***`);
-        } else {
-          const err = await smsRes.text();
-          console.error(`[phone-verify] SMS also failed: ${err}`);
-          return json({ error: "No se pudo enviar el codigo. Intenta de nuevo." }, 500);
-        }
-      } catch (e) {
-        console.error(`[phone-verify] SMS error: ${e}`);
-        return json({ error: "No se pudo enviar el codigo. Intenta de nuevo." }, 500);
-      }
-    } else if (!result.sent) {
+    if (!result.sent) {
       return json({ error: "No se pudo enviar el codigo. Intenta de nuevo." }, 500);
     }
 
-    // Store OTP in DB — same code for both channels now (no more TWILIO_MANAGED)
+    // Store OTP in DB
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
     await db.from("phone_verification_codes").insert({
       user_id: user.id,

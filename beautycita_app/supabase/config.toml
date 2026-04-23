@@ -265,7 +265,7 @@ max_frequency = "5s"
 # uri = "pg-functions://<database>/<schema>/<hook_name>"
 
 # SMS provider not used — phone verification handled by phone-verify edge function
-# (WhatsApp via beautypi, Twilio Verify SMS as fallback).
+# (Infobip WA → bpi WA; Twilio removed platform-wide 2026-04-23).
 
 # Multi-factor-authentication is available to Supabase Pro plan.
 [auth.mfa]

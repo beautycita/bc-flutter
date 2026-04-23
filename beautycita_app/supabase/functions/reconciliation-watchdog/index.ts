@@ -22,10 +22,10 @@ const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const CRON_SECRET = Deno.env.get("CRON_SECRET") ?? "";
 const WA_API_URL = Deno.env.get("BEAUTYPI_WA_URL") ?? "http://172.22.0.1:3200";
 const WA_API_TOKEN = Deno.env.get("BEAUTYPI_WA_TOKEN") ?? "";
-const BC_PHONE = "5217206777800";  // BC superadmin WA
+const BC_PHONE = Deno.env.get("BC_ALERT_PHONE") ?? "";
 
 async function sendAlert(message: string): Promise<boolean> {
-  if (!WA_API_URL) return false;
+  if (!WA_API_URL || !BC_PHONE) return false;
   try {
     const ac = new AbortController();
     const t = setTimeout(() => ac.abort(), 5000);

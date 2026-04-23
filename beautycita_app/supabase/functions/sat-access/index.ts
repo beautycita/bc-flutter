@@ -22,7 +22,7 @@ const SAT_API_KEY = Deno.env.get("SAT_API_KEY") ?? "";
 const SAT_API_SECRET = Deno.env.get("SAT_API_SECRET") ?? "";
 const WA_API_URL = Deno.env.get("BEAUTYPI_WA_URL") ?? "";
 const WA_API_TOKEN = Deno.env.get("BEAUTYPI_WA_TOKEN") ?? "";
-const BC_PHONE = "+5213322091741";
+const BC_PHONE = Deno.env.get("BC_ALERT_PHONE") ?? "";
 
 // Rate limit: sliding window per hour
 const rateLimitWindow: number[] = [];
@@ -41,22 +41,27 @@ const SAT_RETRY_MESSAGE = {
 async function alertBC(reason: string, details: string) {
   const msg = `🚨 *SAT API ALERT* 🚨\n\n*Reason:* ${reason}\n*Details:* ${details}\n*Time:* ${new Date().toISOString()}\n\n_This is a critical alert. The SAT API experienced a failure. Investigate immediately._`;
 
-  // Try WA alert
-  try {
-    const ac = new AbortController();
-    const t = setTimeout(() => ac.abort(), 5000);
-    await fetch(`${WA_API_URL}/api/wa/send`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${WA_API_TOKEN}`,
-      },
-      body: JSON.stringify({ phone: BC_PHONE, message: msg }),
-      signal: ac.signal,
-    });
-    clearTimeout(t);
-  } catch (e) {
-    console.error("[SAT-ALERT] WA alert failed:", e);
+  // Try WA alert. Skip cleanly if BC_ALERT_PHONE is unset — never send to a
+  // fabricated / hardcoded recipient again.
+  if (!BC_PHONE) {
+    console.error("[SAT-ALERT] BC_ALERT_PHONE env var missing — WA alert skipped");
+  } else {
+    try {
+      const ac = new AbortController();
+      const t = setTimeout(() => ac.abort(), 5000);
+      await fetch(`${WA_API_URL}/api/wa/send`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${WA_API_TOKEN}`,
+        },
+        body: JSON.stringify({ phone: BC_PHONE, message: msg }),
+        signal: ac.signal,
+      });
+      clearTimeout(t);
+    } catch (e) {
+      console.error("[SAT-ALERT] WA alert failed:", e);
+    }
   }
 
   // Always log to console (picked up by docker logs)
