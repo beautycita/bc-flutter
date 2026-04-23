@@ -236,6 +236,16 @@ async function handleTransactions(
   const limit = Math.min(parseInt(params.limit ?? "100"), 1000);
   const offset = parseInt(params.offset ?? "0");
 
+  // external_free visibility toggle (design doc §3 — default OFF per BC 2026-04-23).
+  // When OFF: completely exclude external_free rows from the SAT feed.
+  // When ON: include them with collected_by_platform=false marker (no financial impact).
+  const { data: toggle } = await supabase
+    .from("app_config")
+    .select("value")
+    .eq("key", "external_free_sat_visible")
+    .maybeSingle();
+  const externalFreeVisible = toggle?.value === "true";
+
   const data = await queryWithRetry(() => {
     let query = supabase
       .from("appointments")
@@ -246,8 +256,15 @@ async function handleTransactions(
         businesses!inner(name, rfc, tax_regime)
       `)
       .eq("status", "completed")
-      .eq("payment_status", "paid")
       .order("starts_at", { ascending: false });
+
+    if (externalFreeVisible) {
+      // Include both regular paid rows AND external_free
+      query = query.in("payment_status", ["paid", "external_collected"]);
+    } else {
+      query = query.eq("payment_status", "paid")
+                   .neq("payment_method", "external_free");
+    }
 
     if (params.from) query = query.gte("starts_at", params.from);
     if (params.to) query = query.lte("starts_at", `${params.to}T23:59:59Z`);
@@ -272,6 +289,7 @@ async function handleTransactions(
       iva_withheld: t.iva_withheld ?? 0,
       tax_base: t.tax_base ?? 0,
       provider_net: t.provider_net ?? 0,
+      collected_by_platform: t.payment_method !== "external_free",
     })),
     pagination: { limit, offset },
   };

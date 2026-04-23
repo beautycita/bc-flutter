@@ -203,6 +203,20 @@ class PrivacidadPage extends StatelessWidget {
                     'Base legal: Consentimiento implicito para datos no sensibles (Art. 8 LFPDPPP). '
                     'Interes legitimo para prevencion de fraude (Art. 12 Reglamento LFPDPPP).'),
 
+                _section('Programa QR de Registro',
+                    'Si usted escanea un codigo QR interno en un salon participante y completa el formulario de registro, BeautyCita almacena los siguientes datos proporcionados por usted:\n\n'
+                    '  - Nombre completo\n'
+                    '  - Numero telefonico (verificado por codigo OTP via WhatsApp)\n'
+                    '  - Servicio solicitado y notas opcionales\n'
+                    '  - Identificador de dispositivo (UUID generado localmente en su navegador)\n'
+                    '  - Hashes anonimos de direccion IP y navegador (capturados unicamente para prevencion de fraude; no reversibles despues de 30 dias por rotacion diaria de sal criptografica)\n\n'
+                    'Proposito: completar su cita en el salon donde realizo el registro. BeautyCita actua como procesador de estos datos en nombre del salon.\n\n'
+                    'Base legal del programa QR:\n'
+                    '  - Consentimiento expreso (Art. 8 LFPDPPP) — usted marca casillas de aviso de privacidad, terminos y cookies antes de enviar el formulario\n'
+                    '  - Principio de finalidad y minimizacion (Art. 11 LFPDPPP) — solo capturamos datos necesarios para completar su cita y prevenir fraude; no hay uso secundario\n\n'
+                    'Sus derechos ARCO permanecen vigentes. Para ejercerlos o eliminar sus datos, escribanos a soporte@beautycita.com. Eliminacion en plazo maximo de 30 dias.\n\n'
+                    'Retencion: los registros se mantienen mientras la cuenta este activa, mas el plazo legal aplicable por CFF Art. 30 cuando aplica.'),
+
                 _section('Menores de Edad',
                     'La Plataforma esta dirigida a personas mayores de 18 anos. No recopilamos intencionalmente datos de menores de edad. Si detectamos que un menor ha creado una cuenta, procederemos a eliminarla y sus datos asociados.'),
 

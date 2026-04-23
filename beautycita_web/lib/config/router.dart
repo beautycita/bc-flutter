@@ -61,6 +61,8 @@ import '../pages/public/directory_national_page.dart';
 import '../pages/public/directory_state_page.dart';
 import '../pages/public/directory_city_page.dart';
 import '../pages/public/salon_page.dart';
+import '../pages/public/qr_registro_page.dart';
+import '../pages/public/expresscita_landing_page.dart';
 import '../pages/public/terminos_page.dart';
 import '../pages/auth/callback_page.dart';
 import '../pages/auth/google_calendar_callback_page.dart';
@@ -207,6 +209,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           path.startsWith('/explorar') ||
           path.startsWith('/reservar') ||
           path.startsWith('/registro') ||
+          path.startsWith('/expresscita') ||
           path == '/registrar' ||
           path == '/invitar' ||
           path.startsWith('/salon');
@@ -348,6 +351,22 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/salon/:slug',
         builder: (context, state) => SalonPage(
+          slug: state.pathParameters['slug'] ?? '',
+        ),
+      ),
+
+      // ── QR free-tier registration (public, no shell, no auth) ─────────
+      GoRoute(
+        path: '/registro/:slug',
+        builder: (context, state) => QrRegistroPage(
+          slug: state.pathParameters['slug'] ?? '',
+        ),
+      ),
+
+      // ── ExpressCita landing (public, app-gate + platform-aware redirect)
+      GoRoute(
+        path: '/expresscita/:slug',
+        builder: (context, state) => ExpressCitaLandingPage(
           slug: state.pathParameters['slug'] ?? '',
         ),
       ),

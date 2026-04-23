@@ -28,7 +28,8 @@ interface CurateRequest {
     time_of_day: "morning" | "afternoon" | "evening" | null;
     specific_date: string | null;
   } | null;
-  business_id?: string; // Lock to specific business (Cita Express)
+  business_id?: string; // Lock to specific business (legacy — used by locked Cita Express)
+  preferred_business_slug?: string; // ExpressCita: prefer this salon, but allow fallbacks
 }
 
 interface BookingWindow {
@@ -331,7 +332,19 @@ serve(async (req) => {
       follow_up_answers,
       override_window,
       business_id,
+      preferred_business_slug,
     } = body;
+
+    // ExpressCita: resolve preferred slug → business_id. Soft boost, not lock.
+    let preferredBusinessId: string | null = null;
+    if (preferred_business_slug && typeof preferred_business_slug === "string") {
+      const { data: preferred } = await supabase
+        .from("businesses")
+        .select("id")
+        .eq("slug", preferred_business_slug)
+        .maybeSingle();
+      preferredBusinessId = (preferred?.id as string | undefined) ?? null;
+    }
 
     if (!service_type || location?.lat == null || location?.lng == null) {
       return json({ error: "service_type and location are required" }, 400);
@@ -437,10 +450,19 @@ serve(async (req) => {
 
       const boosted = applyModifierBoost(scored, modifierCtx);
 
+      // ExpressCita preferred-salon boost: 1.5x on the preferred business.
+      // Soft — if preferred has no availability, it still drops below viable
+      // alternatives. If preferred is within top results, it rises to card #1.
+      const preferredBoosted = preferredBusinessId
+        ? boosted.map((c) => c.business_id === preferredBusinessId
+            ? { ...c, score: c.score * 1.5 }
+            : c)
+        : boosted;
+
       // ==================================================================
       // STEP 5 — Pick Top 3
       // ==================================================================
-      const top3 = pickTop3(boosted);
+      const top3 = pickTop3(preferredBoosted);
 
       // ==================================================================
       // STEP 6 — Build Response (<5ms)
