@@ -175,6 +175,18 @@ class _StatsGrid extends StatelessWidget {
           value: '\$${stats.revenueMonth.toStringAsFixed(0)}',
           color: bcExt.successColor,
         ),
+        // Only render when QR program has produced external revenue.
+        // Label makes it clear these are external (no BC commission, no SAT).
+        if (stats.revenueExternalMonth > 0)
+          _StatCard(
+            icon: Icons.qr_code_2_rounded,
+            label: 'Externas Mes',
+            value: '\$${stats.revenueExternalMonth.toStringAsFixed(0)}',
+            color: Colors.teal,
+            tooltip: 'Transacciones externas (QR interno / calendario manual). '
+                'No se aplican retenciones ni comision. '
+                'Tu obligacion fiscal directa con SAT.',
+          ),
         _StatCard(
           icon: Icons.pending_actions_rounded,
           label: 'Por Confirmar',
@@ -205,19 +217,21 @@ class _StatCard extends StatelessWidget {
   final String label;
   final String value;
   final Color color;
+  final String? tooltip;
 
   const _StatCard({
     required this.icon,
     required this.label,
     required this.value,
     required this.color,
+    this.tooltip,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
-    return Card(
+    final card = Card(
       elevation: 0,
       color: colors.surface,
       shape: RoundedRectangleBorder(
@@ -232,7 +246,16 @@ class _StatCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 22, color: color),
+            Row(
+              children: [
+                Icon(icon, size: 22, color: color),
+                if (tooltip != null) ...[
+                  const SizedBox(width: 4),
+                  Icon(Icons.info_outline_rounded,
+                      size: 14, color: colors.onSurface.withValues(alpha: 0.4)),
+                ],
+              ],
+            ),
             const Spacer(),
             Text(
               value,
@@ -252,6 +275,14 @@ class _StatCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+
+    if (tooltip == null) return card;
+    return Tooltip(
+      message: tooltip!,
+      triggerMode: TooltipTriggerMode.tap,
+      showDuration: const Duration(seconds: 6),
+      child: card,
     );
   }
 }

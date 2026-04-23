@@ -104,6 +104,12 @@ final businessStatsProvider =
       .eq('status', 'completed')
       .eq('payment_status', 'paid')
       .gte('starts_at', firstOfMonth);
+  // QR free-tier: external_free appointments — segregated, informational only
+  final monthRevenueExternal = client
+      .from(BCTables.appointments).select('price')
+      .eq('business_id', bizId)
+      .eq('payment_method', 'external_free')
+      .gte('starts_at', firstOfMonth);
   final pendingQ = client
       .from(BCTables.appointments).select('id')
       .eq('business_id', bizId)
@@ -115,7 +121,7 @@ final businessStatsProvider =
       .single();
 
   final results = await Future.wait<dynamic>(
-      [todayAppts, weekAppts, monthRevenue, pendingQ, bizInfo]);
+      [todayAppts, weekAppts, monthRevenue, pendingQ, bizInfo, monthRevenueExternal]);
 
   List safeAt(int i) => i < results.length ? (results[i] as List) : [];
 
@@ -124,12 +130,18 @@ final businessStatsProvider =
     revenue += ((row as Map)['price'] as num?)?.toDouble() ?? 0;
   }
 
+  double revenueExternal = 0;
+  for (final row in safeAt(5)) {
+    revenueExternal += ((row as Map)['price'] as num?)?.toDouble() ?? 0;
+  }
+
   final bizData = results.length > 4 ? (results[4] as Map<String, dynamic>) : <String, dynamic>{};
 
   return BusinessStats(
     appointmentsToday: safeAt(0).length,
     appointmentsWeek: safeAt(1).length,
     revenueMonth: revenue,
+    revenueExternalMonth: revenueExternal,
     pendingConfirmations: safeAt(3).length,
     averageRating: (bizData['average_rating'] as num?)?.toDouble() ?? 0,
     totalReviews: bizData['total_reviews'] as int? ?? 0,
@@ -683,6 +695,7 @@ class BusinessStats {
   final int appointmentsToday;
   final int appointmentsWeek;
   final double revenueMonth;
+  final double revenueExternalMonth; // QR free-tier / external_free appointments
   final int pendingConfirmations;
   final double averageRating;
   final int totalReviews;
@@ -691,6 +704,7 @@ class BusinessStats {
     required this.appointmentsToday,
     required this.appointmentsWeek,
     required this.revenueMonth,
+    this.revenueExternalMonth = 0,
     required this.pendingConfirmations,
     required this.averageRating,
     required this.totalReviews,
@@ -700,6 +714,7 @@ class BusinessStats {
         appointmentsToday: 0,
         appointmentsWeek: 0,
         revenueMonth: 0,
+        revenueExternalMonth: 0,
         pendingConfirmations: 0,
         averageRating: 0,
         totalReviews: 0,
