@@ -1269,6 +1269,35 @@ const _privacySections = [
         'LFPDPPP). Interes legitimo para prevencion de fraude (Art. 12 Reglamento).',
   ),
 
+  // ── 13b. Programa QR de Registro ──
+  _Section(
+    heading: '13b. Programa QR de Registro',
+    body:
+        'Si usted escanea un codigo QR interno en un salon participante y completa '
+        'el formulario de registro, BeautyCita almacena los siguientes datos '
+        'proporcionados por usted:\n\n'
+        '  - Nombre completo\n'
+        '  - Numero telefonico (verificado mediante codigo OTP via WhatsApp)\n'
+        '  - Servicio solicitado y notas opcionales\n'
+        '  - Identificador de dispositivo (UUID generado localmente en su navegador, '
+        'almacenado en localStorage)\n'
+        '  - Hashes anonimos de direccion IP y navegador, capturados unicamente para '
+        'prevencion de fraude; se vuelven no-reversibles despues de 30 dias por '
+        'rotacion diaria de sal criptografica\n\n'
+        'Proposito: completar su cita en el salon donde realizo el registro. '
+        'BeautyCita actua como procesador de estos datos en nombre del salon.\n\n'
+        'Base legal del programa QR:\n'
+        '  - Consentimiento expreso (Art. 8 LFPDPPP) — usted marca casillas de aviso '
+        'de privacidad, terminos y cookies antes de enviar el formulario.\n'
+        '  - Principio de finalidad y minimizacion (Art. 11 LFPDPPP) — solo capturamos '
+        'datos necesarios para completar su cita y prevenir fraude; no hay uso secundario.\n\n'
+        'Sus derechos ARCO permanecen vigentes. Para ejercerlos o eliminar sus datos, '
+        'escribanos a soporte@beautycita.com. La eliminacion se completa en un plazo '
+        'maximo de 30 dias habiles.\n\n'
+        'Retencion: los registros se mantienen mientras la cuenta este activa, mas el '
+        'plazo legal aplicable por CFF Art. 30 cuando aplica.',
+  ),
+
   // ── 14. Menores ──
   _Section(
     heading: '14. Menores de edad',
@@ -1358,7 +1387,19 @@ const _storageSections = [
         'en produccion.',
   ),
   _Section(
-    heading: '4. Como eliminar datos',
+    heading: '4. Programa QR (localStorage)',
+    body:
+        'En el contexto del programa QR de registro de clientes (formulario publico '
+        'en /registro/:slug), almacenamos un identificador de dispositivo anonimo '
+        '(UUID v4) en localStorage del navegador con la clave "bc_walkin_device_id". '
+        'Este identificador se usa unicamente para prevencion de fraude — para '
+        'detectar si un mismo dispositivo intenta registrar multiples clientes '
+        'ficticios. No se asocia con su identidad hasta que usted completa el '
+        'formulario y acepta expresamente el Aviso de Privacidad. Puede borrarlo '
+        'en cualquier momento desde los ajustes de su navegador.',
+  ),
+  _Section(
+    heading: '5. Como eliminar datos',
     body:
         'Cerrar sesion elimina datos de sesion. Desde ajustes de Android '
         'puedes borrar todos los datos de la app. Desinstalar elimina '
