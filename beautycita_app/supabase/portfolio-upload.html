@@ -41,6 +41,30 @@
   .input { width: 100%; padding: 10px 14px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 14px; outline: none; }
   .input:focus { border-color: #7c3aed; }
   .hidden { display: none; }
+  /* ── Editor overlay (trim + stickers) ───────────────────────── */
+  .editor { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 300; display: none; flex-direction: column; }
+  .editor.open { display: flex; }
+  .editor-header { padding: 12px 16px; color: white; display: flex; align-items: center; justify-content: space-between; font-weight: 700; }
+  .editor-header button { background: none; border: none; color: white; font-size: 14px; font-weight: 700; padding: 8px 14px; border-radius: 8px; cursor: pointer; }
+  .editor-header .primary { background: #EC4899; }
+  .editor-stage { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .editor-canvas { position: relative; max-width: 100%; max-height: 100%; display: inline-block; }
+  .editor-canvas img, .editor-canvas video { max-width: 100%; max-height: calc(100vh - 300px); display: block; border-radius: 8px; }
+  .overlay-layer { position: absolute; cursor: grab; user-select: none; touch-action: none; }
+  .overlay-layer.active { outline: 2px dashed #EC4899; }
+  .overlay-layer img { width: 100%; pointer-events: none; -webkit-user-drag: none; }
+  .overlay-remove { position: absolute; top: -12px; right: -12px; background: #EF4444; color: white; width: 24px; height: 24px; border-radius: 50%; border: none; font-size: 14px; font-weight: 700; cursor: pointer; display: none; }
+  .overlay-layer.active .overlay-remove { display: block; }
+  .editor-footer { background: rgba(0,0,0,0.7); padding: 10px 12px; color: white; }
+  .trim-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 12px; }
+  .trim-row input[type=range] { flex: 1; accent-color: #EC4899; }
+  .sticker-strip { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0; }
+  .sticker-thumb { flex: 0 0 60px; height: 60px; background: rgba(255,255,255,0.08); border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid transparent; }
+  .sticker-thumb img { max-width: 48px; max-height: 48px; }
+  .sticker-thumb:active { border-color: #EC4899; }
+  .scale-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 11px; color: #ccc; }
+  .scale-row input { flex: 1; accent-color: #EC4899; }
+  .hint-bar { color: #ccc; font-size: 11px; text-align: center; margin-top: 6px; }
   .error { color: #ef4444; font-size: 13px; text-align: center; margin-top: 8px; }
   .staff-name { font-size: 18px; font-weight: 700; color: #1f2937; }
   .salon-name { font-size: 13px; color: #9ca3af; }
@@ -98,14 +122,63 @@
 <input type="file" id="camera-input" accept="image/*" capture="environment" class="hidden">
 <input type="file" id="video-input" accept="video/mp4,video/webm,video/quicktime" class="hidden">
 
+<!-- ── Editor (trim + stickers) ─────────────────────────────── -->
+<div class="editor" id="editor">
+  <div class="editor-header">
+    <button onclick="cancelEditor()">Cancelar</button>
+    <span>Editar</span>
+    <button class="primary" onclick="confirmEditor()">Subir</button>
+  </div>
+  <div class="editor-stage">
+    <div class="editor-canvas" id="editorCanvas"></div>
+  </div>
+  <div class="editor-footer">
+    <div id="trimControls" style="display:none;">
+      <div class="trim-row">
+        <span>Inicio</span>
+        <input type="range" id="trimStart" min="0" max="100" value="0" step="0.1">
+        <span id="trimStartLabel">0.0s</span>
+      </div>
+      <div class="trim-row">
+        <span>Fin</span>
+        <input type="range" id="trimEnd" min="0" max="100" value="100" step="0.1">
+        <span id="trimEndLabel">0.0s</span>
+      </div>
+    </div>
+    <div class="sticker-strip" id="stickerStrip"></div>
+    <div class="scale-row" id="scaleRow" style="display:none;">
+      <span>Tamaño</span>
+      <input type="range" id="overlayScale" min="0.15" max="1.2" step="0.01" value="0.3">
+    </div>
+    <div class="hint-bar">Mantén presionado un sticker para arrastrarlo</div>
+  </div>
+</div>
+
 <script>
 const API = 'https://beautycita.com/supabase/functions/v1/portfolio-upload';
+const STICKER_BASE = 'https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/media/sticker_overlays/';
+const STICKERS = [
+  { id: 'sticker_01_watermark', label: '@bc' },
+  { id: 'sticker_02_newlook',   label: 'Nuevo' },
+  { id: 'sticker_03_before_after', label: 'B+A' },
+  { id: 'sticker_04_star',      label: '★' },
+  { id: 'sticker_05_cta',       label: 'CTA' },
+  { id: 'sticker_06_credit',    label: 'Credit' },
+];
 const params = new URLSearchParams(window.location.search);
 const token = params.get('token') || '';
 let staffId = '';
 let currentPhotoId = null;
 let isBefore = true;
 let afterOnlyFlag = false;
+
+// ── Editor state ──
+let editorFile = null;
+let editorIsVideo = false;
+let editorMediaEl = null;
+let editorOverlays = [];      // [{id, sticker_id, x, y, scale, rotation}]
+let editorActiveOverlay = null;
+let editorCanvasEl = null;
 
 // PIN auto-advance
 document.querySelectorAll('.pin-input input').forEach((inp, i, all) => {
@@ -157,11 +230,20 @@ function renderPhotos(photos) {
     const complete = p.is_complete;
     const safeId = esc(p.id || '');
     const afterIsVideo = p.after_url && /\.(mp4|webm|mov)(\?|$)/i.test(p.after_url);
-    const afterCell = p.after_url
+    const ovHtml = Array.isArray(p.overlays) ? p.overlays.map(o => {
+      const idRaw = String(o.sticker_id || '').replace(/[^a-z0-9_]/gi, '');
+      const sz = Math.max(0.1, Math.min(1.5, +o.scale || 0.3)) * 100;
+      const x = Math.max(0, Math.min(1, +o.x || 0.5)) * 100;
+      const y = Math.max(0, Math.min(1, +o.y || 0.5)) * 100;
+      const r = Math.max(-180, Math.min(180, +o.rotation || 0));
+      return `<img style="position:absolute;width:${sz}%;aspect-ratio:1;left:${x}%;top:${y}%;transform:translate(-50%,-50%) rotate(${r}deg);pointer-events:none;" src="${STICKER_BASE}${idRaw}.png">`;
+    }).join('') : '';
+    const afterInner = p.after_url
       ? (afterIsVideo
           ? `<video src="${esc(p.after_url)}" muted playsinline preload="metadata"></video>`
           : `<img src="${esc(p.after_url)}">`)
       : '<div class="placeholder">+ Despues</div>';
+    const afterCell = p.after_url ? `${afterInner}${ovHtml}` : afterInner;
     return `
       <div class="photo-pair ${complete ? '' : 'incomplete'}">
         <div style="display:flex; align-items:flex-start; justify-content:space-between;">
@@ -237,7 +319,7 @@ async function hidePhoto(photoId) {
   } catch (_) {}
 }
 
-async function uploadMediaFile(file) {
+async function uploadMediaFile(file, overlays = []) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = async () => {
@@ -253,6 +335,7 @@ async function uploadMediaFile(file) {
             image: base64,
             is_before: isBefore,
             after_only: afterOnlyFlag,
+            overlays,
             service_name: document.getElementById('service-name').value || null,
             client_name: document.getElementById('client-name').value || null,
           }),
@@ -281,16 +364,242 @@ async function uploadMediaFile(file) {
 document.getElementById('camera-input').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  await uploadMediaFile(file).catch(() => {});
+  openEditor(file, false);
   e.target.value = '';
 });
 
 document.getElementById('video-input').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  await uploadMediaFile(file).catch(() => {});
+  openEditor(file, true);
   e.target.value = '';
 });
+
+// ── Editor: trim + overlays ──────────────────────────────────────
+
+function openEditor(file, isVideo) {
+  editorFile = file;
+  editorIsVideo = isVideo;
+  editorOverlays = [];
+  editorActiveOverlay = null;
+  editorCanvasEl = document.getElementById('editorCanvas');
+  editorCanvasEl.innerHTML = '';
+
+  const url = URL.createObjectURL(file);
+  if (isVideo) {
+    const v = document.createElement('video');
+    v.src = url;
+    v.playsInline = true;
+    v.muted = true;
+    v.controls = true;
+    v.preload = 'metadata';
+    editorMediaEl = v;
+    editorCanvasEl.appendChild(v);
+    document.getElementById('trimControls').style.display = 'block';
+    v.addEventListener('loadedmetadata', () => setupTrim(v.duration));
+  } else {
+    const img = document.createElement('img');
+    img.src = url;
+    editorMediaEl = img;
+    editorCanvasEl.appendChild(img);
+    document.getElementById('trimControls').style.display = 'none';
+  }
+
+  buildStickerStrip();
+  document.getElementById('editor').classList.add('open');
+}
+
+function cancelEditor() {
+  document.getElementById('editor').classList.remove('open');
+  if (editorMediaEl && editorMediaEl.src) URL.revokeObjectURL(editorMediaEl.src);
+  editorFile = null;
+  editorOverlays = [];
+  editorCanvasEl.innerHTML = '';
+}
+
+function setupTrim(duration) {
+  const start = document.getElementById('trimStart');
+  const end = document.getElementById('trimEnd');
+  const startLbl = document.getElementById('trimStartLabel');
+  const endLbl = document.getElementById('trimEndLabel');
+  start.min = 0; start.max = duration.toFixed(1); start.value = 0;
+  end.min = 0; end.max = duration.toFixed(1); end.value = duration.toFixed(1);
+  startLbl.textContent = '0.0s';
+  endLbl.textContent = duration.toFixed(1) + 's';
+  const onChange = () => {
+    if (+start.value >= +end.value) start.value = Math.max(0, +end.value - 0.2);
+    startLbl.textContent = (+start.value).toFixed(1) + 's';
+    endLbl.textContent = (+end.value).toFixed(1) + 's';
+    if (editorMediaEl && editorMediaEl.currentTime < +start.value) editorMediaEl.currentTime = +start.value;
+    if (editorMediaEl && editorMediaEl.currentTime > +end.value) editorMediaEl.currentTime = +start.value;
+  };
+  start.addEventListener('input', onChange);
+  end.addEventListener('input', onChange);
+}
+
+function buildStickerStrip() {
+  const strip = document.getElementById('stickerStrip');
+  strip.innerHTML = STICKERS.map(s =>
+    `<div class="sticker-thumb" onclick="addSticker('${s.id}')"><img src="${STICKER_BASE}${s.id}.png" alt="${s.label}"></div>`
+  ).join('');
+}
+
+function addSticker(stickerId) {
+  const id = 'ov_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+  const ov = { id, sticker_id: stickerId, x: 0.5, y: 0.5, scale: 0.3, rotation: 0 };
+  editorOverlays.push(ov);
+  renderOverlays();
+  selectOverlay(id);
+}
+
+function renderOverlays() {
+  // Clear and re-add overlay layers
+  [...editorCanvasEl.querySelectorAll('.overlay-layer')].forEach(n => n.remove());
+  const rect = editorMediaEl.getBoundingClientRect();
+  const canvasRect = editorCanvasEl.getBoundingClientRect();
+  const offsetLeft = rect.left - canvasRect.left;
+  const offsetTop = rect.top - canvasRect.top;
+
+  editorOverlays.forEach(ov => {
+    const layer = document.createElement('div');
+    layer.className = 'overlay-layer' + (editorActiveOverlay === ov.id ? ' active' : '');
+    layer.dataset.id = ov.id;
+    const sz = rect.width * ov.scale;
+    layer.style.width = sz + 'px';
+    layer.style.height = sz + 'px';
+    layer.style.left = (offsetLeft + rect.width * ov.x - sz / 2) + 'px';
+    layer.style.top = (offsetTop + rect.height * ov.y - sz / 2) + 'px';
+    layer.style.transform = 'rotate(' + (ov.rotation || 0) + 'deg)';
+    layer.innerHTML =
+      '<img src="' + STICKER_BASE + ov.sticker_id + '.png">' +
+      '<button class="overlay-remove" onclick="removeOverlay(event,\'' + ov.id + '\')">×</button>';
+    layer.addEventListener('pointerdown', (e) => startDrag(e, ov));
+    editorCanvasEl.appendChild(layer);
+  });
+}
+
+function selectOverlay(id) {
+  editorActiveOverlay = id;
+  const ov = editorOverlays.find(o => o.id === id);
+  const scaleRow = document.getElementById('scaleRow');
+  const scaleInput = document.getElementById('overlayScale');
+  if (ov) {
+    scaleRow.style.display = 'flex';
+    scaleInput.value = ov.scale;
+    scaleInput.oninput = () => {
+      ov.scale = +scaleInput.value;
+      renderOverlays();
+    };
+  }
+  renderOverlays();
+}
+
+function removeOverlay(e, id) {
+  e.stopPropagation();
+  editorOverlays = editorOverlays.filter(o => o.id !== id);
+  if (editorActiveOverlay === id) {
+    editorActiveOverlay = null;
+    document.getElementById('scaleRow').style.display = 'none';
+  }
+  renderOverlays();
+}
+
+function startDrag(e, ov) {
+  e.preventDefault();
+  selectOverlay(ov.id);
+  const rect = editorMediaEl.getBoundingClientRect();
+  const startX = e.clientX, startY = e.clientY;
+  const startOvX = ov.x, startOvY = ov.y;
+  const move = (ev) => {
+    const dx = (ev.clientX - startX) / rect.width;
+    const dy = (ev.clientY - startY) / rect.height;
+    ov.x = Math.max(0, Math.min(1, startOvX + dx));
+    ov.y = Math.max(0, Math.min(1, startOvY + dy));
+    renderOverlays();
+  };
+  const up = () => {
+    window.removeEventListener('pointermove', move);
+    window.removeEventListener('pointerup', up);
+  };
+  window.addEventListener('pointermove', move);
+  window.addEventListener('pointerup', up);
+}
+
+async function confirmEditor() {
+  if (!editorFile) return;
+  let fileToUpload = editorFile;
+
+  // Video trim via MediaRecorder if supported AND user changed the range
+  if (editorIsVideo) {
+    const start = +document.getElementById('trimStart').value;
+    const end = +document.getElementById('trimEnd').value;
+    const duration = editorMediaEl.duration;
+    const trimmed = (start > 0.1) || (end < duration - 0.1);
+    if (trimmed && window.MediaRecorder) {
+      try {
+        fileToUpload = await trimVideoViaRecorder(editorFile, start, end);
+      } catch (err) {
+        console.warn('trim failed, uploading original:', err);
+      }
+    }
+  }
+
+  const overlaysOut = editorOverlays.map(o => ({
+    sticker_id: o.sticker_id, x: o.x, y: o.y, scale: o.scale, rotation: o.rotation || 0,
+  }));
+
+  document.getElementById('editor').classList.remove('open');
+  await uploadMediaFile(fileToUpload, overlaysOut).catch(() => {});
+  if (editorMediaEl && editorMediaEl.src) URL.revokeObjectURL(editorMediaEl.src);
+  editorFile = null;
+  editorOverlays = [];
+  editorCanvasEl.innerHTML = '';
+}
+
+async function trimVideoViaRecorder(file, startSec, endSec) {
+  // Source video plays hidden; a canvas pulls frames; MediaRecorder captures.
+  return new Promise((resolve, reject) => {
+    const src = document.createElement('video');
+    src.src = URL.createObjectURL(file);
+    src.muted = true;
+    src.playsInline = true;
+    src.addEventListener('loadedmetadata', () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = src.videoWidth;
+      canvas.height = src.videoHeight;
+      const ctx = canvas.getContext('2d');
+      const stream = canvas.captureStream(30);
+      let mime = 'video/webm;codecs=vp9';
+      if (!MediaRecorder.isTypeSupported(mime)) mime = 'video/webm;codecs=vp8';
+      if (!MediaRecorder.isTypeSupported(mime)) mime = 'video/webm';
+      const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 2_500_000 });
+      const chunks = [];
+      rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+      rec.onstop = () => {
+        const blob = new Blob(chunks, { type: mime });
+        URL.revokeObjectURL(src.src);
+        resolve(new File([blob], 'trimmed.webm', { type: mime }));
+      };
+      src.currentTime = startSec;
+      src.addEventListener('seeked', function onSeek() {
+        src.removeEventListener('seeked', onSeek);
+        rec.start();
+        src.play();
+        const draw = () => {
+          if (src.currentTime >= endSec || src.ended) {
+            rec.stop();
+            src.pause();
+            return;
+          }
+          ctx.drawImage(src, 0, 0, canvas.width, canvas.height);
+          requestAnimationFrame(draw);
+        };
+        draw();
+      }, { once: true });
+    });
+    src.addEventListener('error', reject);
+  });
+}
 
 async function toggleFeed(photoId, publish) {
   try {

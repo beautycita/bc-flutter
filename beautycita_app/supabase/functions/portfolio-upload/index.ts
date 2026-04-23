@@ -105,7 +105,7 @@ serve(async (req) => {
       // (salon owns the work), but are not shown in the stylist's gallery.
       const { data: pending } = await supabase
         .from("portfolio_photos")
-        .select("id, before_url, after_url, service_name, client_name, is_complete, publish_to_feed, created_at")
+        .select("id, before_url, after_url, service_name, client_name, is_complete, publish_to_feed, overlays, created_at")
         .eq("staff_id", staff.id)
         .eq("hidden_from_staff_view", false)
         .order("created_at", { ascending: false })
@@ -131,6 +131,20 @@ serve(async (req) => {
       // Optional hint from the client — "after_only" creates a complete
       // pair with just an after image (client refused before).
       const afterOnly = body.after_only === true;
+      // Optional brand overlays — array of {sticker_id, x, y, scale, rotation}.
+      // Rendered at display time; never burned into the media.
+      const overlays: Array<Record<string, unknown>> = Array.isArray(body.overlays)
+        ? (body.overlays as Array<Record<string, unknown>>)
+            .filter(o => typeof o?.sticker_id === "string")
+            .map(o => ({
+              sticker_id: String(o.sticker_id),
+              x: Math.max(0, Math.min(1, Number(o.x) || 0.5)),
+              y: Math.max(0, Math.min(1, Number(o.y) || 0.5)),
+              scale: Math.max(0.1, Math.min(1.5, Number(o.scale) || 0.3)),
+              rotation: Math.max(-180, Math.min(180, Number(o.rotation) || 0)),
+            }))
+            .slice(0, 5)
+        : [];
 
       if (!staffId || !imageBase64) {
         return json({ error: "staff_id and image required" }, 400, corsHeaders);
@@ -204,6 +218,7 @@ serve(async (req) => {
 
         if (serviceName) updates.service_name = serviceName;
         if (clientName) updates.client_name = clientName;
+        if (overlays.length > 0) updates.overlays = overlays;
 
         await supabase
           .from("portfolio_photos")
@@ -226,6 +241,7 @@ serve(async (req) => {
             client_name: clientName,
             is_complete: completeImmediately,
             completed_at: completeImmediately ? new Date().toISOString() : null,
+            overlays: overlays,
           })
           .select("id")
           .single();
@@ -237,6 +253,31 @@ serve(async (req) => {
           is_video: isVideo,
         }, 200, corsHeaders);
       }
+    }
+
+    // ── Update overlays on an existing photo (re-position / change sticker) ──
+    if (action === "set_overlays") {
+      const photoId = body.photo_id;
+      if (!photoId) return json({ error: "photo_id required" }, 400, corsHeaders);
+      const incoming: Array<Record<string, unknown>> = Array.isArray(body.overlays)
+        ? (body.overlays as Array<Record<string, unknown>>)
+            .filter(o => typeof o?.sticker_id === "string")
+            .map(o => ({
+              sticker_id: String(o.sticker_id),
+              x: Math.max(0, Math.min(1, Number(o.x) || 0.5)),
+              y: Math.max(0, Math.min(1, Number(o.y) || 0.5)),
+              scale: Math.max(0.1, Math.min(1.5, Number(o.scale) || 0.3)),
+              rotation: Math.max(-180, Math.min(180, Number(o.rotation) || 0)),
+            }))
+            .slice(0, 5)
+        : [];
+
+      await supabase
+        .from("portfolio_photos")
+        .update({ overlays: incoming })
+        .eq("id", photoId);
+
+      return json({ photo_id: photoId, overlays: incoming }, 200, corsHeaders);
     }
 
     // ── Hide from stylist gallery (keeps it in salon portfolio) ──

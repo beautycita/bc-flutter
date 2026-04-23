@@ -77,7 +77,7 @@ serve(async (req) => {
   // stylist's own view; the salon portfolio shows everything.
   const { data: photos } = await supabase
     .from("portfolio_photos")
-    .select("id, staff_id, before_url, after_url, service_name, caption, created_at")
+    .select("id, staff_id, before_url, after_url, service_name, caption, overlays, created_at")
     .eq("business_id", biz.id)
     .eq("is_complete", true)
     .or("publish_to_feed.is.null,publish_to_feed.eq.true")
@@ -156,10 +156,25 @@ function buildPage(
     `;
   }).join("");
 
+  const overlayHtmlFor = (overlays: unknown) => {
+    if (!Array.isArray(overlays) || overlays.length === 0) return "";
+    return overlays.map(raw => {
+      const o = raw as { sticker_id?: string; x?: number; y?: number; scale?: number; rotation?: number };
+      const idRaw = String(o.sticker_id ?? "");
+      if (!/^[a-z0-9_]+$/i.test(idRaw)) return "";
+      const sz = Math.max(0.1, Math.min(1.5, Number(o.scale) || 0.3)) * 100;
+      const x = Math.max(0, Math.min(1, Number(o.x) || 0.5)) * 100;
+      const y = Math.max(0, Math.min(1, Number(o.y) || 0.5)) * 100;
+      const r = Math.max(-180, Math.min(180, Number(o.rotation) || 0));
+      return `<img class="sticker-overlay" style="position:absolute;width:${sz}%;aspect-ratio:1;left:${x}%;top:${y}%;transform:translate(-50%,-50%) rotate(${r}deg);pointer-events:none;" src="https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/media/sticker_overlays/${idRaw}.png" loading="lazy">`;
+    }).join("");
+  };
+
   const photosHtml = photos.map(p => `
-    <div class="photo-pair">
+    <div class="photo-pair" style="position:relative;">
       ${p.before_url ? `<img src="${escUrl(p.before_url)}" alt="Antes" loading="lazy">` : ""}
       ${p.after_url ? `<img src="${escUrl(p.after_url)}" alt="Despues" loading="lazy">` : ""}
+      ${overlayHtmlFor((p as Record<string, unknown>).overlays)}
       ${p.service_name ? `<div class="photo-label">${esc(p.service_name)}</div>` : ""}
     </div>
   `).join("");
@@ -368,7 +383,20 @@ const __SALON_PHOTOS = ${JSON.stringify((photos ?? []).map(p => ({
   id: p.id, staff_id: p.staff_id,
   before_url: p.before_url, after_url: p.after_url,
   service_name: p.service_name, created_at: p.created_at,
+  overlays: Array.isArray(p.overlays) ? p.overlays : [],
 })))};
+const __STICKER_BASE = 'https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/media/sticker_overlays/';
+function __overlayHtml(overlays) {
+  if (!Array.isArray(overlays) || !overlays.length) return '';
+  return overlays.map(o => {
+    const sz = Math.max(0.1, Math.min(1.5, Number(o.scale) || 0.3)) * 100;
+    const x = Math.max(0, Math.min(1, Number(o.x) || 0.5)) * 100;
+    const y = Math.max(0, Math.min(1, Number(o.y) || 0.5)) * 100;
+    const r = Math.max(-180, Math.min(180, Number(o.rotation) || 0));
+    const id = String(o.sticker_id || '').replace(/[^a-z0-9_]/gi, '');
+    return '<img class="sticker-overlay" style="position:absolute;width:' + sz + '%;aspect-ratio:1;left:' + x + '%;top:' + y + '%;transform:translate(-50%,-50%) rotate(' + r + 'deg);pointer-events:none;" src="' + __STICKER_BASE + id + '.png" loading="lazy">';
+  }).join('');
+}
 const __isVideo = (u) => u && /\\.(mp4|webm|mov)(\\?|$)/i.test(u);
 const __escAttr = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
@@ -379,11 +407,12 @@ function openGallery(staffId, staffName) {
   grid.innerHTML = pics.length === 0
     ? '<div style="color:#ccc;text-align:center;grid-column:span 2;padding:40px">Sin fotos publicadas</div>'
     : pics.map(p => {
-        const afterCell = p.after_url
+        const afterInner = p.after_url
           ? (__isVideo(p.after_url)
               ? '<video src="' + __escAttr(p.after_url) + '" controls playsinline muted preload="metadata"></video>'
               : '<img src="' + __escAttr(p.after_url) + '" loading="lazy">')
           : '<div style="aspect-ratio:1;background:#222;border-radius:6px"></div>';
+        const afterCell = '<div style="position:relative;">' + afterInner + __overlayHtml(p.overlays) + '</div>';
         const beforeCell = p.before_url
           ? '<img src="' + __escAttr(p.before_url) + '" loading="lazy">'
           : '<div style="aspect-ratio:1;background:#222;border-radius:6px"></div>';
