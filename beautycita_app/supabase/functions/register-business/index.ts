@@ -87,12 +87,15 @@ serve(async (req) => {
       }, 400);
     }
 
-    // Check if user already has a business
+    // Check if user already has an ACTIVE business. Soft-deleted businesses
+    // (is_active=false) should not block re-registration — ex-salons need the
+    // onboarding path back in.
     const { data: existingBusiness } = await supabase
       .from("businesses")
       .select("id, name")
       .eq("owner_id", user.id)
-      .single();
+      .eq("is_active", true)
+      .maybeSingle();
 
     if (existingBusiness) {
       return json({
