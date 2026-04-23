@@ -430,9 +430,19 @@ class _DisputeDetailSheetState extends ConsumerState<_DisputeDetailSheet> {
     super.initState();
     _responseCtrl.text =
         widget.dispute['stylist_evidence'] as String? ?? '';
-    // Pre-fill amount from appointment price if available
-    final appt = widget.dispute['appointments'] as Map<String, dynamic>?;
-    final price = appt?['price'] as num?;
+    // F4 fix: order-aware prefill. For order disputes, pull from orders;
+    // for appointment disputes, pull from appointments. Previously always
+    // read from appointments, leaving order disputes with an empty amount.
+    final isOrderDispute = widget.dispute['order_id'] != null &&
+        widget.dispute['appointment_id'] == null;
+    num? price;
+    if (isOrderDispute) {
+      final order = widget.dispute['orders'] as Map<String, dynamic>?;
+      price = order?['total_amount'] as num?;
+    } else {
+      final appt = widget.dispute['appointments'] as Map<String, dynamic>?;
+      price = appt?['price'] as num?;
+    }
     if (price != null) {
       _amountCtrl.text = price.toStringAsFixed(0);
     }

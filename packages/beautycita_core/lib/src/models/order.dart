@@ -76,4 +76,19 @@ class Order {
 
   bool get isShippingOverdue => shippingDeadlineDaysLeft < 0;
   bool get isShippingUrgent => shippingDeadlineDaysLeft <= 3 && shippingDeadlineDaysLeft >= 0;
+
+  /// Days since the salon marked the order as shipped. Null if not shipped.
+  int? get daysSinceShipped =>
+      shippedAt == null ? null : DateTime.now().difference(shippedAt!).inDays;
+
+  /// Buyer may dispute a `shipped` order if it's been in transit too long
+  /// (fixes G1 — lost in transit) or a `delivered` order up front.
+  bool canDispute({int shippedDisputeAfterDays = 10}) {
+    if (isDelivered) return true;
+    if (isShipped) {
+      final d = daysSinceShipped;
+      return d != null && d >= shippedDisputeAfterDays;
+    }
+    return false;
+  }
 }

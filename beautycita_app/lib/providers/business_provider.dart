@@ -382,10 +382,11 @@ final businessDisputesProvider =
 
   final bizId = biz['id'] as String;
 
-  // Fetch all disputes for this business (appointments + orders)
+  // Fetch all disputes for this business (appointments + orders).
+  // Join both parent tables so the assign modal can prefill amount from either.
   final response = await SupabaseClientService.client
       .from(BCTables.disputes)
-      .select()
+      .select('*, appointments(id, price, service_name, starts_at), orders(id, product_name, total_amount, status)')
       .eq('business_id', bizId)
       .order('created_at', ascending: false);
 

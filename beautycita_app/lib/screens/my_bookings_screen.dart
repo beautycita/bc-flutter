@@ -1182,7 +1182,10 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
     final ext = Theme.of(context).extension<BCThemeExtension>()!;
     final dispute = disputes[order.id];
     final hasDispute = dispute != null;
-    final canDispute = order.isDelivered && !hasDispute;
+    // G1+G2 fix: allow dispute on shipped orders that have been in transit ≥10
+    // days (carrier lost package / salon ghosting). Delivered orders remain
+    // disputable immediately.
+    final canDispute = order.canDispute() && !hasDispute;
     final formatter = DateFormat("d MMM yyyy", 'es');
 
     Color statusColor;
@@ -1296,7 +1299,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
               child: OutlinedButton.icon(
                 onPressed: () => _openOrderDispute(order),
                 icon: const Icon(Icons.gavel, size: 16),
-                label: const Text('Disputar pedido'),
+                label: Text(order.isShipped ? 'No llego mi pedido' : 'Disputar pedido'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: colorScheme.error,
                   side: BorderSide(color: colorScheme.error.withValues(alpha: 0.3)),
@@ -1313,7 +1316,14 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
   }
 
   Future<void> _openOrderDispute(Order order) async {
-    final reasons = [
+    // For shipped orders, "no llego" is the primary/default reason.
+    final reasons = order.isShipped
+        ? [
+            'Paquete no recibido',
+            'Guia de rastreo falsa o inválida',
+            'Otro',
+          ]
+        : [
       'Producto danado',
       'Producto incorrecto',
       'No recibi el producto',

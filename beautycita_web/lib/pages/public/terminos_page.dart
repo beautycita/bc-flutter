@@ -84,14 +84,28 @@ class TerminosPage extends StatelessWidget {
                     '  c) Venta de productos (POS): 10% del precio del producto\n\n'
                     'Las comisiones se deducen automaticamente del pago al proveedor. Los salones reciben un desglose detallado de cada transaccion incluyendo comision, retenciones fiscales y monto neto.'),
 
+                _section('7b. Categorias de productos en el POS',
+                    'El sistema de Punto de Venta (POS) acepta exclusivamente las siguientes categorias de producto:\n\n'
+                    'Cosmeticos: perfume, labiales y gloss, polvos, serums y esencias, limpiadores faciales, shampoo y acondicionador, exfoliantes, cremas y brumas, jabon y gel de ducha, base y corrector.\n\n'
+                    'Herramientas y accesorios: herramientas de cabello (secadoras, planchas, cepillos), herramientas de unas (limas, cortaunas, esmaltes), accesorios de cabello (ganchos, diademas, peines).\n\n'
+                    'Bienes adyacentes a belleza: joyeria, bolsos y neceseres, ropa y calzado.\n\n'
+                    'PRODUCTOS EXPRESAMENTE PROHIBIDOS (sin excepcion):\n'
+                    '  - Suplementos alimenticios, vitaminas, tes, gomitas, o cualquier producto ingerible.\n'
+                    '  - Productos farmaceuticos, medicamentos con o sin receta, dispositivos medicos.\n'
+                    '  - Productos con CBD, cannabis, o derivados de cannabis.\n'
+                    '  - Productos para perdida de peso con hCG, efedrina, o sustancias controladas.\n'
+                    '  - Cosmeticos con afirmaciones medicas (curas, tratamientos, diagnosticos).\n'
+                    '  - Tabaco, cigarros electronicos, vapeadores, liquidos para vapear.\n'
+                    '  - Alcohol, armas, municiones, productos de apuestas.\n'
+                    '  - Productos adultos o de contenido sexual.\n'
+                    '  - Articulos falsificados, replicas de marcas, productos que violen propiedad intelectual.\n\n'
+                    'Estas restricciones se alinean con las politicas del procesador de pagos y con la legislacion mexicana aplicable. BeautyCita remueve sin aviso previo cualquier producto fuera de las categorias permitidas y revoca el acceso al POS en caso de incumplimiento.'),
+
                 _section('8. Retenciones Fiscales',
-                    'Conforme a la legislacion fiscal mexicana, BeautyCita actua como plataforma tecnologica intermediaria y esta obligada a realizar las siguientes retenciones:\n\n'
-                    'Para proveedores con RFC registrado:\n'
+                    'Conforme a la legislacion fiscal mexicana, BeautyCita actua como plataforma tecnologica intermediaria y esta obligada a realizar las siguientes retenciones sobre las transacciones procesadas por la plataforma:\n\n'
                     '  - ISR (Impuesto Sobre la Renta): 2.5% del monto bruto (Art. 113-A LISR)\n'
                     '  - IVA (Impuesto al Valor Agregado): 8% de la porcion de IVA (Art. 18-J LIVA)\n\n'
-                    'Para proveedores sin RFC registrado:\n'
-                    '  - ISR: 20% del monto bruto\n'
-                    '  - IVA: 16% de la porcion de IVA\n\n'
+                    'Todos los salones registrados deben proporcionar un RFC valido; BeautyCita no opera con salones sin RFC.\n\n'
                     'BeautyCita emite CFDI (Comprobante Fiscal Digital por Internet) por todas las retenciones efectuadas. Los registros fiscales se conservan por 5 anos conforme al Articulo 30 del Codigo Fiscal de la Federacion.\n\n'
                     'La Plataforma cumple con el Articulo 30-B del Codigo Fiscal, proporcionando al SAT acceso autenticado a la informacion de transacciones y retenciones.'),
 

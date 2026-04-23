@@ -5,6 +5,7 @@ import 'package:beautycita_core/models.dart' hide Provider;
 import '../../config/constants.dart';
 import '../../config/theme_extension.dart';
 import '../../providers/order_provider.dart';
+import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 // ignore: depend_on_referenced_packages
 import 'package:beautycita/widgets/admin/admin_widgets.dart';
@@ -680,10 +681,102 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
               ),
             ),
           ],
+
+          // F3 fix: salon cancel+refund button, available on paid or shipped
+          if (order.isPaid || order.isShipped) ...[
+            const SizedBox(height: AppConstants.paddingXS),
+            SizedBox(
+              width: double.infinity,
+              height: 36,
+              child: OutlinedButton.icon(
+                onPressed: _loading ? null : () => _cancelOrder(context, order),
+                icon: const Icon(Icons.cancel_outlined, size: 14),
+                label: Text(
+                  'No puedo cumplir — cancelar y reembolsar',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: colors.error,
+                  side: BorderSide(color: colors.error.withValues(alpha: 0.3)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     ),
     );
+  }
+
+  Future<void> _cancelOrder(BuildContext context, Order order) async {
+    final reasonCtl = TextEditingController();
+    final confirmed = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Cancelar pedido?', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Se reembolsara \$${order.totalAmount.toStringAsFixed(2)} al saldo del cliente inmediatamente. '
+              'El monto quedara como adeudo a tu salon (se descontara de tu proximo pago via BeautyCita).',
+              style: GoogleFonts.nunito(fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: reasonCtl,
+              decoration: const InputDecoration(
+                labelText: 'Razon (obligatorio)',
+                hintText: 'Ej: Producto sin stock',
+                border: OutlineInputBorder(),
+              ),
+              maxLength: 200,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cerrar')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
+            onPressed: () {
+              final r = reasonCtl.text.trim();
+              if (r.length < 3) return;
+              Navigator.pop(ctx, r);
+            },
+            child: const Text('Cancelar y reembolsar'),
+          ),
+        ],
+      ),
+    );
+    reasonCtl.dispose();
+    if (confirmed == null || confirmed.isEmpty) return;
+
+    setState(() => _loading = true);
+    try {
+      final res = await SupabaseClientService.client.functions.invoke(
+        'salon-cancel-order',
+        body: {'order_id': order.id, 'reason': confirmed},
+      );
+      final data = res.data;
+      if (data is Map && data['success'] == true) {
+        ref.invalidate(businessOrdersProvider);
+        ToastService.showSuccess('Pedido cancelado y reembolsado');
+      } else {
+        final err = data is Map ? data['error']?.toString() : 'Error inesperado';
+        ToastService.showError(err ?? 'Error');
+      }
+    } catch (e) {
+      ToastService.showErrorWithDetails('No se pudo cancelar', e);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   void _showTrackingNumberSheet(BuildContext context, Order order) {

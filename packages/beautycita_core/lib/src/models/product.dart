@@ -74,6 +74,7 @@ class Product {
       );
 
   static const categories = <String, String>{
+    // Cosmetics
     'perfume': 'Perfume',
     'lipstick': 'Labiales y Gloss',
     'powder': 'Polvos',
@@ -84,5 +85,13 @@ class Product {
     'moisturisers': 'Cremas y Brumas',
     'body_wash': 'Jabon y Gel de Ducha',
     'foundation': 'Base y Corrector',
+    // Tools + accessories
+    'hair_tools': 'Herramientas de Cabello',
+    'nail_tools': 'Herramientas de Unas',
+    'hair_accessories': 'Accesorios de Cabello',
+    // Beauty-adjacent retail
+    'jewelry': 'Joyeria',
+    'bags': 'Bolsos y Neceseres',
+    'apparel': 'Ropa y Calzado',
   };
 }

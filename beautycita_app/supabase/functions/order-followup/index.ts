@@ -53,6 +53,7 @@ interface Order {
   payment_method: string | null;
   stripe_payment_intent_id: string | null;
   created_at: string;
+  shipped_at: string | null;
   status: string;
   businesses: {
     id: string;
@@ -163,7 +164,7 @@ Deno.serve(async (req: Request) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // -----------------------------------------------------------------
-    // 1. Fetch all paid orders with business info
+    // 1. Fetch all paid + shipped orders with business info
     // -----------------------------------------------------------------
     const { data: orders, error: queryErr } = await supabase
       .from("orders")
@@ -176,6 +177,7 @@ Deno.serve(async (req: Request) => {
         payment_method,
         stripe_payment_intent_id,
         created_at,
+        shipped_at,
         status,
         businesses!inner (
           id,
@@ -184,7 +186,7 @@ Deno.serve(async (req: Request) => {
           email
         )
       `)
-      .eq("status", "paid");
+      .in("status", ["paid", "shipped"]);
 
     if (queryErr) {
       console.error("[ORDER-FOLLOWUP] Query error:", queryErr.message);
@@ -192,19 +194,39 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!orders || orders.length === 0) {
-      console.log("[ORDER-FOLLOWUP] No paid orders pending fulfillment.");
-      return json({ day3_notified: 0, day7_escalated: 0, day14_refunded: 0 });
+      console.log("[ORDER-FOLLOWUP] No paid/shipped orders pending fulfillment.");
+      return json({
+        day3_notified: 0, day7_escalated: 0, day14_refunded: 0,
+        shipped_day14_nudged: 0, shipped_day30_escalated: 0,
+      });
     }
 
     // -----------------------------------------------------------------
     // 2. Group orders by escalation tier
     // -----------------------------------------------------------------
+    // PAID (unshipped) tiers — existing behavior
     const day3Orders: { order: Order; days: number }[] = [];
     const day7Orders: { order: Order; days: number }[] = [];
     const day14Orders: { order: Order; days: number }[] = [];
+    // SHIPPED tiers — F1 fix for lost-in-transit (G1+G2)
+    const shippedDay14Orders: { order: Order; days: number }[] = [];
+    const shippedDay30Orders: { order: Order; days: number }[] = [];
 
     for (const raw of orders) {
       const order = raw as unknown as Order;
+
+      if (order.status === "shipped") {
+        if (!order.shipped_at) continue; // safety — shipped status but no timestamp
+        const daysShipped = daysSince(order.shipped_at);
+        if (daysShipped >= 30) {
+          shippedDay30Orders.push({ order, days: daysShipped });
+        } else if (daysShipped >= 14) {
+          shippedDay14Orders.push({ order, days: daysShipped });
+        }
+        continue;
+      }
+
+      // status === 'paid' (unshipped)
       const days = daysSince(order.created_at);
 
       if (days >= 14) {
@@ -350,6 +372,57 @@ Deno.serve(async (req: Request) => {
     }
 
     // -----------------------------------------------------------------
+    // 5b. Shipped Day 14: Push reminder to salon — "confirm delivery"
+    //     (F1 fix — was previously no touch on shipped orders)
+    // -----------------------------------------------------------------
+    for (const { order, days } of shippedDay14Orders) {
+      const ownerId = order.businesses?.owner_id;
+      if (!ownerId) continue;
+      const shortId = order.id.slice(0, 8).toUpperCase();
+      const productName = order.product_name ?? "producto";
+      await sendPush(
+        ownerId,
+        "Confirma entrega del pedido",
+        `El pedido #${shortId} de ${productName} lleva ${days} dias en transito. Confirma entrega en la app.`,
+        { type: "shipped_delivery_confirm", order_id: order.id },
+      );
+    }
+
+    // -----------------------------------------------------------------
+    // 5c. Shipped Day 30: Admin escalation + buyer offered dispute path
+    //     (F1 fix — lost-in-transit detection)
+    // -----------------------------------------------------------------
+    for (const { order, days } of shippedDay30Orders) {
+      const shortId = order.id.slice(0, 8).toUpperCase();
+      const productName = order.product_name ?? "producto";
+
+      // Insert admin_alert for investigation (if table exists)
+      try {
+        await supabase.from("admin_alerts").insert({
+          category: "shipped_order_lost_in_transit",
+          severity: "warning",
+          payload: {
+            order_id: order.id,
+            business_id: order.business_id,
+            buyer_id: order.buyer_id,
+            days_since_shipped: days,
+            product_name: productName,
+          },
+        });
+      } catch (e) {
+        console.error(`[ORDER-FOLLOWUP] Admin alert failed for ${shortId}: ${(e as Error).message}`);
+      }
+
+      // Buyer push — "Tu pedido lleva 30 dias en camino. Si no llego, disputalo."
+      await sendPush(
+        order.buyer_id,
+        "Tu pedido lleva tiempo en camino",
+        `El pedido de ${productName} fue enviado hace ${days} dias. Si no llego, abrelo en Mis Pedidos y reporta el problema.`,
+        { type: "shipped_lost_in_transit", order_id: order.id },
+      );
+    }
+
+    // -----------------------------------------------------------------
     // 6. Return summary
     // -----------------------------------------------------------------
     const summary = {
@@ -357,6 +430,8 @@ Deno.serve(async (req: Request) => {
       day7_escalated: day7Orders.length,
       day14_refunded: day14Orders.length - refundErrors,
       day14_errors: refundErrors,
+      shipped_day14_nudged: shippedDay14Orders.length,
+      shipped_day30_escalated: shippedDay30Orders.length,
       total_processed: orders.length,
     };
 
