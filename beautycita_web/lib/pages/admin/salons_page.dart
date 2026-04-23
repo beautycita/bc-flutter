@@ -12,6 +12,7 @@ import '../../widgets/master_detail_layout.dart';
 import '../../widgets/admin_typeahead_search.dart';
 import '../../widgets/pagination_bar.dart';
 import '../../widgets/salon_segments_dashboard.dart';
+import '../../utils/salon_default_avatar.dart';
 import 'salon_detail_panel.dart';
 
 /// Admin salons management page with two tabs:
@@ -296,12 +297,11 @@ class _RegisteredTab extends ConsumerWidget {
                   radius: 14,
                   backgroundColor:
                       colors.primary.withValues(alpha: 0.1),
-                  backgroundImage: salon.photoUrl != null
-                      ? NetworkImage(salon.photoUrl!)
-                      : null,
-                  child: salon.photoUrl == null
-                      ? Icon(Icons.store, size: 14, color: colors.primary)
-                      : null,
+                  backgroundImage: NetworkImage(
+                    (salon.photoUrl != null && salon.photoUrl!.isNotEmpty)
+                        ? salon.photoUrl!
+                        : salonDefaultAvatarUrl(salon.id),
+                  ),
                 ),
                 const SizedBox(width: BCSpacing.sm),
                 Flexible(
@@ -658,12 +658,11 @@ class _DiscoveredTab extends ConsumerWidget {
                   radius: 14,
                   backgroundColor:
                       colors.secondary.withValues(alpha: 0.1),
-                  backgroundImage: salon.photoUrl != null
-                      ? NetworkImage(salon.photoUrl!)
-                      : null,
-                  child: salon.photoUrl == null
-                      ? Icon(Icons.store, size: 14, color: colors.secondary)
-                      : null,
+                  backgroundImage: NetworkImage(
+                    (salon.photoUrl != null && salon.photoUrl!.isNotEmpty)
+                        ? salon.photoUrl!
+                        : salonDefaultAvatarUrl(salon.id),
+                  ),
                 ),
                 const SizedBox(width: BCSpacing.sm),
                 Flexible(

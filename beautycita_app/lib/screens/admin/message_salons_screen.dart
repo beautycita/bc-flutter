@@ -11,6 +11,7 @@ import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/outreach_contact_sheet.dart';
+import '../../widgets/salon_avatar.dart';
 
 /// Provider to fetch discovered salons with WA-verified status for messaging.
 final _messageSalonsProvider = FutureProvider.family<List<Map<String, dynamic>>, _SalonFilter>(
@@ -380,19 +381,12 @@ class _MessageSalonsScreenState extends ConsumerState<MessageSalonsScreen> {
                 // Header
                 Row(
                   children: [
-                    if (imageUrl != null && imageUrl.isNotEmpty)
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: CachedImage(imageUrl, width: 56, height: 56, fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => Container(width: 56, height: 56, color: Colors.grey[200],
-                            child: Icon(Icons.store, color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.4)))),
-                      )
-                    else
-                      Container(
-                        width: 56, height: 56,
-                        decoration: BoxDecoration(color: Theme.of(ctx).colorScheme.surfaceContainerLowest, borderRadius: BorderRadius.circular(8)),
-                        child: Icon(Icons.store, color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.4), size: 28),
-                      ),
+                    SalonAvatar(
+                      photoUrl: imageUrl,
+                      seed: salon['id'] as String?,
+                      size: 56,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -725,15 +719,13 @@ class _SalonCard extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             child: Row(
               children: [
-                // Avatar / image
-                if (imageUrl != null && imageUrl.isNotEmpty)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: CachedImage(imageUrl, width: 48, height: 48, fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => _buildPlaceholder(context, waVerified)),
-                  )
-                else
-                  _buildPlaceholder(context, waVerified),
+                // Avatar / image — falls back to deterministic pool of 10 when missing
+                SalonAvatar(
+                  photoUrl: imageUrl,
+                  seed: salon['id'] as String?,
+                  size: 48,
+                  borderRadius: BorderRadius.circular(8),
+                ),
                 const SizedBox(width: 12),
                 // Info
                 Expanded(
@@ -831,20 +823,6 @@ class _SalonCard extends StatelessWidget {
     );
   }
 
-  Widget _buildPlaceholder(BuildContext context, bool verified) {
-    return Container(
-      width: 48, height: 48,
-      decoration: BoxDecoration(
-        color: verified ? Colors.green[50] : Theme.of(context).colorScheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Icon(
-        verified ? Icons.verified : Icons.store,
-        color: verified ? Theme.of(context).extension<BCThemeExtension>()!.successColor : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-        size: 22,
-      ),
-    );
-  }
 }
 
 class _StatChip extends StatelessWidget {
