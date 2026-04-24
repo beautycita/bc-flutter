@@ -128,35 +128,50 @@ serve(async (req) => {
       orderPaymentMethod = orderRow?.payment_method ?? null;
     }
 
-    // Process refund: saldo credit to buyer + debt to seller + tax reversal
-    const result = await processRefund({
-      supabase,
-      buyerId: dispute.user_id,
-      businessId: dispute.business_id,
-      grossAmount: refundAmount,
-      appointmentId: dispute.appointment_id ?? undefined,
-      orderId: dispute.order_id ?? undefined,
-      paymentMethod: orderPaymentMethod,
-      reason: `dispute_${dispute_id}`,
-      idempotencyKey: `dispute-refund-${dispute_id}`,
-    });
+    // Process refund: saldo credit to buyer + debt to seller + tax reversal.
+    // If processRefund (or the downstream source-row update) throws, roll the
+    // lock back to 'pending' so the admin can retry — otherwise the dispute
+    // gets stuck in 'processing' forever and the guard on line 85 blocks any
+    // future attempt.
+    let result: Awaited<ReturnType<typeof processRefund>>;
+    try {
+      result = await processRefund({
+        supabase,
+        buyerId: dispute.user_id,
+        businessId: dispute.business_id,
+        grossAmount: refundAmount,
+        appointmentId: dispute.appointment_id ?? undefined,
+        orderId: dispute.order_id ?? undefined,
+        paymentMethod: orderPaymentMethod,
+        reason: `dispute_${dispute_id}`,
+        idempotencyKey: `dispute-refund-${dispute_id}`,
+      });
 
-    // Update dispute: refund_status → processed
-    await supabase.from("disputes").update({ refund_status: "processed" }).eq("id", dispute_id);
+      // Update dispute: refund_status → processed
+      await supabase.from("disputes").update({ refund_status: "processed" }).eq("id", dispute_id);
 
-    // Update source record
-    if (isOrderDispute) {
-      await supabase.from("orders").update({
-        status: "refunded",
-        refunded_at: new Date().toISOString(),
-      }).eq("id", dispute.order_id);
-    } else {
-      await supabase.from("appointments").update({
-        payment_status: "refunded_to_saldo",
-        refund_amount: refundAmount,
-        refunded_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }).eq("id", dispute.appointment_id);
+      // Update source record
+      if (isOrderDispute) {
+        await supabase.from("orders").update({
+          status: "refunded",
+          refunded_at: new Date().toISOString(),
+        }).eq("id", dispute.order_id);
+      } else {
+        await supabase.from("appointments").update({
+          payment_status: "refunded_to_saldo",
+          refund_amount: refundAmount,
+          refunded_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }).eq("id", dispute.appointment_id);
+      }
+    } catch (refundErr) {
+      console.error("[DISPUTE-REFUND] Refund pipeline failed, reverting lock:", refundErr);
+      await supabase
+        .from("disputes")
+        .update({ refund_status: "pending" })
+        .eq("id", dispute_id)
+        .eq("refund_status", "processing");
+      return json({ error: "Refund processing failed; lock reverted, retry is safe" }, 500);
     }
 
     // Notify client
