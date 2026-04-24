@@ -1,0 +1,21 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# TikTok feed seed file — paste URLs here and run:
+#   ./scripts/tiktok-feed-curate.sh scripts/tiktok-feed-seed.txt
+#
+# Format:  category | region | URL
+#   - category: one of cabello, unas, pestanas, cejas, maquillaje, facial,
+#               corporal, novias, hombres
+#   - region:   ISO-2 country code (MX, CO, AR, CL, PE, ES, VE, EC, GT, CR,
+#               DO, UY, BO, PY, SV, HN, NI, PA, CU, PR). Blank = unknown.
+#               LATAM codes rank ahead of the rest of the world in /explorar.
+#   - URL:      any public TikTok video URL (canonical, vm.tiktok.com, etc.)
+#
+# Lines starting with '#' and blank lines are ignored. Re-running safely
+# updates existing rows (upsert by video_id).
+# ─────────────────────────────────────────────────────────────────────────────
+
+# --- EXAMPLES (replace with real curated URLs) -----------------------------
+# maquillaje | MX | https://www.tiktok.com/@creator/video/7385629201234567890
+# cabello    | CO | https://www.tiktok.com/@stylist/video/7385629209876543210
+# unas       | AR | https://www.tiktok.com/@nails/video/7385629211234567890
+# novias     | ES | https://vm.tiktok.com/ZM12abcdef/
