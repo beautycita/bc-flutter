@@ -37,6 +37,32 @@ const SAT_RETRY_MESSAGE = {
   retry_after_seconds: 30,
 };
 
+// Suppression window per-reason so a real SAT hammering us doesn't spam
+// hundreds of WA messages. 15-minute cooldown per distinct reason string.
+const ALERT_SUPPRESSION_MS = 15 * 60 * 1000;
+const lastAlertByReason = new Map<string, number>();
+
+// Owner whitelist: BC's own ISP range (177.248.0.0/16 per infra.md).
+// When exploring from his own IP, don't wake him up with his own probes.
+function isOwnerIp(ip: string | null): boolean {
+  if (!ip) return false;
+  return ip.startsWith("177.248.");
+}
+
+async function maybeAlertBC(reason: string, details: string, ip: string | null) {
+  if (isOwnerIp(ip)) {
+    console.log(`[SAT-ALERT] suppressed (owner IP ${ip}): ${reason}`);
+    return;
+  }
+  const last = lastAlertByReason.get(reason) ?? 0;
+  if (Date.now() - last < ALERT_SUPPRESSION_MS) {
+    console.log(`[SAT-ALERT] suppressed (cooldown): ${reason}`);
+    return;
+  }
+  lastAlertByReason.set(reason, Date.now());
+  await alertBC(reason, details);
+}
+
 // ── Alert BC immediately on any SAT failure ─────────────────────────────────
 async function alertBC(reason: string, details: string) {
   const msg = `🚨 *SAT API ALERT* 🚨\n\n*Reason:* ${reason}\n*Details:* ${details}\n*Time:* ${new Date().toISOString()}\n\n_This is a critical alert. The SAT API experienced a failure. Investigate immediately._`;
@@ -127,12 +153,22 @@ Deno.serve(async (req) => {
 
     if (!SAT_API_KEY || !SAT_API_SECRET || apiKey !== SAT_API_KEY) {
       logAccess(supabase, endpoint, null, 401, ipAddress, apiKey, "invalid_key").catch((e) => console.error("[SAT-ACCESS] logAccess failed:", e));
+      maybeAlertBC(
+        "SAT invalid_key",
+        `IP ${ipAddress ?? "?"} endpoint ${endpoint} — a caller hit the SAT API with an invalid or missing X-SAT-Key. If this is SAT, rotate the credentials with them immediately.`,
+        ipAddress,
+      ).catch((e) => console.error("[SAT-ALERT] maybeAlertBC failed:", e));
       return json({ error: "Invalid or missing API key" }, 401);
     }
 
     const ts = parseInt(timestamp);
     if (!ts || Math.abs(Date.now() - ts) > TIMESTAMP_TOLERANCE_MS) {
       logAccess(supabase, endpoint, null, 401, ipAddress, apiKey, "expired_timestamp").catch((e) => console.error("[SAT-ACCESS] logAccess failed:", e));
+      maybeAlertBC(
+        "SAT expired_timestamp",
+        `IP ${ipAddress ?? "?"} endpoint ${endpoint} — timestamp drift >5 min. Check server clock sync (ntpd) and caller clock.`,
+        ipAddress,
+      ).catch((e) => console.error("[SAT-ALERT] maybeAlertBC failed:", e));
       return json({ error: "Timestamp expired or invalid. Must be within 5 minutes." }, 401);
     }
 
@@ -160,6 +196,11 @@ Deno.serve(async (req) => {
 
     if (signature !== expectedSignature) {
       logAccess(supabase, endpoint, null, 403, ipAddress, apiKey, "invalid_signature").catch((e) => console.error("[SAT-ACCESS] logAccess failed:", e));
+      maybeAlertBC(
+        "SAT invalid_signature",
+        `IP ${ipAddress ?? "?"} endpoint ${endpoint} — valid key but HMAC signature mismatch. If the SAT caller's secret drifted we are locked out of our own reporting obligation. Rotate immediately.`,
+        ipAddress,
+      ).catch((e) => console.error("[SAT-ALERT] maybeAlertBC failed:", e));
       return json({ error: "Invalid signature" }, 403);
     }
 
@@ -170,6 +211,11 @@ Deno.serve(async (req) => {
     }
     if (rateLimitWindow.length >= RATE_LIMIT_MAX) {
       logAccess(supabase, endpoint, null, 429, ipAddress, apiKey, "rate_limited").catch((e) => console.error("[SAT-ACCESS] logAccess failed:", e));
+      maybeAlertBC(
+        "SAT rate_limited",
+        `IP ${ipAddress ?? "?"} endpoint ${endpoint} — per-hour rate limit exceeded. If SAT is legitimately pulling heavily, raise RATE_LIMIT_MAX.`,
+        ipAddress,
+      ).catch((e) => console.error("[SAT-ALERT] maybeAlertBC failed:", e));
       return json(SAT_RETRY_MESSAGE, 429);
     }
     rateLimitWindow.push(now);
@@ -338,15 +384,19 @@ async function handleProviders(
   params: Record<string, string>,
 ) {
   const data = await queryWithRetry(() => {
+    // Escrito commitment: "prestadores de servicios REGISTRADOS".
+    // Soft-deleted rows (is_active=false) are NOT currently registered — exclude them.
     let query = supabase
       .from("businesses")
-      .select("id, name, rfc, tax_regime, tax_residency, city, state, is_active, created_at");
+      .select("id, name, rfc, tax_regime, tax_residency, city, state, is_active, created_at")
+      .eq("is_active", true);
 
     if (params.rfc) query = query.eq("rfc", params.rfc);
     if (params.business_id) query = query.eq("id", params.business_id);
     return query;
   }, "providers");
 
+  // RFC is mandatory for a legally-registered provider; drop any row missing it.
   return { data: (data ?? []).filter((b: any) => b.rfc) };
 }
 

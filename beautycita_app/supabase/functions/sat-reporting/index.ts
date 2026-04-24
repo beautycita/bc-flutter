@@ -44,18 +44,19 @@ serve(async (req) => {
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Auth check — require service_role or admin
+    // Auth: service_role, admin user, or cron (CRON_SECRET header).
     const authHeader = req.headers.get("authorization") ?? "";
     const token = authHeader.replace("Bearer ", "");
-
-    // Allow service_role key or authenticated admin
+    const cronSecret = Deno.env.get("CRON_SECRET") ?? "";
+    const cronHeader = req.headers.get("x-cron-secret") ?? "";
+    const isCron = cronSecret.length > 0 && cronHeader === cronSecret;
     const isServiceRole = token === SUPABASE_SERVICE_ROLE_KEY;
-    if (!isServiceRole) {
+
+    if (!isServiceRole && !isCron) {
       const { data: { user }, error: authError } = await supabase.auth.getUser(token);
       if (authError || !user) {
         return json({ error: "Unauthorized" }, 401);
       }
-      // Check admin role
       const { data: profile } = await supabase
         .from("profiles")
         .select("role")
@@ -66,8 +67,26 @@ serve(async (req) => {
       }
     }
 
-    const body: ReportRequest = await req.json();
-    const { year, month } = body;
+    // Cron auto-targets the prior month. Manual callers can still POST
+    // {year,month} explicitly. Keeping the statutory day-10 deadline in mind,
+    // the cron runs on day 9 of each month at 03:00 UTC (well before the cutoff).
+    let body: Partial<ReportRequest>;
+    try {
+      body = await req.json();
+    } catch {
+      body = {};
+    }
+    let year: number;
+    let month: number;
+    if (isCron && (!body.year || !body.month)) {
+      const now = new Date();
+      const prior = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+      year = prior.getUTCFullYear();
+      month = prior.getUTCMonth() + 1;
+    } else {
+      year = body.year!;
+      month = body.month!;
+    }
 
     if (!year || !month || month < 1 || month > 12) {
       return json({ error: "Valid year and month (1-12) are required" }, 400);
