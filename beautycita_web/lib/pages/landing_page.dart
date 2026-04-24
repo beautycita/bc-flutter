@@ -98,6 +98,8 @@ class _LandingPageState extends State<LandingPage>
   // Phone input for demo section
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _codeController = TextEditingController();
+  final FocusNode _phoneFocusNode = FocusNode();
+  final FocusNode _codeFocusNode = FocusNode();
   String? _phoneError;
 
   @override
@@ -176,6 +178,8 @@ class _LandingPageState extends State<LandingPage>
     }
     _phoneController.dispose();
     _codeController.dispose();
+    _phoneFocusNode.dispose();
+    _codeFocusNode.dispose();
     super.dispose();
   }
 
@@ -188,6 +192,17 @@ class _LandingPageState extends State<LandingPage>
     }
     if (_mobileMenuOpen) {
       setState(() => _mobileMenuOpen = false);
+    }
+    // When the target is the demo section, auto-focus whichever input
+    // the user should act on next (phone if we haven't sent a code,
+    // code otherwise) once the scroll settles. 650 ms > 600 ms scroll
+    // animation so the focus lands after the section is on-screen.
+    if (key == _demoKey) {
+      Future.delayed(const Duration(milliseconds: 650), () {
+        if (!mounted) return;
+        final node = _codeSent ? _codeFocusNode : _phoneFocusNode;
+        node.requestFocus();
+      });
     }
   }
 
@@ -1163,6 +1178,8 @@ class _LandingPageState extends State<LandingPage>
                 child: _DemoPhoneInput(
                   controller: _phoneController,
                   error: _phoneError,
+                  focusNode: _phoneFocusNode,
+                  onSubmitted: _sendingCode ? null : _onSendDemoCode,
                 ),
               ),
               const SizedBox(width: 12),
@@ -1193,10 +1210,20 @@ class _LandingPageState extends State<LandingPage>
               Expanded(
                 child: TextField(
                   controller: _codeController,
+                  focusNode: _codeFocusNode,
                   keyboardType: TextInputType.number,
+                  textInputAction: TextInputAction.done,
                   maxLength: 6,
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, letterSpacing: 8, color: _textPrimary),
+                  onChanged: (v) {
+                    // Auto-submit once the 6 digits are in.
+                    final digits = v.replaceAll(RegExp(r'\D'), '');
+                    if (digits.length == 6 && !_verifyingCode) {
+                      _onVerifyCode();
+                    }
+                  },
+                  onSubmitted: _verifyingCode ? null : (_) => _onVerifyCode(),
                   decoration: InputDecoration(
                     counterText: '',
                     hintText: '000000',
@@ -1500,6 +1527,11 @@ class _LandingPageState extends State<LandingPage>
           _codeSent = true;
           _sendingCode = false;
           _phoneError = null;
+        });
+        // Code field just became visible — focus it so the user can start
+        // typing the OTP without reaching for the mouse.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _codeFocusNode.requestFocus();
         });
       } else {
         setState(() {
@@ -3014,7 +3046,14 @@ class _TestimonialCardState extends State<_TestimonialCard> {
 class _DemoPhoneInput extends StatefulWidget {
   final TextEditingController controller;
   final String? error;
-  const _DemoPhoneInput({required this.controller, this.error});
+  final FocusNode? focusNode;
+  final VoidCallback? onSubmitted;
+  const _DemoPhoneInput({
+    required this.controller,
+    this.error,
+    this.focusNode,
+    this.onSubmitted,
+  });
   @override
   State<_DemoPhoneInput> createState() => _DemoPhoneInputState();
 }
@@ -3040,7 +3079,10 @@ class _DemoPhoneInputState extends State<_DemoPhoneInput> {
         onFocusChange: (f) => setState(() => _focused = f),
         child: TextField(
           controller: widget.controller,
+          focusNode: widget.focusNode,
           keyboardType: TextInputType.phone,
+          textInputAction: TextInputAction.send,
+          onSubmitted: widget.onSubmitted == null ? null : (_) => widget.onSubmitted!(),
           style: const TextStyle(fontSize: 16, color: _textPrimary),
           decoration: InputDecoration(
             hintText: '+52 (___) ___-____',
