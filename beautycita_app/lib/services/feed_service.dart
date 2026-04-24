@@ -106,6 +106,24 @@ class FeedService {
     }
   }
 
+  /// Toggle like on a product (showcase cards). Distinct from toggleSave:
+  /// like is a public counter visible to all viewers, not a private bookmark.
+  /// Returns {liked: bool, likes_count: int}.
+  Future<({bool liked, int likesCount})> toggleProductLike(String productId) async {
+    if (SupabaseClientService.currentUserId == null) {
+      return (liked: false, likesCount: 0);
+    }
+    final res = await SupabaseClientService.client.rpc(
+      'toggle_product_like',
+      params: {'p_product_id': productId},
+    );
+    final map = res as Map<String, dynamic>;
+    return (
+      liked: map['liked'] as bool? ?? false,
+      likesCount: (map['likes_count'] as num?)?.toInt() ?? 0,
+    );
+  }
+
   /// Track a feed engagement event. Fire-and-forget; errors are silently ignored.
   Future<void> trackEngagement({
     required String contentType, // 'photo' or 'showcase'

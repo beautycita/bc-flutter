@@ -195,52 +195,67 @@ class _VideoFeedTabState extends State<_VideoFeedTab>
       'Mozilla/5.0 (Linux; Android 14; SM-S911U) AppleWebKit/537.36 '
       '(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36';
 
-  // One controller per category, keyed by category value (null = "Todo").
-  final Map<String?, WebViewController> _controllers = {};
-  final Map<String?, bool> _loadingState = {};
+  // Only the currently-selected category has a live WebView. Switching
+  // categories disposes the previous controller and spins up a new one.
+  // Pre-loading all 9 hashtag pages (old behavior) ran ~270 auto-playing
+  // shorts in parallel — crushing the phone and stealing battery. Lazy-load
+  // trades a ~1s category-switch load for actual usability.
+  WebViewController? _controller;
+  String? _currentCategoryValue; // the category key currently loaded
+  bool _loading = true;
   int _selectedIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    // Create all WebViews upfront — they load in parallel.
-    for (final (_, value) in _kCategories) {
-      _loadingState[value] = true;
-      final controller = WebViewController()
-        ..setJavaScriptMode(JavaScriptMode.unrestricted)
-        ..setNavigationDelegate(
-          NavigationDelegate(
-            onPageFinished: (_) {
-              if (mounted) {
-                setState(() => _loadingState[value] = false);
-                if (widget.isDark) {
-                  _controllers[value]?.runJavaScript(
-                    "document.documentElement.style.cssText += "
-                    "'background-color: #121212 !important; "
-                    "color: #E0E0E0 !important;';"
-                    "document.body.style.cssText += "
-                    "'background-color: #121212 !important; "
-                    "color: #E0E0E0 !important;';",
-                  );
-                }
-              }
-            },
-            onNavigationRequest: (request) {
-              final url = request.url;
-              if (url.contains('youtube.com') ||
-                  url.contains('ytimg.com') ||
-                  url.contains('googlevideo.com') ||
-                  url.contains('google.com')) {
-                return NavigationDecision.navigate;
-              }
-              return NavigationDecision.prevent;
-            },
-          ),
-        )
-        ..setUserAgent(_kUserAgent)
-        ..loadRequest(_urlForCategory(value));
-      _controllers[value] = controller;
-    }
+    _loadCategoryAt(0);
+  }
+
+  void _loadCategoryAt(int index) {
+    final (_, value) = _kCategories[index];
+    if (_currentCategoryValue == value && _controller != null) return;
+
+    // Dispose previous controller so its WebView stops eating cycles.
+    _controller = null;
+    setState(() {
+      _currentCategoryValue = value;
+      _loading = true;
+    });
+
+    final controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageFinished: (_) {
+            if (!mounted) return;
+            setState(() => _loading = false);
+            if (widget.isDark) {
+              _controller?.runJavaScript(
+                "document.documentElement.style.cssText += "
+                "'background-color: #121212 !important; "
+                "color: #E0E0E0 !important;';"
+                "document.body.style.cssText += "
+                "'background-color: #121212 !important; "
+                "color: #E0E0E0 !important;';",
+              );
+            }
+          },
+          onNavigationRequest: (request) {
+            final url = request.url;
+            if (url.contains('youtube.com') ||
+                url.contains('ytimg.com') ||
+                url.contains('googlevideo.com') ||
+                url.contains('google.com')) {
+              return NavigationDecision.navigate;
+            }
+            return NavigationDecision.prevent;
+          },
+        ),
+      )
+      ..setUserAgent(_kUserAgent)
+      ..loadRequest(_urlForCategory(value));
+
+    setState(() => _controller = controller);
   }
 
   static Uri _urlForCategory(String? category) {
@@ -288,7 +303,10 @@ class _VideoFeedTabState extends State<_VideoFeedTab>
                   ),
                 ),
                 selected: isSelected,
-                onSelected: (_) => setState(() => _selectedIndex = index),
+                onSelected: (_) {
+                  setState(() => _selectedIndex = index);
+                  _loadCategoryAt(index);
+                },
                 selectedColor: palette.primary,
                 backgroundColor: palette.surfaceContainerHighest,
                 side: BorderSide.none,
@@ -303,47 +321,45 @@ class _VideoFeedTabState extends State<_VideoFeedTab>
 
         const SizedBox(height: AppConstants.paddingSM),
 
-        // ── Stacked WebViews — one per category, instant switch ────
+        // ── Single live WebView (lazy-loaded on category change) ───
         Expanded(
-          child: IndexedStack(
-            index: _selectedIndex,
+          child: Stack(
+            clipBehavior: Clip.hardEdge,
             children: [
-              for (final (_, value) in _kCategories)
-                Stack(
-                  clipBehavior: Clip.hardEdge,
-                  children: [
-                    Positioned(
-                      top: -topClip,
-                      left: 0,
-                      right: 0,
-                      bottom: -topClip,
-                      child: WebViewWidget(
-                        controller: _controllers[value]!,
-                      ),
-                    ),
-                    if (_loadingState[value] == true)
-                      Container(
-                        color: Theme.of(context).scaffoldBackgroundColor,
-                        child: Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              CircularProgressIndicator(
-                                color: palette.primary,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'Cargando videos...',
-                                style: GoogleFonts.nunito(
-                                  color: palette.onSurface
-                                      .withValues(alpha: 0.5),
-                                ),
-                              ),
-                            ],
+              if (_controller != null)
+                Positioned(
+                  top: -topClip,
+                  left: 0,
+                  right: 0,
+                  bottom: -topClip,
+                  // Key by category so Flutter tears down + rebuilds the
+                  // widget on switch — guaranteed clean unload.
+                  child: WebViewWidget(
+                    key: ValueKey(_currentCategoryValue ?? '__todo__'),
+                    controller: _controller!,
+                  ),
+                ),
+              if (_loading)
+                Container(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(
+                          color: palette.primary,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Cargando videos...',
+                          style: GoogleFonts.nunito(
+                            color: palette.onSurface
+                                .withValues(alpha: 0.5),
                           ),
                         ),
-                      ),
-                  ],
+                      ],
+                    ),
+                  ),
                 ),
             ],
           ),

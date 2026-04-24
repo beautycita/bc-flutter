@@ -285,18 +285,33 @@ Deno.serve(async (req: Request) => {
       if (s.product_id) productIdsFromPhotos.add(s.product_id);
     }
 
-    // Fetch all referenced products in one query
+    // Fetch all referenced products in one query — including likes_count so
+    // product-showcase cards can surface the public like counter instead of
+    // the save/bookmark count.
     // deno-lint-ignore no-explicit-any
     let productsMap = new Map<string, any>();
+    const productLikedByUser = new Set<string>();
     const productIdsList = [...productIdsFromPhotos];
     if (productIdsList.length > 0) {
       const { data: productsData } = await supabase
         .from("products")
-        .select("id, name, brand, price, photo_url, in_stock")
+        .select("id, name, brand, price, photo_url, in_stock, likes_count")
         .in("id", productIdsList);
 
       for (const prod of productsData ?? []) {
         productsMap.set(prod.id, prod);
+      }
+
+      // Resolve which of these products the authed user has liked.
+      if (userId) {
+        const { data: myLikes } = await supabase
+          .from("product_likes")
+          .select("product_id")
+          .eq("user_id", userId)
+          .in("product_id", productIdsList);
+        for (const r of myLikes ?? []) {
+          productLikedByUser.add(r.product_id as string);
+        }
       }
     }
 
@@ -366,6 +381,13 @@ Deno.serve(async (req: Request) => {
         in_stock: prod?.in_stock ?? false,
       };
 
+      // Showcase cards render the heart as a public "like" on the product,
+      // not a private save. Surface the product's likes_count + the user's
+      // per-product like state via the same fields the client already reads.
+      const productId = prod?.id ?? s.product_id;
+      const likesCount = (prod?.likes_count as number | undefined) ?? 0;
+      const userLiked = productId ? productLikedByUser.has(productId) : false;
+
       feedItems.push({
         id: s.id,
         type: "showcase",
@@ -379,8 +401,8 @@ Deno.serve(async (req: Request) => {
         caption: s.caption ?? null,
         service_category: null,
         product_tags: [showcaseTag],
-        save_count: saveCounts.get(s.id) ?? 0,
-        is_saved: userSaves.has(s.id),
+        save_count: likesCount,
+        is_saved: userLiked,
         created_at: s.created_at,
       });
     }

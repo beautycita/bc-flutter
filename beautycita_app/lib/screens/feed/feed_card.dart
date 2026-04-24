@@ -52,6 +52,21 @@ class _FeedCardState extends ConsumerState<FeedCard> {
     });
 
     final service = ref.read(feedServiceProvider);
+
+    // Product showcases use the public "like" counter; everything else uses
+    // the private saves/bookmarks list.
+    if (widget.item.isShowcase && widget.item.hasProducts) {
+      final productId = widget.item.productTags.first.productId;
+      final res = await service.toggleProductLike(productId);
+      if (mounted) {
+        setState(() {
+          _isSaved = res.liked;
+          _saveCount = res.likesCount;
+        });
+      }
+      return;
+    }
+
     final nowSaved = await service.toggleSave(
       contentType: widget.item.type,
       contentId: widget.item.id,
