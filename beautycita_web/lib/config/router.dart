@@ -50,6 +50,7 @@ import '../pages/business/biz_staff_page.dart';
 import '../pages/client/cuenta_page.dart';
 import '../pages/client/configuracion_page.dart';
 import '../pages/client/feed_page.dart';
+import '../pages/client/tiktok_feed_page.dart';
 import '../pages/client/invite_page.dart';
 import '../pages/client/mis_citas_page.dart';
 import '../pages/client/reservar_page.dart';
@@ -688,6 +689,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: WebRoutes.explorar,
+            builder: (context, state) => const TikTokFeedPage(),
+          ),
+          GoRoute(
+            path: '/explorar/legacy',
             builder: (context, state) => const FeedPage(),
           ),
           GoRoute(
