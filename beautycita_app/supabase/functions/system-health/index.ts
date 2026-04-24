@@ -237,10 +237,15 @@ async function checkBeautypi(): Promise<Record<string, ServiceStatus>> {
       status: data.guestkey ? "operational" : "down",
       uptime: data.guestkey_last || (data.guestkey ? "active" : "stopped"),
     };
-    result["WA Validator"] = {
-      status: data.wa_validator ? "operational" : "down",
-      uptime: data.wa_validator ? "running" : "stopped",
-    };
+    // wa-validator service was retired platform-wide (see infra.md / memory
+    // infra_wa_api.md). Only include it in the report if the upstream
+    // bpi_status.py is still publishing the field.
+    if (Object.prototype.hasOwnProperty.call(data, "wa_validator")) {
+      result["WA Validator"] = {
+        status: data.wa_validator ? "operational" : "down",
+        uptime: data.wa_validator ? "running" : "stopped",
+      };
+    }
 
     return result;
   } catch (_) {
@@ -310,9 +315,38 @@ Deno.serve(async (req) => {
       "Backup": backupStatus,
     };
 
-    // Compute overall from all statuses
-    const allStatuses = Object.values(services).map((s) => s.status);
-    const overall = computeOverall(allStatuses);
+    // Overall status reflects CRITICAL services only. Non-critical services
+    // (scraper daemons on Beautypi, WA validator, etc.) degrade to a
+    // "degraded" indicator, not a platform-down flag. Every service still
+    // shows its individual status in the services map for admins.
+    const CRITICAL = new Set<string>([
+      "Base de Datos",
+      "Auth",
+      "Storage",
+      "WhatsApp API",
+    ]);
+    const criticalStatuses = Object.entries(services)
+      .filter(([name]) => CRITICAL.has(name))
+      .map(([, s]) => s.status);
+    const nonCriticalStatuses = Object.entries(services)
+      .filter(([name]) => !CRITICAL.has(name))
+      .map(([, s]) => s.status);
+    let overall: OverallStatus;
+    if (criticalStatuses.some((s) => s === "down")) {
+      overall = "down";
+    } else if (
+      criticalStatuses.some((s) => s === "degraded") ||
+      nonCriticalStatuses.some((s) => s === "down" || s === "degraded")
+    ) {
+      overall = "degraded";
+    } else if (
+      criticalStatuses.length > 0 &&
+      criticalStatuses.every((s) => s === "operational")
+    ) {
+      overall = "operational";
+    } else {
+      overall = computeOverall(Object.values(services).map((s) => s.status));
+    }
 
     const body: HealthResponse = { overall, services, checked_at: checkedAt };
 
