@@ -724,6 +724,15 @@ class _LandingPageState extends State<LandingPage>
   // ── Comparison Table ───────────────────────────────────────────────────────
 
   Widget _buildComparison(bool isDesktop, bool isMobile) {
+    // BC feedback 2026-04-24: neither the stacked-card fallback nor the
+    // horizontal-scroll hack worked for the comparison table on small
+    // screens. Tables + narrow viewports is a losing fight. Hide the
+    // section entirely on mobile — the key comparative points (GRATIS,
+    // 0% commission until first client, automatic SAT) are already made
+    // in the hero, features, and pricing sections above.
+    if (isMobile) {
+      return SizedBox(key: _comparisonKey);
+    }
     return _SectionWrapper(
       sectionKey: _comparisonKey,
       anim: _comparisonAnim,
@@ -741,33 +750,8 @@ class _LandingPageState extends State<LandingPage>
               boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 20, offset: const Offset(0, 2))],
             ),
             clipBehavior: Clip.antiAlias,
-            // BC's directive 2026-04-24: the small-screen card fallback looked
-            // "like a chart turned to piece of shit". Keep the table as the
-            // single rendering at every breakpoint; small viewports get a
-            // horizontal scroll so the comparison story is preserved.
-            child: isMobile
-                ? SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: _comparisonTable(),
-                  )
-                : _comparisonTable(),
+            child: _comparisonTable(),
           ),
-          if (isMobile)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.swipe_rounded, size: 14, color: _textSecondary),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Desliza para ver el resto →',
-                    style: TextStyle(color: _textSecondary, fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
         ],
       ),
     );
