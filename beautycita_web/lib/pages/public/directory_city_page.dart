@@ -176,12 +176,22 @@ class _DirectoryCityPageState extends State<DirectoryCityPage> {
                             const SizedBox(height: 32),
                           ],
 
-                          // Invite CTA
-                          _buildInviteCta(isMobile),
+                          // Invite CTA — full-width so it centers on the page.
+                          // Parent Column is crossAxisAlignment.start (to
+                          // left-align salon rows above), which leaves these
+                          // hero CTAs hugging the left edge at ~50% width
+                          // unless we explicitly stretch them to the column.
+                          SizedBox(
+                            width: double.infinity,
+                            child: _buildInviteCta(isMobile),
+                          ),
                           const SizedBox(height: 32),
 
                           // Bottom CTA
-                          _buildBottomCta(isMobile),
+                          SizedBox(
+                            width: double.infinity,
+                            child: _buildBottomCta(isMobile),
+                          ),
                           const SizedBox(height: 60),
                         ],
                       ),

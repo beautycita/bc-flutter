@@ -741,10 +741,33 @@ class _LandingPageState extends State<LandingPage>
               boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 20, offset: const Offset(0, 2))],
             ),
             clipBehavior: Clip.antiAlias,
+            // BC's directive 2026-04-24: the small-screen card fallback looked
+            // "like a chart turned to piece of shit". Keep the table as the
+            // single rendering at every breakpoint; small viewports get a
+            // horizontal scroll so the comparison story is preserved.
             child: isMobile
-                ? _comparisonCards()
+                ? SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: _comparisonTable(),
+                  )
                 : _comparisonTable(),
           ),
+          if (isMobile)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.swipe_rounded, size: 14, color: _textSecondary),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Desliza para ver el resto →',
+                    style: TextStyle(color: _textSecondary, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
@@ -826,69 +849,10 @@ class _LandingPageState extends State<LandingPage>
     );
   }
 
-  Widget _comparisonCards() {
-    final items = [
-      ('Cuota mensual', 'GRATIS', '\$299-4,500/mes', '"Gratis" + 20%'),
-      ('Staff', 'Ilimitado', '1-20 (segun plan)', '\$14.95/mes c/u'),
-      ('WhatsApp', 'ILIMITADO GRATIS', '\$2/mensaje', 'Limitado'),
-      ('Cumplimiento SAT', 'Automatico', 'Solo autofacturacion', 'No'),
-      ('Calendario', 'Drag & drop', 'No', 'Basico'),
-      ('Motor inteligente', '0% hasta el primero', 'Directorio pasivo', '20% comision'),
-      ('Punto de venta', 'GRATIS (7%+3%)', '\$250/mes', '2.19% + 0.20'),
-      ('Cash/OXXO', 'Si', 'No', 'No'),
-    ];
-
-    return Column(
-      children: items.map((item) => Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: _cardBorder),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(item.$1, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _textPrimary)),
-            const SizedBox(height: 10),
-            // BC row
-            Row(children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(gradient: _brandGradient, borderRadius: BorderRadius.circular(6)),
-                child: const Text('BC', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white)),
-              ),
-              const SizedBox(width: 10),
-              Expanded(child: Text(item.$2, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: _checkGreen))),
-            ]),
-            const SizedBox(height: 6),
-            // AgendaPro row
-            Row(children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(color: _textHint.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
-                child: const Text('AP', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: _textHint)),
-              ),
-              const SizedBox(width: 10),
-              Expanded(child: Text(item.$3, style: TextStyle(fontSize: 13, color: _crossRed.withValues(alpha: 0.8)))),
-            ]),
-            const SizedBox(height: 4),
-            // Fresha row
-            Row(children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(color: _textHint.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
-                child: const Text('FR', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: _textHint)),
-              ),
-              const SizedBox(width: 10),
-              Expanded(child: Text(item.$4, style: TextStyle(fontSize: 13, color: _crossRed.withValues(alpha: 0.8)))),
-            ]),
-          ],
-        ),
-      )).toList(),
-    );
-  }
+  // _comparisonCards removed 2026-04-24: the small-screen stacked-card
+  // rendering was visually cluttered (BC called it "a features piece of
+  // shit"). Replaced by the real _comparisonTable() wrapped in a horizontal
+  // scroll on mobile so the chart structure is preserved at every viewport.
 
   // ── Feature Detail Popup ───────────────────────────────────────────────────
 
@@ -1110,27 +1074,34 @@ class _LandingPageState extends State<LandingPage>
                   const SizedBox(height: 48),
                   ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: _maxWidth),
-                    child: Wrap(
-                      spacing: 24,
-                      runSpacing: 24,
-                      children: features.map((f) {
-                        final cardWidth = crossCount == 1
-                            ? double.infinity
-                            : (_maxWidth - (crossCount - 1) * 24) / crossCount;
-                        // Fixed height — Wrap gives each card its natural
-                        // height from content, which produces visibly uneven
-                        // rows when descriptions vary in length. Pinning
-                        // every card to the same height keeps the 12-cell
-                        // grid rectangular at every breakpoint.
-                        return SizedBox(
-                          width: crossCount == 1 ? null : cardWidth,
-                          height: 230,
-                          child: _FeatureCard(
-                            feature: f,
-                            onTapUp: (pos) => _showFeatureDetail(context, f, pos),
-                          ),
+                    // LayoutBuilder gives us the ACTUAL rendered width — the
+                    // previous hardcoded _maxWidth calc made cards too wide
+                    // on viewports narrower than 1200 px, producing the
+                    // uneven-tile layout BC flagged 2026-04-24. Pinning
+                    // every card to the same height AND computing widths
+                    // from real constraints keeps the grid rectangular at
+                    // every breakpoint.
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final avail = constraints.maxWidth;
+                        return Wrap(
+                          spacing: 24,
+                          runSpacing: 24,
+                          children: features.map((f) {
+                            final cardWidth = crossCount == 1
+                                ? avail
+                                : (avail - (crossCount - 1) * 24) / crossCount;
+                            return SizedBox(
+                              width: cardWidth,
+                              height: 230,
+                              child: _FeatureCard(
+                                feature: f,
+                                onTapUp: (pos) => _showFeatureDetail(context, f, pos),
+                              ),
+                            );
+                          }).toList(),
                         );
-                      }).toList(),
+                      },
                     ),
                   ),
                   const SizedBox(height: 48),
@@ -1648,18 +1619,26 @@ class _LandingPageState extends State<LandingPage>
           const SizedBox(height: 40),
           isMobile
               ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: cards.map((c) => Padding(
                     padding: const EdgeInsets.only(bottom: 20),
                     child: _ClientCardWidget(card: c),
                   )).toList(),
                 )
-              : Row(
-                  children: cards.map((c) => Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      child: _ClientCardWidget(card: c),
-                    ),
-                  )).toList(),
+              // IntrinsicHeight + stretch forces all 3 cards to match the
+              // tallest sibling; otherwise a card with more body text (middle)
+              // grows while its neighbours shrink, producing the sloppy
+              // uneven-top look BC flagged 2026-04-24.
+              : IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: cards.map((c) => Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        child: _ClientCardWidget(card: c),
+                      ),
+                    )).toList(),
+                  ),
                 ),
           const SizedBox(height: 60),
           // Download CTA
