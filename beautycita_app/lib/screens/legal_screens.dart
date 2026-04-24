@@ -603,23 +603,38 @@ const _termsSections = [
         'disposicion de los proveedores un desglose de retenciones en su panel.',
   ),
   _Section(
-    heading: '4b. Pagos en efectivo registrados en la plataforma',
+    heading: '4b. Transacciones en red BeautyCita vs. fuera de red',
     body:
-        'Toda transaccion registrada en BeautyCita — incluyendo pagos en '
-        'efectivo, OXXO, y walk-ins registrados via Cita Express o '
-        'calendario manual — esta sujeta a:\n\n'
-        '- Comision BeautyCita del 3% sobre el monto del servicio.\n'
-        '- Retencion de ISR (2.5%) e IVA (8%) conforme a LISR Art. 113-A '
-        'y LIVA Art. 18-J.\n\n'
-        'Cuando el pago es en efectivo, el salon cobra directamente al '
-        'cliente. La comision del 3% y las retenciones fiscales se cargan '
-        'a la cuenta del salon en BeautyCita y se deducen del proximo pago '
-        'via Stripe o se acumulan como saldo pendiente.\n\n'
-        'Las obligaciones fiscales se liquidan inmediatamente al registrar '
-        'la transaccion. BeautyCita entera al SAT las retenciones '
-        'correspondientes independientemente del metodo de pago.\n\n'
-        'Transacciones en efectivo NO registradas en la plataforma son '
-        'responsabilidad exclusiva del proveedor.',
+        'BeautyCita distingue dos tipos de transacciones que pueden '
+        'registrarse en la plataforma:\n\n'
+        'TRANSACCIONES EN RED BC (on-network):\n'
+        'El pago fluye por la infraestructura de BeautyCita — tarjeta, '
+        'saldo, OXXO, o efectivo que el cliente paga en el salon pero '
+        'fue generado por BeautyCita (ej. Cita Express, motor de recomen'
+        'daciones, invite link). Estas transacciones estan sujetas a:\n'
+        '  - Cargo del 3% de procesamiento de transacciones de BeautyCita.\n'
+        '  - Retenciones fiscales (ISR 2.5% + IVA 8% con RFC; 20% + 16% '
+        'sin RFC) conforme a LISR Art. 113-A y LIVA Art. 18-J, '
+        'automaticamente enteradas al SAT por BeautyCita en declaraciones '
+        'informativas mensuales.\n\n'
+        'TRANSACCIONES FUERA DE RED BC (off-network):\n'
+        'Son clientes propios del salon que pagaron por medios que BC '
+        'nunca toco — efectivo directo al salon, terminal propio del '
+        'salon, transferencia directa, etc. El salon puede registrar '
+        'estas transacciones en BeautyCita unicamente para sus propios '
+        'controles internos (agenda, historial). Para estas transacciones:\n'
+        '  - BeautyCita NO cobra comision ni cargo de procesamiento.\n'
+        '  - BeautyCita NO retiene ISR ni IVA (no toco el dinero).\n'
+        '  - BeautyCita NO incluye estas transacciones en los reportes '
+        'al SAT ni en el acceso de SAT a la API (Art. 30-B CFF).\n'
+        '  - El salon es responsable exclusivo de declarar estas '
+        'transacciones al SAT por sus propios medios y de pagar los '
+        'impuestos correspondientes.\n\n'
+        'BeautyCita muestra al salon un desglose mensual de sus ingresos '
+        'fuera de red como referencia, indicando el monto sobre el cual '
+        'deberan cumplir sus obligaciones fiscales propias.\n\n'
+        'Transacciones NO registradas en la plataforma no existen para '
+        'BeautyCita y son responsabilidad exclusiva del proveedor.',
   ),
   _Section(
     heading: '4c. Punto de Venta (POS)',

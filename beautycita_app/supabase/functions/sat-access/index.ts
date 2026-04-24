@@ -298,15 +298,21 @@ async function handleTransactions(
   const externalFreeVisible = toggle?.value === "true";
 
   const data = await queryWithRetry(() => {
+    // Escrito libre §III commits BC-facilitated transactions only. Off-network
+    // (salon_direct, walk_in) are the salon's own clients paid outside BC
+    // rails; BC never withheld taxes on them and they must never appear in
+    // the SAT feed. Defense in depth: create_booking_with_financials also
+    // skips tax_withholdings for off-network.
     let query = supabase
       .from("appointments")
       .select(`
         id, business_id, starts_at, price, payment_method, payment_status,
         isr_withheld, iva_withheld, tax_base, provider_net,
-        service_name, status, created_at,
+        service_name, status, created_at, booking_source,
         businesses!inner(name, rfc, tax_regime)
       `)
       .eq("status", "completed")
+      .in("booking_source", ["bc_marketplace", "invite_link"])
       .order("starts_at", { ascending: false });
 
     if (externalFreeVisible) {

@@ -101,13 +101,25 @@ class TerminosPage extends StatelessWidget {
                     '  - Articulos falsificados, replicas de marcas, productos que violen propiedad intelectual.\n\n'
                     'Estas restricciones se alinean con las politicas del procesador de pagos y con la legislacion mexicana aplicable. BeautyCita remueve sin aviso previo cualquier producto fuera de las categorias permitidas y revoca el acceso al POS en caso de incumplimiento.'),
 
+                _section('7c. Transacciones en red BC vs. fuera de red',
+                    'BeautyCita distingue dos tipos de transacciones registrables en la plataforma:\n\n'
+                    'EN RED BC (on-network): el pago fluye por la infraestructura de BeautyCita — tarjeta, saldo, OXXO, o efectivo generado por flujos de BC (Cita Express, motor de recomendaciones, invite link). Sujeto a:\n'
+                    '  - 3% de cargo de procesamiento de transacciones de BeautyCita (universal, no reembolsable).\n'
+                    '  - Retenciones fiscales (ISR + IVA) que BeautyCita entera al SAT.\n\n'
+                    'FUERA DE RED (off-network): clientes propios del salon pagando por medios que BC nunca toco (efectivo directo, terminal propio del salon, transferencia directa, etc.). El salon puede registrar estas transacciones en BeautyCita unicamente para sus propios controles y agenda. Para estas:\n'
+                    '  - BeautyCita NO cobra comision ni cargo de procesamiento.\n'
+                    '  - BeautyCita NO retiene ISR ni IVA (no toco el dinero).\n'
+                    '  - BeautyCita NO incluye estas transacciones en reportes al SAT ni en el acceso a la API de SAT (Art. 30-B CFF).\n'
+                    '  - El salon es responsable exclusivo de declararlas al SAT y pagar los impuestos correspondientes.\n\n'
+                    'BeautyCita muestra al salon un desglose mensual de sus ingresos fuera de red como referencia. Transacciones no registradas en la plataforma son responsabilidad exclusiva del proveedor y quedan fuera del alcance de BeautyCita.'),
+
                 _section('8. Retenciones Fiscales',
-                    'Conforme a la legislacion fiscal mexicana, BeautyCita actua como plataforma tecnologica intermediaria y esta obligada a realizar las siguientes retenciones sobre las transacciones procesadas por la plataforma:\n\n'
+                    'Conforme a la legislacion fiscal mexicana, BeautyCita actua como plataforma tecnologica intermediaria y esta obligada a realizar las siguientes retenciones sobre las transacciones EN RED BC (ver §7c):\n\n'
                     '  - ISR (Impuesto Sobre la Renta): 2.5% del monto bruto (Art. 113-A LISR)\n'
                     '  - IVA (Impuesto al Valor Agregado): 8% de la porcion de IVA (Art. 18-J LIVA)\n\n'
                     'Todos los salones registrados deben proporcionar un RFC valido; BeautyCita no opera con salones sin RFC.\n\n'
                     'BeautyCita emite CFDI (Comprobante Fiscal Digital por Internet) por todas las retenciones efectuadas. Los registros fiscales se conservan por 5 anos conforme al Articulo 30 del Codigo Fiscal de la Federacion.\n\n'
-                    'La Plataforma cumple con el Articulo 30-B del Codigo Fiscal, proporcionando al SAT acceso autenticado a la informacion de transacciones y retenciones.'),
+                    'La Plataforma cumple con el Articulo 30-B del Codigo Fiscal, proporcionando al SAT acceso autenticado a la informacion de transacciones y retenciones EN RED BC. Las transacciones fuera de red (§7c) NO se incluyen en este acceso — son responsabilidad del salon.'),
 
                 _section('9. Saldo y Sistema de Creditos',
                     'La Plataforma mantiene un sistema de credito interno ("Saldo") asociado a cada cuenta de usuario:\n\n'

@@ -678,7 +678,7 @@ class _CommissionBreakdownSection extends ConsumerWidget {
         Padding(
           padding: const EdgeInsets.only(bottom: 8),
           child: Text(
-            'Solo se cobran comisiones en citas que BeautyCita te envia. Tus propios clientes y walk-ins: 0%.',
+            'Transacciones en red BeautyCita (el cliente paga via la plataforma): 3% de cargo de procesamiento + retenciones fiscales que BC enteras al SAT. Transacciones fuera de red (tus propios clientes pagando en efectivo, terminal propio, etc. que tu registras en BC para tus controles): 0% de cargo, sin retencion. Tu responsabilidad reportar esas al SAT.',
             style: theme.textTheme.bodySmall?.copyWith(color: kWebTextHint),
           ),
         ),
