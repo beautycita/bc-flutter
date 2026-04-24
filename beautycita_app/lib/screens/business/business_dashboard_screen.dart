@@ -878,8 +878,12 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
                   Text(
                     'Muebles, herramientas, gasolina, renta, internet — todo gasto de negocio con factura es 100% deducible. '
                     'Puedes gastar hasta \$${_fmt(deductionBudget)} mas para reducir tu ISR.\n\n'
-                    'IMPORTANTE: Este calculo asume que pagas tu mitad de impuestos al SAT. '
-                    'Si no pagas, las deducciones no aplican.',
+                    'Importante: los montos mostrados son aproximados y se calculan unicamente con base en las '
+                    'transacciones que has registrado en BeautyCita. Asumimos que registras todos tus clientes '
+                    '(dentro y fuera de la red de BC) y que cumples puntualmente con tus obligaciones fiscales '
+                    'ante el SAT. Los resultados pueden variar segun tu regimen fiscal y gastos efectivamente '
+                    'deducibles. Esta herramienta no constituye asesoria fiscal, contable ni financiera '
+                    'profesional; para decisiones vinculantes consulta a un contador publico titulado.',
                     style: GoogleFonts.nunito(fontSize: 11, color: colors.secondary, height: 1.4),
                   ),
                   const SizedBox(height: 8),

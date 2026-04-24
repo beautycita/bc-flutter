@@ -684,6 +684,29 @@ class _TaxDeductionsCard extends StatelessWidget {
                   icon: const Icon(Icons.add_circle_outline, size: 18),
                   label: const Text('Registrar Gasto'),
                 ),
+                const SizedBox(height: 16),
+                // Mandatory disclaimer — assumption + approximation + not advice.
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: kWebTextHint.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: kWebTextHint.withValues(alpha: 0.15)),
+                  ),
+                  child: Text(
+                    'Importante: los montos mostrados son aproximados y se calculan unicamente con base en las '
+                    'transacciones que has registrado en BeautyCita. Asumimos que registras todos tus clientes '
+                    '(dentro y fuera de la red de BC) y que cumples puntualmente con tus obligaciones fiscales '
+                    'ante el SAT. Los resultados pueden variar segun tu regimen fiscal y gastos efectivamente '
+                    'deducibles. Esta herramienta no constituye asesoria fiscal, contable ni financiera '
+                    'profesional; para decisiones vinculantes consulta a un contador publico titulado.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: kWebTextSecondary,
+                      fontSize: 11,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
