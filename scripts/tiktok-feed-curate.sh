@@ -60,11 +60,11 @@ while IFS= read -r line || [[ -n "$line" ]]; do
     handle=$(echo "$resp" | jq -r '.creator_handle // "?"')
     vid=$(echo "$resp" | jq -r '.video_id')
     echo "ok   $category ${region:-  } $vid $handle"
-    ((ok++))
+    ok=$((ok+1))
   else
     err=$(echo "$resp" | jq -r '.error // .' 2>/dev/null | head -c 200)
     echo "fail $url → $err" >&2
-    ((fail++))
+    fail=$((fail+1))
   fi
 
   sleep 0.5    # polite

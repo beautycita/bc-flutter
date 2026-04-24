@@ -1,21 +1,88 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# TikTok feed seed file — paste URLs here and run:
-#   ./scripts/tiktok-feed-curate.sh scripts/tiktok-feed-seed.txt
+# TikTok feed seed file — BC curated, 2026-04-23
+# Run: ./scripts/tiktok-feed-curate.sh scripts/tiktok-feed-seed.txt
 #
 # Format:  category | region | URL
-#   - category: one of cabello, unas, pestanas, cejas, maquillaje, facial,
+#   - category: cabello, unas, pestanas, cejas, maquillaje, facial,
 #               corporal, novias, hombres
-#   - region:   ISO-2 country code (MX, CO, AR, CL, PE, ES, VE, EC, GT, CR,
-#               DO, UY, BO, PY, SV, HN, NI, PA, CU, PR). Blank = unknown.
-#               LATAM codes rank ahead of the rest of the world in /explorar.
-#   - URL:      any public TikTok video URL (canonical, vm.tiktok.com, etc.)
-#
-# Lines starting with '#' and blank lines are ignored. Re-running safely
-# updates existing rows (upsert by video_id).
+#   - region:   ISO-2 country code. LATAM codes (MX/CO/AR/CL/PE/ES/VE/EC/
+#               GT/CR/DO/UY/BO/PY/SV/HN/NI/PA/CU/PR) rank ahead in /explorar.
+#               Blank when the source didn't explicitly state country.
+#   - URL:      any public TikTok video URL.
+# URLs below were harvested from Google's public index and verified via
+# TikTok's official oEmbed endpoint (no login, no scraping).
 # ─────────────────────────────────────────────────────────────────────────────
 
-# --- EXAMPLES (replace with real curated URLs) -----------------------------
-# maquillaje | MX | https://www.tiktok.com/@creator/video/7385629201234567890
-# cabello    | CO | https://www.tiktok.com/@stylist/video/7385629209876543210
-# unas       | AR | https://www.tiktok.com/@nails/video/7385629211234567890
-# novias     | ES | https://vm.tiktok.com/ZM12abcdef/
+# ── maquillaje ─────────────────────────────────────────────────────────────
+maquillaje | MX | https://www.tiktok.com/@memohipolito/video/7269868385670892806
+maquillaje | MX | https://www.tiktok.com/@vane.anee99/video/7403465370134400262
+maquillaje | MX | https://www.tiktok.com/@evelynivens/video/7397540708904652038
+maquillaje |    | https://www.tiktok.com/@sandrallosa/video/7483228751325596934
+maquillaje |    | https://www.tiktok.com/@pautips/video/7273274339519171846
+
+# ── cabello ────────────────────────────────────────────────────────────────
+cabello    | CO | https://www.tiktok.com/@kaidmd2/video/7279957223332187398
+cabello    | CO | https://www.tiktok.com/@anablushh/video/7292949058480524550
+cabello    | CO | https://www.tiktok.com/@kelvybrulee/video/7367520184455712006
+cabello    | MX | https://www.tiktok.com/@gaxelestetica/video/7523013931850419463
+cabello    |    | https://www.tiktok.com/@_lunajulio/video/7324472733742435589
+cabello    |    | https://www.tiktok.com/@elcrilon/video/7448325557399457029
+
+# ── unas ───────────────────────────────────────────────────────────────────
+unas       | MX | https://www.tiktok.com/@anaismakeup16/video/7276190082808302854
+unas       | MX | https://www.tiktok.com/@anaismakeup16/video/7275800482499546374
+unas       | MX | https://www.tiktok.com/@marlenysnails/video/7278463105867336965
+unas       | MX | https://www.tiktok.com/@isabelbaucar/video/7276608486803262725
+unas       | MX | https://www.tiktok.com/@lizze_nails/video/7448044300035788037
+unas       | CO | https://www.tiktok.com/@manucastro057/video/7428364397698944261
+unas       | PE | https://www.tiktok.com/@fresabelll/video/7571263519656807701
+
+# ── pestanas ───────────────────────────────────────────────────────────────
+pestanas   | PE | https://www.tiktok.com/@valentinacejasylabios/video/7055082395443186949
+pestanas   |    | https://www.tiktok.com/@colorada.lashes/video/7320218771791170821
+pestanas   |    | https://www.tiktok.com/@fferlopez/video/7325910479195409694
+pestanas   |    | https://www.tiktok.com/@karinabandatv/video/7480398235396295982
+pestanas   |    | https://www.tiktok.com/@andreaiescorcia/video/7597957613212405003
+
+# ── cejas ──────────────────────────────────────────────────────────────────
+cejas      | MX | https://www.tiktok.com/@hashis_spa/video/7388726525773876486
+cejas      | MX | https://www.tiktok.com/@circebeautyclub/video/7490799829690502407
+cejas      | MX | https://www.tiktok.com/@adrianallaness/video/7484387203234188599
+cejas      | ES | https://www.tiktok.com/@paauulagarcia/video/7378977286386732321
+cejas      |    | https://www.tiktok.com/@vanitybreak/video/7350792900864740650
+cejas      |    | https://www.tiktok.com/@santisgarcia/video/7271309805862554885
+
+# ── facial ─────────────────────────────────────────────────────────────────
+facial     | MX | https://www.tiktok.com/@paovelazquezz0/video/7379787948050353413
+facial     | ES | https://www.tiktok.com/@integralbeautybcn/video/7203003675676036358
+facial     |    | https://www.tiktok.com/@itsmejools/video/7225769658157239557
+facial     |    | https://www.tiktok.com/@dtlashbeauty/video/7338879324759837998
+facial     |    | https://www.tiktok.com/@kassandralanis/video/7429381797907123461
+facial     |    | https://www.tiktok.com/@soyjimeaguilar/video/7140721119165713669
+
+# ── corporal ───────────────────────────────────────────────────────────────
+corporal   | MX | https://www.tiktok.com/@timeoutmexico/video/7187212573136276741
+corporal   | MX | https://www.tiktok.com/@dejametecuentomty/video/7440155356237466935
+corporal   | MX | https://www.tiktok.com/@diana.anconawellness/video/7348208502529117445
+corporal   | MX | https://www.tiktok.com/@paovibes/video/7471067683623013637
+corporal   | MX | https://www.tiktok.com/@undiacondya/video/7400199747786624261
+corporal   | MX | https://www.tiktok.com/@paovibes/video/7349256371574951173
+corporal   | MX | https://www.tiktok.com/@mariimollyy/video/7462983853301452037
+corporal   | MX | https://www.tiktok.com/@masajeslaxmexico/video/7478500360693370119
+
+# ── novias ─────────────────────────────────────────────────────────────────
+novias     |    | https://www.tiktok.com/@cositas.de.chicas1/video/7355606089112538373
+novias     |    | https://www.tiktok.com/@nicollechangc/video/7386821096105938181
+novias     |    | https://www.tiktok.com/@nicollechangc/video/7540806125344623890
+novias     |    | https://www.tiktok.com/@itslauravi/video/7508155102222503173
+novias     |    | https://www.tiktok.com/@soyjimeaguilar/video/7294787105840958726
+
+# ── hombres ────────────────────────────────────────────────────────────────
+hombres    | PE | https://www.tiktok.com/@liviabarbershop/video/7221668973513837829
+hombres    | CO | https://www.tiktok.com/@jorgepacheco95/video/7519873935500922117
+hombres    |    | https://www.tiktok.com/@javier_the_barber3/video/7565676584779271479
+hombres    |    | https://www.tiktok.com/@barbero_fitt/video/7518498725384228127
+hombres    |    | https://www.tiktok.com/@esau.barber/video/7514532814373653778
+hombres    |    | https://www.tiktok.com/@elboribarber/video/7439900085154090270
+hombres    |    | https://www.tiktok.com/@saezbarber/video/7489665254008360197
+hombres    |    | https://www.tiktok.com/@insnacionaldebarberia/video/7321942703074315525
