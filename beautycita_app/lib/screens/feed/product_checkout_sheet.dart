@@ -755,7 +755,7 @@ class _ProductCheckoutSheetState extends State<ProductCheckoutSheet> {
           ),
           const SizedBox(height: AppConstants.paddingXS),
           Text(
-            'BeautyCita cobra 10% de comision',
+            'BeautyCita cobra 7% de comision + 3% de procesamiento',
             style: GoogleFonts.nunito(
               fontSize: 11,
               color: palette.onSurface.withValues(alpha: 0.45),

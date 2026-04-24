@@ -232,7 +232,7 @@ class _ResumenTab extends ConsumerWidget {
                 children: [
                   _CommissionRow(label: 'Reservas (3%)', amount: c.bookingCommission, count: c.bookingCount, color: Theme.of(context).colorScheme.primary),
                   const Divider(height: 20),
-                  _CommissionRow(label: 'Productos (10%)', amount: c.productCommission, count: c.productCount, color: const Color(0xFFF59E0B)),
+                  _CommissionRow(label: 'Productos (7%+3%)', amount: c.productCommission, count: c.productCount, color: const Color(0xFFF59E0B)),
                   const Divider(height: 20),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,

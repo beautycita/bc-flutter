@@ -105,7 +105,7 @@ const _faqCategories = [
       _FaqItem(
         question: '¿Cuanto cobra BeautyCita?',
         answer:
-            'Una comision del 10% por cada reserva completada. Los profesionales conservan el 90%.',
+            'En reservas del marketplace: 3% de cargo por procesamiento de transacciones (no reembolsable). En ventas POS: 7% de comision (reembolsable en devoluciones) + 3% de procesamiento = 10% total. El 3% es el cargo universal de BeautyCita que cubre los costos operativos de cada transaccion.',
       ),
     ],
   ),

@@ -62,7 +62,7 @@ class _PosOptInViewState extends ConsumerState<_PosOptInView> {
       if (biz == null) throw Exception('Negocio no encontrado');
       final bizId = biz['id'] as String;
       final service = ref.read(productServiceProvider);
-      await service.acceptAgreement(bizId, '1.0');
+      await service.acceptAgreement(bizId, '1.1');
       await service.enablePos(bizId);
       ref.invalidate(posEnabledProvider);
       ref.invalidate(posAgreementProvider);
@@ -169,7 +169,13 @@ class _PosOptInViewState extends ConsumerState<_PosOptInView> {
                 'medicamentos controlados o cualquier producto que infrinja derechos de propiedad intelectual.\n\n'
                 '4. BeautyCita se reserva el derecho de remover productos que no cumplan con estas políticas '
                 'y de desactivar permanentemente el acceso al Punto de Venta en caso de infracciones repetidas.\n\n'
-                '5. Puedes desactivar tu Punto de Venta en cualquier momento desde esta pantalla.',
+                '5. Puedes desactivar tu Punto de Venta en cualquier momento desde esta pantalla.\n\n'
+                '6. Comisiones y cargo de procesamiento: por cada venta POS, BeautyCita retiene 10% del precio del producto:\n'
+                '    • 7% como comisión de plataforma, reembolsable en caso de devolución (no se cobra sobre el monto devuelto al cliente).\n'
+                '    • 3% como cargo de procesamiento de transacciones de BeautyCita, no reembolsable bajo ninguna circunstancia. '
+                'Este 3% es el mismo cargo universal de BeautyCita que aplica a toda transacción de la plataforma '
+                '(reservas, ventas POS, devoluciones, cancelaciones, disputas) y cubre los costos operativos '
+                'de procesar cada transacción.',
                 style: GoogleFonts.nunito(
                   fontSize: 12,
                   color: const Color(0xFF757575),
@@ -182,7 +188,7 @@ class _PosOptInViewState extends ConsumerState<_PosOptInView> {
                 onChanged: (v) => setState(() => _agreed = v ?? false),
                 contentPadding: EdgeInsets.zero,
                 title: Text(
-                  'He leido y acepto los terminos del vendedor (v1.0)',
+                  'He leido y acepto los terminos del vendedor (v1.1)',
                   style: GoogleFonts.nunito(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,

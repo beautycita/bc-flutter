@@ -1149,7 +1149,7 @@ class _DesktopCommissionTable extends StatelessWidget {
         DataColumn(label: Text('Periodo')),
         DataColumn(label: Text('Reservas (3%)'), numeric: true),
         DataColumn(label: Text('# Reservas'), numeric: true),
-        DataColumn(label: Text('Productos (10%)'), numeric: true),
+        DataColumn(label: Text('Productos (7%+3%)'), numeric: true),
         DataColumn(label: Text('# Productos'), numeric: true),
         DataColumn(label: Text('Total'), numeric: true),
       ],
@@ -1226,7 +1226,7 @@ class _MobileCommissionList extends StatelessWidget {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Text('Productos (10%)',
+                        Text('Productos (7%+3%)',
                             style: theme.textTheme.labelSmall?.copyWith(
                               color:
                                   colors.onSurface.withValues(alpha: 0.5),

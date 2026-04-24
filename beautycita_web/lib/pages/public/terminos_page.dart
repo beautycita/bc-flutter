@@ -77,12 +77,12 @@ class TerminosPage extends StatelessWidget {
                     'Cancelacion por el salon: Si el salon cancela la cita, el usuario recibe un reembolso COMPLETO del precio acreditado a su saldo. La comision (3%) la asume el salon como adeudo, no se descuenta del usuario.\n\n'
                     'No se realizan devoluciones a tarjetas de credito o cuentas bancarias. Todos los reembolsos se procesan como credito en la Plataforma (saldo).'),
 
-                _section('7. Comisiones',
-                    'BeautyCita opera bajo el siguiente modelo de comisiones:\n\n'
-                    '  a) Reservas del marketplace: 3% del precio del servicio\n'
-                    '  b) Reservas directas del salon: 0% (sin comision)\n'
-                    '  c) Venta de productos (POS): 10% del precio del producto\n\n'
-                    'Las comisiones se deducen automaticamente del pago al proveedor. Los salones reciben un desglose detallado de cada transaccion incluyendo comision, retenciones fiscales y monto neto.'),
+                _section('7. Comisiones y cargo de procesamiento',
+                    'BeautyCita opera bajo el siguiente modelo:\n\n'
+                    '  a) Reservas del marketplace: 3% del precio del servicio, como cargo de procesamiento de transacciones de BeautyCita.\n'
+                    '  b) Reservas directas del salon: 0% (sin cargo).\n'
+                    '  c) Venta de productos (POS): 10% del precio del producto, compuesto de 7% de comision de plataforma (reembolsable en caso de devolucion) + 3% de cargo de procesamiento de transacciones (no reembolsable). Este 3% es el mismo cargo universal de BeautyCita que aplica a reservas del marketplace — cubre los costos operativos de procesar cada transaccion (creacion, entrega, cancelacion, devolucion, disputa) y nunca es reembolsable bajo ninguna circunstancia.\n\n'
+                    'Las comisiones y el cargo de procesamiento se deducen automaticamente del pago al proveedor. Los salones reciben un desglose detallado de cada transaccion incluyendo estos conceptos, retenciones fiscales y monto neto.'),
 
                 _section('7b. Categorias de productos en el POS',
                     'El sistema de Punto de Venta (POS) acepta exclusivamente las siguientes categorias de producto:\n\n'

@@ -148,7 +148,7 @@ class _PosOptInState extends ConsumerState<_PosOptIn> {
               ShaderMask(
                 shaderCallback: (bounds) => kWebBrandGradient.createShader(bounds),
                 child: Text(
-                  'Solo 10% de comision por venta.',
+                  'Solo 7% de comision + 3% de procesamiento por venta.',
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: Colors.white,

@@ -151,7 +151,7 @@
           <div class="sub" id="commSub"></div>
         </div>
         <div class="result-card">
-          <div class="label">Comision por productos (10%)</div>
+          <div class="label">Comisión + procesamiento por productos (7%+3%)</div>
           <div class="value accent" id="productComm">—</div>
           <div class="sub" id="prodSub"></div>
         </div>
@@ -318,7 +318,7 @@ function calc() {
   document.getElementById('commSub').textContent = '3% de ' + fmtMxn(monthlyServiceGPV) + ' servicios';
 
   document.getElementById('productComm').textContent = fmtMxn(productCommission);
-  document.getElementById('prodSub').textContent = '10% de ' + fmtMxn(monthlyProductGPV) + ' productos';
+  document.getElementById('prodSub').textContent = '7%+3% de ' + fmtMxn(monthlyProductGPV) + ' productos';
 
   document.getElementById('interest').textContent = fmtMxn(monthlyInterest);
   document.getElementById('intSub').textContent = fmtMxn(avgTaxBalance) + ' balance prom × ' + (bankRate*100).toFixed(1) + '%/año';
@@ -344,7 +344,7 @@ function calc() {
     ['', ''],
     ['Fuentes de Ingreso BC', ''],
     ['├ Comision servicios (3% × todas las reservas)', fmtMxn(serviceCommission)],
-    ['├ Comision productos (10% × productos)', fmtMxn(productCommission)],
+    ['├ Comision + procesamiento productos (7%+3% × productos)', fmtMxn(productCommission)],
     ['├ Comision cancelaciones (3% × canceladas)', fmtMxn(cancelCommission)],
     ['├ Intereses float fiscal (' + taxHoldDays + 'd prom @ ' + (bankRate*100).toFixed(1) + '%)', fmtMxn(monthlyInterest)],
     ['├ Intereses float saldo (' + fmtNum(usersWithSaldo) + ' usuarios × $' + avgSaldo + ' prom)', fmtMxn(saldoFloatInterest)],
@@ -390,7 +390,7 @@ function calc() {
 
     'GPV = <span>N</span>(' + N + ') × <span>Y</span>(' + Y + ') × 26d × <span>Z</span>($' + Z + ') = ' + fmtMxn(monthlyServiceGPV) + '<br>' +
     'Commission = GPV × 3% = ' + fmtMxn(serviceCommission) + '<br>' +
-    'Products = GPV × ' + (productPct*100) + '% × 10% = ' + fmtMxn(productCommission) + '<br>' +
+    'Products = GPV × ' + (productPct*100) + '% × 10% (7% comm + 3% proc) = ' + fmtMxn(productCommission) + '<br>' +
     'Cancel = GPV × ' + (cancelRate*100) + '% × 3% = ' + fmtMxn(cancelCommission) + '<br>' +
     'Tax Float = (GPV/1.16 × 10.5%) × ' + taxHoldDays + '/30 × ' + (bankRate*100).toFixed(1) + '%/12 = ' + fmtMxn(monthlyInterest) + '<br>' +
     'Saldo Float = ' + fmtNum(usersWithSaldo) + ' users × $' + avgSaldo + ' × ' + (bankRate*100).toFixed(1) + '%/12 = ' + fmtMxn(saldoFloatInterest) + '<br>' +

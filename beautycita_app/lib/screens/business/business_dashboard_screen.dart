@@ -944,9 +944,9 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
               ],
             ),
             const SizedBox(height: 8),
-            _TaxRow(label: 'Comision BC (3% servicios)', value: '\$${_fmt(_commissionServices)}', color: const Color(0xFFEC4899)),
+            _TaxRow(label: 'Cargo BC (3% reservas)', value: '\$${_fmt(_commissionServices)}', color: const Color(0xFFEC4899)),
             const SizedBox(height: 4),
-            _TaxRow(label: 'Comision BC (10% productos)', value: '\$${_fmt(_commissionProducts)}', color: const Color(0xFFEC4899)),
+            _TaxRow(label: 'Comision + procesamiento BC (7%+3% productos)', value: '\$${_fmt(_commissionProducts)}', color: const Color(0xFFEC4899)),
             const SizedBox(height: 4),
             _TaxRow(
               label: 'Total comisiones ${DateTime.now().year}',

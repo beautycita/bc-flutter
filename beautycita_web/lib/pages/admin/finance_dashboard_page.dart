@@ -439,7 +439,7 @@ class _CommissionBreakdown extends StatelessWidget {
                   const SizedBox(height: 12),
                   _CommissionDetail(
                     color: const Color(0xFFFF9800),
-                    label: 'Productos (10%)',
+                    label: 'Productos (7%+3%)',
                     amount: data.productCommission,
                     count: data.productCount,
                   ),
