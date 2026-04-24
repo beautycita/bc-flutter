@@ -1,0 +1,2331 @@
+# Mexico — cities & towns with population ≥ 4,000
+
+Source: GeoNames MX.zip (feature_class=P, pop≥4000). Dedupe by (state, name), keeping highest-pop row. Downloaded 2026-04-23.
+
+**Totals:** 32 states/entities · 2229 unique localities
+
+## Aguascalientes (19 cities)
+
+- Aguascalientes — 722,250
+- Jesús María — 43,012
+- Pabellón de Arteaga — 28,633
+- Rincón de Romos — 27,988
+- Calvillo — 19,742
+- San Francisco de los Romo — 16,124
+- Jesús Gómez Portugal (Margaritas) — 11,589
+- Jesús Gómez Portugal — 8,579
+- Ojocaliente — 6,914
+- Palo Alto — 5,399
+- Pocitos — 5,169
+- Hacienda San Marcos [Fraccionamiento] — 5,000
+- San José de Gracia — 4,927
+- Cosío — 4,898
+- Villa Juárez — 4,888
+- Asientos — 4,517
+- Tepezalá — 4,511
+- Villa Licenciado Jesús Terán (Calvillito) — 4,481
+- Pabellón de Hidalgo — 4,316
+
+## Baja California (41 cities)
+
+- Tijuana — 1,922,523
+- Mexicali — 1,032,686
+- Ensenada — 443,807
+- Rosarito — 100,660
+- Tecate — 64,764
+- Pórticos de San Antonio — 34,234
+- Santa Isabel — 29,311
+- La Joya — 26,860
+- Rodolfo Sánchez Taboada — 22,957
+- Terrazas del Valle — 20,421
+- Villa del Prado 2da Sección — 18,226
+- Guadalupe Victoria — 17,119
+- San Felipe — 16,702
+- Lázaro Cárdenas — 16,294
+- Las Delicias — 15,486
+- Puebla — 15,168
+- Villa del Campo — 13,906
+- Progreso — 12,557
+- Vicente Guerrero — 11,455
+- El Niño — 8,999
+- El Sauzal de Rodríguez — 8,832
+- Camalú — 8,621
+- San Luis — 8,571
+- Doctor Alberto Oviedo Mota — 8,064
+- Estación Coahuila — 7,596
+- Maclovio Rojas — 7,279
+- Lomas de Santa Anita — 6,604
+- Benito García (El Zorrillo) — 6,598
+- Colonia Venustiano Carranza — 6,098
+- Emiliano Zapata — 5,756
+- Quinta del Cedro — 5,704
+- Ciudad Coahuila (Kilómetro Cincuenta y Siete) — 5,617
+- Tecolots — 5,259
+- Delta — 5,180
+- Ejido Hermosillo — 5,101
+- Primo Tapia — 4,921
+- Los Algodones — 4,874
+- San Quintín — 4,777
+- San Vicente — 4,362
+- Cereso del Hongo — 4,278
+- Benito Juárez — 4,167
+
+## Baja California Sur (15 cities)
+
+- La Paz — 250,141
+- Cabo San Lucas — 202,694
+- San José del Cabo — 136,285
+- Colonia del Sol — 48,032
+- Ciudad Constitución — 40,935
+- Loreto — 14,724
+- Guerrero Negro — 13,054
+- Santa Rosalía — 11,765
+- Las Palmas — 11,562
+- Las Veredas — 10,478
+- Ciudad Insurgentes — 8,741
+- Villa Alberto Andrés Alvarado Arámburo — 6,902
+- Puerto San Carlos — 5,538
+- Todos Santos — 5,148
+- El Centenario — 4,696
+
+## Campeche (20 cities)
+
+- Campeche — 220,389
+- Ciudad del Carmen — 191,238
+- Champotón — 30,881
+- Escárcega — 29,477
+- Calkiní — 14,934
+- Dzitbalché — 11,686
+- Hecelchakán — 10,285
+- Candelaria — 9,812
+- Seybaplaya — 8,711
+- Pomuch — 8,694
+- Lerma — 8,281
+- Tenabo — 7,543
+- Hopelchén — 7,295
+- Sabancuy — 7,286
+- Bécal — 6,511
+- Isla Aguada — 6,204
+- Nunkiní — 5,859
+- Chiná — 5,194
+- Nuevo Progreso — 4,851
+- San Antonio Cárdenas — 4,206
+
+## Chiapas (102 cities)
+
+- Tuxtla — 604,147
+- Tapachula — 353,706
+- San Cristóbal de las Casas — 215,874
+- Comitán — 166,178
+- Pijijiapan — 50,079
+- Chiapa de Corzo — 45,077
+- Palenque — 42,947
+- Cintalapa de Figueroa — 42,467
+- Ocosingo — 41,878
+- Ocozocoautla de Espinosa — 39,180
+- Villaflores — 37,237
+- Tonalá — 35,322
+- Huixtla — 32,033
+- Berriozábal — 28,128
+- Reforma — 26,257
+- Arriaga — 24,447
+- Motozintla — 23,755
+- Las Margaritas — 20,786
+- Las Rosas — 18,817
+- Comalapa — 18,704
+- Mapastepec — 17,931
+- Suchiapa — 16,637
+- Yajalón — 16,622
+- Cacahoatán — 16,572
+- Teopisca — 16,240
+- Venustiano Carranza — 15,496
+- Ciudad Hidalgo — 14,606
+- Pichucalco — 14,212
+- Acala — 13,889
+- Brisas Barra de Suchiate — 13,743
+- Bochil — 12,404
+- El Parral — 10,865
+- Villa Corzo — 10,841
+- Simojovel de Allende — 10,762
+- Nueva Palestina — 10,588
+- Jaltenango de la Paz — 10,427
+- Pueblo Nuevo — 10,043
+- Jiquipilas — 9,894
+- San Fernando — 9,651
+- Escuintla — 9,570
+- Puerto Madero — 9,557
+- Altamirano — 9,200
+- La Trinitaria — 9,042
+- San Pedro Buenavista — 8,390
+- Copoya — 8,160
+- Revolución Mexicana — 7,989
+- Huehuetán — 7,755
+- La Concordia — 7,641
+- Acacoyagua — 7,515
+- Tapilula — 7,441
+- Chilón — 7,368
+- Juárez — 7,286
+- Benemérito de las Américas — 7,259
+- Villa Comaltitlán — 7,201
+- Tila — 7,164
+- San Francisco Pujiltic — 7,137
+- Tuxtla Chico — 7,026
+- Chanal — 7,008
+- Pantelhó — 6,888
+- Mazatán — 6,838
+- Raudales Malpaso — 6,817
+- Petalcingo — 6,775
+- Jesús María Garza — 6,724
+- Oxchuc — 6,675
+- Copainalá — 6,550
+- Vida Mejor I — 6,460
+- San Juan Cancuc — 6,327
+- Estación Huehuetán — 6,314
+- Acapetahua — 6,194
+- Paredón — 6,126
+- Ixtapa — 6,086
+- Chicomuselo — 5,938
+- Rayón — 5,895
+- Álvaro Obregón — 5,717
+- Rincón Chamula — 5,592
+- El Triunfo — 5,478
+- Salto de Agua — 5,199
+- Frontera Corozal — 5,184
+- El Bosque — 5,155
+- Tzimol — 5,112
+- Bachajón — 5,063
+- Cancuc — 4,970
+- Socoltenango — 4,863
+- Ixtacomitán — 4,835
+- San Lucas — 4,716
+- Cristóbal Obregón — 4,664
+- Ocotepec — 4,663
+- Amatenango del Valle — 4,661
+- Tenango — 4,633
+- El Jobo — 4,632
+- Navenchauc — 4,625
+- Totolapa — 4,596
+- Tecpatán — 4,530
+- La Libertad — 4,500
+- Jitotol — 4,427
+- Tres Picos — 4,403
+- Veinte de Noviembre — 4,309
+- Nicolás Ruiz — 4,277
+- Buenos Aires — 4,260
+- 2da. Sección de Medio Monte — 4,182
+- Nueva Esperanza — 4,059
+- Soyaló — 4,014
+
+## Chihuahua (40 cities)
+
+- Ciudad Juárez — 1,512,450
+- Chihuahua — 925,762
+- Cuauhtémoc — 168,482
+- Ciudad Delicias — 148,045
+- Hidalgo del Parral — 104,836
+- Nuevo Casas Grandes — 55,553
+- Santa Rosalía de Camargo — 40,221
+- José Mariano Jiménez — 34,281
+- Ojinaga — 28,040
+- Manuel Ojinaga — 22,744
+- Pedro Meoqui — 22,574
+- Juan Aldama — 18,642
+- Madera — 15,447
+- Guachochi — 14,513
+- Ascensión — 13,456
+- Ascención — 11,781
+- Saucillo — 11,004
+- San Juanito — 10,535
+- Colonia Anáhuac — 9,952
+- La Junta — 8,930
+- Adolfo López Mateos — 8,770
+- Santa Bárbara — 8,765
+- Lázaro Cárdenas — 8,704
+- Miguel Ahumada — 8,575
+- Ampliación Colonia Lázaro Cárdenas — 8,161
+- Ciudad Guerrero — 7,751
+- Santa Eulalia — 7,135
+- San Buenaventura — 6,957
+- Benito Juárez — 6,138
+- Guadalupe y Calvo — 5,816
+- Ejido Benito Juárez — 5,778
+- Puerto Palomas — 5,659
+- Santa Cruz de Rosales — 5,570
+- Valentín Gómez Farías — 5,330
+- Casas Grandes — 5,256
+- Creel — 5,026
+- El Largo — 4,964
+- Naica — 4,938
+- San Francisco del Oro — 4,249
+- Valle de Ignacio Allende — 4,185
+
+## Coahuila (34 cities)
+
+- Torreón — 735,340
+- Saltillo — 709,671
+- Ciudad Acuña — 216,099
+- Monclova — 215,271
+- Piedras Negras — 150,178
+- Frontera — 69,462
+- Ramos Arizpe — 66,554
+- Sabinas — 54,905
+- Matamoros — 52,233
+- San Pedro — 48,746
+- Nueva Rosita — 38,158
+- Ciudad Melchor Múzquiz — 35,060
+- Parras de la Fuente — 33,817
+- Francisco I. Madero — 26,632
+- Castaños — 23,649
+- Nava — 22,192
+- Allende — 20,694
+- San Buenaventura — 20,480
+- Palaú — 16,970
+- Zaragoza — 10,461
+- Cuatro Ciénegas de Carranza — 10,309
+- San Antonio del Coyote — 8,856
+- Arteaga — 8,446
+- Concordia — 7,858
+- Minas de Barroterán — 7,842
+- Morelos — 6,839
+- Villa Unión — 5,350
+- Villa Union — 5,147
+- Colonia Venustiano Carranza — 4,921
+- General Cepeda — 4,382
+- Nadadores — 4,343
+- Venustiano Carranza — 4,288
+- Hidalgo — 4,143
+- La Partida — 4,010
+
+## Colima (15 cities)
+
+- Manzanillo — 159,853
+- Colima — 146,965
+- Ciudad de Villa de Álvarez — 117,600
+- Tecomán — 85,689
+- Ciudad de Armería — 15,923
+- Coquimatlán — 13,358
+- El Colomo — 10,255
+- Comala — 9,442
+- Quesería — 8,611
+- Cuauhtémoc — 8,602
+- Cerro de Ortega — 7,598
+- Cofradía — 6,495
+- Cofradía de Juárez — 6,202
+- Minatitlán — 4,691
+- Suchitlán — 4,450
+
+## Durango (28 cities)
+
+- Victoria de Durango — 518,709
+- Gómez Palacio — 257,352
+- Lerdo — 79,669
+- Santiago Papasquiaro — 26,121
+- El Salto — 24,241
+- Pueblo Nuevo — 19,363
+- Guadalupe Victoria — 16,506
+- Vicente Guerrero — 15,982
+- Canatlán — 11,495
+- Nuevo Ideal — 10,876
+- Villa Unión — 10,753
+- Cuencamé de Ceniceros — 9,848
+- Tlahualilo de Zaragoza — 9,517
+- Bermejillo — 9,149
+- Nazareno — 7,515
+- Villa Juárez — 7,069
+- Santa María del Oro — 5,878
+- Mapimí — 5,623
+- Nombre de Dios — 5,302
+- Peñón Blanco — 5,271
+- Tayoltita — 5,124
+- Santa Catarina de Tepehuanes — 4,761
+- Rodeo — 4,666
+- San Felipe — 4,552
+- Francisco I. Madero — 4,550
+- Súchil — 4,107
+- Santa Clara — 4,061
+- La Loma — 4,045
+
+## Guanajuato (82 cities)
+
+- León de los Aldama — 1,579,803
+- Irapuato — 380,941
+- Celaya — 340,387
+- San Miguel de Allende — 174,615
+- Salamanca — 160,682
+- Silao — 74,242
+- Guanajuato — 72,237
+- San Francisco del Rincón — 71,139
+- Valle de Santiago — 68,058
+- Dolores Hidalgo — 67,101
+- Cortazar — 61,658
+- Acámbaro — 57,972
+- Uriangato — 51,382
+- San Luis de la Paz — 49,914
+- Purísima de Bustos — 43,512
+- Moroleón — 43,200
+- Juventino Rosas — 42,264
+- Pénjamo — 40,070
+- Salvatierra — 37,203
+- Centro Familiar la Soledad — 32,159
+- Marfil — 29,375
+- San Felipe — 28,452
+- Apaseo el Alto — 27,991
+- Abasolo — 27,389
+- Villagrán — 27,079
+- Apaseo el Grande — 26,121
+- Yuriria — 25,216
+- Comonfort — 23,683
+- San José Iturbide — 23,471
+- Romita — 21,176
+- Jaral del Progreso — 20,457
+- La Ermita — 19,703
+- Medina — 16,166
+- Ciudad Manuel Doblado — 13,956
+- Cuerámaro — 13,948
+- Empalme Escobedo — 13,384
+- San Miguel Octopan — 13,303
+- Valtierrilla — 12,713
+- Tarimoro — 12,188
+- Rincón de Tamayo — 10,324
+- Santa Ana Pacueco — 10,052
+- San Juan de la Vega — 9,597
+- Urireo — 8,679
+- Yerbabuena — 8,399
+- Jerécuaro — 7,748
+- Arandas — 7,722
+- San Nicolás de los Agustinos — 7,148
+- San Diego de la Unión — 7,116
+- Santa Teresa — 6,998
+- Misión de Chichimecas — 6,716
+- Cerano — 6,530
+- Santiago de Cuenda — 6,524
+- Ocampo — 6,499
+- Duarte — 6,261
+- Tarandacuao — 6,058
+- Irámuco — 5,954
+- San Bartolo de Berrios — 5,899
+- San José Temascatío — 5,839
+- Mexicanos — 5,782
+- La Aldea — 5,615
+- San Roque — 5,563
+- Huanímaro — 5,505
+- Cerro Gordo — 5,460
+- Sarabia — 5,280
+- Villas de Irapuato — 5,199
+- Doctor Mora — 5,140
+- San José de Agua Azul — 5,139
+- Plan de Ayala — 5,134
+- Tenería del Santuario — 4,722
+- La Calera — 4,665
+- San Juan de Abajo — 4,514
+- San Pedro de los Naranjos — 4,494
+- San Cristóbal — 4,439
+- Lo de Juárez — 4,378
+- La Moncada — 4,377
+- Franco — 4,349
+- Loma Pelada — 4,262
+- Aldama — 4,175
+- El Sabino — 4,095
+- Parácuaro — 4,058
+- Coroneo — 4,024
+- El Coecillo — 4,002
+
+## Guerrero (76 cities)
+
+- Acapulco de Juárez — 658,609
+- Chilpancingo — 187,251
+- Iguala de la Independencia — 118,468
+- Ixtapa-Zihuatanejo — 67,408
+- Taxco de Alarcón — 50,399
+- Tlapa de Comonfort — 46,975
+- Chilapa de Álvarez — 31,157
+- Ciudad Altamirano — 25,168
+- Zumpango del Río — 24,719
+- Ometepec — 24,120
+- Teloloapan — 23,549
+- Tixtla de Guerrero — 22,826
+- Petatlán — 21,659
+- Atoyac de Álvarez — 21,407
+- Arcelia — 18,685
+- Ciudad de Huitzuco — 17,475
+- Ayutla de los Libres — 15,370
+- Técpan de Galeana — 15,119
+- Coyuca de Benítez — 13,566
+- San Marcos — 13,282
+- Cruz Grande — 11,783
+- Tierra Colorada — 11,540
+- Chichihualco — 10,690
+- Cuajinicuilapa — 10,282
+- Petaquillas — 9,801
+- Tlapehuala — 9,331
+- Ixtapa — 8,992
+- San José Ixtapa (Barrio Viejo) — 8,698
+- San Luis Acatlán — 8,276
+- San Jerónimo de Juárez — 7,200
+- Buenavista de Cuéllar — 7,131
+- Apaxtla de Castrejón — 7,037
+- Xaltianguis — 6,965
+- El Súchil — 6,962
+- Copalillo — 6,910
+- El Ocotito — 6,882
+- Coyuca de Catalán — 6,857
+- El Coacoyul — 6,850
+- Tlacotepec — 6,848
+- San Jeronimito — 6,830
+- Copala — 6,619
+- Marquelia — 6,553
+- Ajuchitlán del Progreso — 6,329
+- Kilómetro 30 — 6,301
+- Tepecoacuilco de Trujano — 6,298
+- Tlamacazapa — 6,234
+- Bajos del Ejido — 6,165
+- Zitlala — 6,065
+- Huamuxtitlán — 6,063
+- Atliaca — 5,997
+- Olinalá — 5,792
+- Quechultenango — 5,720
+- Mazatlán — 5,316
+- Acamixtla — 5,301
+- Pilcaya — 5,270
+- Mochitlán — 5,269
+- San Luis de La Loma — 5,085
+- Tres Palos — 5,001
+- Zacoalpan — 4,900
+- Cutzamala de Pinzón — 4,895
+- Xochihuehuetlán — 4,859
+- Huitziltepec — 4,513
+- Las Vigas — 4,504
+- Tlacoachistlahuaca — 4,359
+- Apango — 4,345
+- San Miguel Totolapan — 4,319
+- Cocula — 4,310
+- San Pedro las Playas — 4,292
+- Tecoanapa — 4,268
+- Xalpatlahuac — 4,255
+- Cochoapa — 4,237
+- San Luis San Pedro — 4,236
+- Azoyú — 4,211
+- Xochistlahuaca — 4,152
+- Tlalchapa — 4,067
+- Acuitlapan — 4,006
+
+## Hidalgo (80 cities)
+
+- Pachuca de Soto — 256,584
+- Tulancingo — 102,406
+- Tepeji del Río de Ocampo — 80,612
+- Tizayuca — 43,250
+- Huejutla de Reyes — 40,015
+- Ixmiquilpan — 34,814
+- Actopan — 32,276
+- Ciudad Sahagun — 28,609
+- Tula de Allende — 28,577
+- Apan — 26,642
+- Mixquiahuala de Juarez — 25,510
+- Zacualtipán — 23,125
+- Cuautepec de Hinojosa — 18,835
+- Don Antonio — 17,736
+- Progreso de Alvaro Obregon — 17,486
+- La Providencia Siglo XXI — 16,747
+- Santiago Tulantepec — 16,078
+- Tepeapulco — 15,244
+- El Llano — 14,559
+- Tlaxcoapan — 14,241
+- Zimapan — 13,243
+- San Marcos — 12,779
+- Tepatepec — 11,084
+- Mineral del Monte — 11,015
+- San Agustín Tlaxiaca — 10,496
+- Cardonal — 9,090
+- Huichapan — 9,051
+- Emiliano Zapata — 8,722
+- Tetepango — 8,705
+- Tlahuelilpan — 8,498
+- Acayuca — 8,470
+- Atotonilco de Tula — 8,154
+- San Miguel Vindho — 7,988
+- Tlanalapa — 7,518
+- Atotonilco el Grande — 7,261
+- Ajacuba — 7,245
+- Doxey — 7,066
+- Presas — 6,942
+- Tolcayuca — 6,836
+- Zempoala — 6,798
+- San Felipe Orizatlán — 6,686
+- Jaltepec — 6,431
+- Atitalaquia — 6,322
+- Jaltocan — 6,201
+- Campestre Villas del Álamo — 6,192
+- Javier Rojo Gómez — 6,186
+- Parque Urbano Napateco — 6,172
+- Pachuquilla — 6,139
+- San Juan Tepa — 5,932
+- Tecozautla — 5,844
+- Santa Ana Hueytlalpan — 5,705
+- Unidad Minera 11 de Julio — 5,692
+- Huitel — 5,390
+- Tezontepec — 5,214
+- Tlanchinol — 5,199
+- Huitzila — 5,151
+- Los Tuzos — 5,087
+- Zapotlán de Juárez — 4,961
+- Colinas de Plata — 4,852
+- Tepepa — 4,830
+- Almoloya — 4,802
+- Tezontepec de Aldama — 4,731
+- Melchor Ocampo — 4,679
+- Tianguistengo (La Romera) — 4,558
+- San Pedro Huaquilpan — 4,459
+- San Ildefonso — 4,423
+- Jacala — 4,415
+- Panuaya — 4,392
+- El Rosario — 4,370
+- Conejos — 4,284
+- Santiago Tezontlale — 4,226
+- Teltipán de Juárez — 4,207
+- Santa Teresa — 4,178
+- Santa Ana Tzacuala — 4,156
+- Calnali — 4,147
+- Chapulhuacán — 4,143
+- Tepojaco — 4,119
+- Singuilucan — 4,076
+- Vito — 4,056
+- Acaxochitlán — 4,026
+
+## Jalisco (148 cities)
+
+- Zapopan — 1,476,491
+- Guadalajara — 1,385,629
+- Tlaquepaque — 650,123
+- Tonalá — 408,759
+- Puerto Vallarta — 224,166
+- Ciudad Guzmán — 111,975
+- Lagos de Moreno — 98,206
+- Tepatitlán de Morelos — 91,959
+- Hacienda Santa Fe — 86,935
+- Ocotlán — 83,769
+- San Francisco Tesistán — 62,397
+- Arandas — 52,175
+- San Juan de los Lagos — 48,684
+- Autlán de Navarro — 45,382
+- Cihuatlán — 40,139
+- San José del Castillo — 39,246
+- Ameca — 36,156
+- Tala — 35,396
+- La Barca — 35,219
+- Zapotlanejo — 32,376
+- San Agustín — 30,424
+- Tlajomulco de Zúñiga — 30,273
+- Coyula — 29,674
+- Cocula — 29,267
+- Tequila — 29,203
+- Ixtapa — 29,036
+- San Sebastián el Grande — 28,138
+- Nuevo México — 28,135
+- Tuxpan — 27,523
+- Atotonilco el Alto — 26,874
+- Sayula — 26,789
+- Las Pintitas — 26,500
+- Encarnación de Díaz — 25,010
+- Jalostotitlán — 24,423
+- San Miguel el Alto — 23,982
+- Teocaltiche — 23,726
+- Las Pintas de Arriba — 22,838
+- Zapotiltic — 22,833
+- El Salto — 22,550
+- Chapala — 21,596
+- El Grullo — 20,924
+- Santa Anita — 20,320
+- Lomas del Sur — 19,413
+- Jocotepec — 18,852
+- Tamazula de Gordiano — 18,787
+- Zacoalco de Torres — 18,172
+- San José del Quince — 17,669
+- Jamay — 17,204
+- Magdalena — 16,214
+- Ahualulco de Mercado — 15,512
+- Villa Hidalgo — 15,182
+- Tizapán el Alto — 14,877
+- Santa Cruz del Valle — 14,637
+- Real del Valle (El Paraíso) [Fraccionamiento] — 13,949
+- Yahualica de González Gallo — 13,655
+- Poncitlán — 13,581
+- Etzatlán — 13,513
+- Capilla de Guadalupe — 13,308
+- Colotlán — 13,256
+- Centro de Readaptación Social — 13,071
+- San Julián — 12,949
+- Tototlán — 12,516
+- La Tijera — 12,425
+- Tecalitlán — 12,411
+- Acatic — 11,890
+- Ojuelos de Jalisco — 11,881
+- Lomas de San Agustín — 11,836
+- Ayotlán — 11,724
+- El Arenal — 11,610
+- Ajijic — 11,439
+- Santa Cruz de las Flores — 11,204
+- La Resolana — 11,180
+- Villas de la Hacienda [Fraccionamiento] — 11,078
+- Amatitán — 11,006
+- Degollado — 10,753
+- Acatlán de Juárez — 10,461
+- Valle Dorado Inn — 9,966
+- San Ignacio Cerro Gordo — 9,774
+- Tecolotlán — 9,189
+- Juanacatlán — 9,133
+- Galaxia Bonito Jalisco — 9,082
+- Las Juntas — 9,035
+- Unión de Tula — 9,035
+- Tomatlán — 9,026
+- La Alameda — 9,013
+- Talpa de Allende — 8,839
+- Mascota — 8,801
+- Capulín — 8,724
+- Rancho Alegre [Fraccionamiento] — 8,441
+- Jesús María — 8,249
+- San Martín Hidalgo — 8,092
+- La Huerta — 7,891
+- Mazamitla — 7,865
+- La Ribera — 7,780
+- Los Olivos — 7,647
+- Unión de San Antonio — 7,620
+- Villa Corona — 7,603
+- San Patricio — 7,569
+- San José el Verde — 7,556
+- San Miguel Cuyutlán — 7,533
+- Los Ruiseñores — 7,493
+- Usmajac — 7,269
+- Atotonilquillo — 7,249
+- Ayutla — 7,244
+- Bellavista — 7,163
+- San Juan Cosalá — 6,973
+- Pihuamo — 6,838
+- Atequiza — 6,498
+- El Refugio — 6,262
+- Ixtlahuacán del Río — 6,198
+- Ixtlahuacán de los Membrillos — 6,137
+- Colinas del Roble — 5,830
+- Tapalpa — 5,782
+- Galaxia la Noria — 5,681
+- Puente Grande — 5,664
+- La Venta del Astillero — 5,649
+- Cuitzeo (La Estancia) — 5,603
+- Atemajac de Brizuela — 5,457
+- San Juanito de Escobedo — 5,373
+- Cajititlán — 5,323
+- San Diego de Alejandría — 5,312
+- San Francisco de Asís — 5,291
+- Antonio Escobedo — 5,269
+- San Andrés Ixtlán — 5,230
+- San Pedro Itzicán — 5,199
+- San José de Gracia — 5,190
+- Atoyac — 5,052
+- Mezcala — 5,005
+- La Punta — 4,889
+- Palomar — 4,837
+- Huejuquilla el Alto — 4,811
+- Matancillas (San Isidro Matancillas) — 4,784
+- Concepción de Buenos Aires — 4,744
+- Purificación — 4,740
+- Tenamaxtlán — 4,711
+- Paseo del Prado — 4,706
+- Cuquío — 4,682
+- San Gabriel — 4,606
+- Hacienda los Fresnos — 4,541
+- Valle de Guadalupe — 4,492
+- Campestre las Palomas [Fraccionamiento] — 4,488
+- El Zapote — 4,401
+- Barra de Navidad — 4,324
+- Bajío de San José — 4,238
+- Santa María del Valle — 4,142
+- Pegueros — 4,063
+- Nextipac — 4,008
+- Valle de Juárez — 4,006
+
+## Mexico City (36 cities)
+
+- Mexico City — 12,294,193
+- Iztapalapa — 1,835,486
+- Gustavo Adolfo Madero — 1,185,772
+- Álvaro Obregón — 726,664
+- Coyoacán — 614,447
+- Tlalpan — 574,577
+- Cuauhtémoc — 531,831
+- Xochimilco — 442,178
+- Venustiano Carranza — 430,978
+- Azcapotzalco — 414,711
+- Benito Juárez — 385,439
+- Iztacalco — 384,326
+- Miguel Hidalgo — 372,889
+- Benito Juarez — 355,017
+- Tláhuac — 305,076
+- Colonia del Valle — 250,000
+- Magdalena Contreras — 238,431
+- Delegación Cuajimalpa de Morelos — 160,491
+- Colonia Nativitas — 60,000
+- Polanco — 50,000
+- San Miguel Topilejo — 34,603
+- San Miguel Ajusco — 29,781
+- San Antonio Tecómitl — 24,397
+- San Juan Ixtayopan — 24,120
+- San Lorenzo Acopilco — 23,037
+- Milpa Alta — 18,274
+- San Pablo Oztotepec — 15,507
+- Col. Bosques de las Lomas — 15,000
+- San Salvador Cuauhtenco — 13,856
+- San Andrés Mixquic — 13,310
+- San Francisco Tecoxpa — 11,456
+- Santa Ana Tlacotenco — 10,593
+- Santa Catarina Yecahuizotl — 9,563
+- San Pedro Atocpan — 8,283
+- San Bartolome Xicomulco — 4,340
+- Tetelco — 4,246
+
+## Michoacán (116 cities)
+
+- Morelia — 743,275
+- Uruapan — 299,523
+- Ciudad Lázaro Cárdenas — 196,003
+- Zamora de Hidalgo — 186,102
+- Apatzingán — 102,362
+- Heróica Zitácuaro — 84,307
+- La Piedad de Cabadas — 83,323
+- Sahuayo de Morelos — 64,431
+- Ciudad Hidalgo — 60,542
+- Pátzcuaro — 55,298
+- Jacona de Plancarte — 53,860
+- Zacapu — 50,112
+- Los Reyes de Salgado — 39,209
+- Las Guacamayas — 37,980
+- Paracho de Verduzco — 37,464
+- Maravatío de Ocampo — 34,381
+- Nueva Italia de Ruiz — 32,467
+- Puruándiro — 30,571
+- Tacámbaro de Codallos — 25,665
+- Jiquilpan de Juárez — 24,233
+- Yurécuaro — 23,843
+- Purépero de Echáiz — 23,713
+- Huetamo de Núñez — 21,864
+- La Orilla — 20,126
+- Coalcomán de Vázquez Pallares — 18,156
+- Ario de Rosales — 16,595
+- Zinapécuaro de Figueroa — 15,875
+- Peribán de Ramos — 15,434
+- Tuzantla — 15,302
+- Tepalcatepec — 15,221
+- Tangancícuaro de Arista — 15,068
+- Nuevo San Juan Parangaricutiro — 14,772
+- Quiroga — 14,669
+- Santa Clara del Cobre — 14,359
+- Cherán — 14,245
+- Morelos — 13,565
+- Cotija de la Paz — 13,560
+- La Mira — 13,415
+- Lombardía — 12,610
+- San Pedro Cahro — 11,987
+- Conjunto Habitacional Villas del Pedregal — 10,934
+- Vista Hermosa de Negrete — 10,752
+- Arteaga — 10,537
+- Santiago Tangamandapio — 10,463
+- Buenavista Tomatlán — 10,390
+- Nahuatzen — 10,283
+- Cuitzeo del Porvenir — 10,239
+- Felipe Carrillo Puerto — 10,217
+- Opopeo — 10,055
+- Pajacuarán — 10,014
+- Buenos Aires — 9,868
+- Tanhuato de Guerrero — 9,546
+- San José de Gracia — 9,537
+- La Huacana — 9,395
+- Tuxpan — 9,122
+- Queréndaro — 9,105
+- Antúnez (Morelos) — 9,044
+- Tarecuato — 8,863
+- Álvaro Obregón — 8,807
+- Aguililla — 8,801
+- Fraccionamiento Misión del Valle — 8,663
+- Antúnez — 8,591
+- Ario de Rayón — 8,464
+- Tingambato — 7,771
+- Chilchota — 7,673
+- Capácuaro — 7,424
+- Coahuayana de Hidalgo — 7,307
+- Puruarán — 7,162
+- Santa Ana Maya — 7,087
+- Tingüindín — 6,923
+- Santa Clara de Valladares — 6,917
+- Indaparapeo — 6,791
+- Cojumatlán de Régules — 6,763
+- Tancítaro — 6,747
+- Huandacareo — 6,736
+- Acuitzio del Canje — 6,733
+- Pastor Ortiz — 6,630
+- Villa Madero — 6,577
+- Taretan — 6,440
+- Carapan — 6,379
+- Chavinda — 6,246
+- Rincón de Nicolás Romero (Cedros Tercera Manzana) — 6,213
+- La Aldea — 6,162
+- Pedernales — 6,131
+- Tarímbaro — 6,049
+- Fraccionamiento Galaxia Tarímbaro — 5,989
+- Fraccionamiento Metrópolis II — 5,973
+- Angahuan — 5,773
+- Panindícuaro — 5,565
+- Charo — 5,207
+- Caltzontzin — 5,136
+- Capula — 5,086
+- Jungapeo de Juárez — 5,073
+- Angamacutiro de la Unión — 5,030
+- San Bartolo Cuitareo — 4,989
+- San Francisco Pichátaro — 4,952
+- Numarán — 4,944
+- Santa Fe de la Laguna — 4,879
+- Comachuén — 4,762
+- Cuanajo — 4,758
+- Churumuco de Morelos — 4,725
+- Ecuandureo — 4,716
+- Mineral de Angangueo — 4,601
+- Tungareo — 4,597
+- Villa Magna — 4,577
+- Ixtlán de los Hervores — 4,573
+- Villas de la Loma — 4,336
+- Villa Jiménez — 4,249
+- Briseñas de Matamoros — 4,193
+- Santa Ana Amatlán — 4,189
+- Contepec — 4,184
+- Jesús del Monte — 4,182
+- La Rinconada — 4,155
+- Cuto del Porvenir — 4,147
+- Agostitlán — 4,048
+- La Cantera — 4,024
+
+## Morelos (64 cities)
+
+- Cuernavaca — 338,650
+- Jiutepec — 215,357
+- Cuautla — 157,336
+- Yautepec — 105,780
+- Temixco — 97,788
+- Emiliano Zapata — 49,193
+- Zacatepec — 21,586
+- Puente de Ixtla — 21,098
+- Xoxocotla — 21,074
+- Xochitepec — 19,164
+- Jojutla — 18,867
+- Tlaquiltenango — 18,334
+- Tres de Mayo — 17,966
+- Axochiapan — 17,508
+- Yecapixtla — 16,811
+- Santa Rosa Treinta — 16,691
+- Progreso — 14,525
+- Tepoztlán — 14,130
+- La Joya — 13,715
+- Juan Morales — 12,756
+- San Pedro Apatlaco — 12,630
+- Tepalcingo — 12,053
+- Anenecuilco — 11,227
+- Galeana — 10,726
+- Unidad Habitacional José María Morelos y Pavón — 10,625
+- Tlaltizapán — 10,563
+- Tetela del Volcán — 10,199
+- Cocoyoc — 9,663
+- Coatetelco — 9,094
+- Fraccionamiento Lomas de Ahuatlán — 8,990
+- Alpuyeca — 8,330
+- Jonacatepec — 8,123
+- Tenextepango — 8,083
+- Tlayacapan — 7,989
+- Atlatlahucan — 7,941
+- Independencia — 7,282
+- Miacatlán — 7,212
+- Chiconcuac — 7,071
+- Oaxtepec — 6,939
+- Ciudad Ayala — 6,777
+- Hueyapan — 6,478
+- Tehuixtla — 6,311
+- Totolapan — 6,198
+- Tres Marías — 6,160
+- Temoac — 5,799
+- Tlatenchi — 5,555
+- Pedro Amaro — 5,551
+- Los Arcos — 5,446
+- Calera Chica — 5,392
+- Amacuzac — 5,368
+- Amayuca — 5,287
+- Tlacotepec — 5,087
+- Tetecala — 4,893
+- Ocuituco — 4,846
+- Tilzapotla — 4,789
+- Jantetelco — 4,645
+- Mazatepec — 4,572
+- Higuerón — 4,568
+- Huitzilac — 4,568
+- Tezoyuca — 4,555
+- Telixtac — 4,554
+- Santa Catarina — 4,521
+- San José Vista Hermosa — 4,447
+- Atlacholoaya — 4,131
+
+## México (326 cities)
+
+- Ecatepec de Morelos — 1,645,352
+- Ciudad Nezahualcoyotl — 1,077,208
+- Naucalpan de Juárez — 834,434
+- Tlalnepantla — 653,410
+- Cuautitlán Izcalli — 555,163
+- Toluca — 489,333
+- Ciudad López Mateos — 489,160
+- Ojo de Agua — 386,290
+- Xico — 384,327
+- Ixtapaluca — 322,271
+- Nicolás Romero — 281,799
+- Zumpango — 280,455
+- Coacalco — 277,959
+- Buenavista — 216,776
+- Cuautitlán — 178,847
+- Chicoloapan — 172,919
+- Chalco — 168,720
+- San Pablo de las Salinas — 156,191
+- Huixquilucan — 124,846
+- Texcoco de Mora — 105,165
+- Tepexpan — 102,667
+- Colonia Lindavista — 100,000
+- Los Reyes Acaquilpan — 85,359
+- Fuentes del Valle — 74,087
+- Santa María Chimalhuacán — 70,519
+- San Mateo Atenco — 67,890
+- Tultepec — 65,338
+- San Salvador Tizatlalli — 61,367
+- Zinacantepec — 54,220
+- Santiago Teyahualco — 53,684
+- Teoloyucan — 51,255
+- San Buenaventura — 44,761
+- Melchor Ocampo — 38,599
+- Tepotzotlán — 38,119
+- Santa Teresa — 36,845
+- San Jerónimo Cuatro Vientos — 36,778
+- Coyotepec — 35,677
+- San Martín Azcatepec — 35,390
+- San Pablo Autopan — 35,141
+- San Isidro — 33,737
+- Amecameca — 31,687
+- San José Guadalupe Otzacatipan — 31,299
+- Metepec — 28,205
+- Tultitlán de Mariano Escobedo — 28,017
+- San Francisco Acuautla — 27,960
+- Magdalena Atlicpac — 26,429
+- San Jerónimo — 26,281
+- Ocoyoacac — 26,015
+- Tejupilco de Hidalgo — 25,631
+- Valle de Bravo — 25,554
+- Emiliano Zapata — 25,309
+- San Francisco Cuaxusco — 24,900
+- San Martín Cuautlalpan — 23,501
+- Teotihuacán de Arista — 23,325
+- Jesús del Monte — 23,150
+- San Jorge Pueblo Nuevo — 23,107
+- Atlacomulco de Fabela — 22,774
+- Lerma de Villada — 22,713
+- Tequixquiac — 22,676
+- San Mateo Otzacatipan — 22,656
+- San Miguel Coatlinchán — 22,619
+- Reyes Acozac — 21,910
+- Tenango de Arista — 21,765
+- Chiconcuac — 21,738
+- San Pedro Totoltepec — 21,076
+- San Rafael — 20,873
+- Capulhuac de Mirafuentes — 20,757
+- Xonacatlán — 20,680
+- San Juan Zitlaltepec — 19,600
+- Santa María Totoltepec — 18,779
+- San Andrés Cuexcontitlán — 18,005
+- Santa María Ajoloapan — 17,784
+- Ixtapan de la Sal — 17,640
+- Huilango — 17,399
+- San Salvador Atenco — 17,124
+- Tezoyuca — 16,933
+- Ozumba de Alzate — 16,700
+- San Francisco Tlalcilalcalpan — 16,509
+- San Antonio Acahualco — 16,442
+- Ampliación San Mateo — 16,250
+- Juchitepec — 16,021
+- Tecámac de Felipe Villanueva — 15,911
+- Santiago Tlacotepec — 15,853
+- Tulantongo — 15,584
+- San Mateo Huitzilzingo — 15,389
+- Tecámac — 15,244
+- Alborada Jaltenco — 15,235
+- Xalatlaco — 15,043
+- Santa Ana Nextlalpan — 14,871
+- Tlalmanalco — 14,786
+- Tenancingo de Degollado — 14,174
+- Apaxco de Ocampo — 13,836
+- Atarasquillo — 13,769
+- San Pedro Tultepec — 13,634
+- Tepetlixpa — 13,239
+- San Gregorio Cuautzingo — 13,138
+- Santiago Tianguistenco de Galeana — 13,106
+- Veintidós de Febrero — 13,021
+- San Sebastián Chimalpa — 12,951
+- San Martín de las Pirámides — 12,812
+- Temascalcingo — 12,698
+- San Antonio la Isla — 12,525
+- Santa María Huexoculco — 12,456
+- Lomas de San Sebastián — 12,372
+- Santiago Cuautlalpan — 12,336
+- San Juan de las Huertas — 12,253
+- San Marcos Huixtoco — 12,229
+- San Bartolo del Llano — 12,227
+- La Magdalena Chichicaspa — 12,193
+- San Pedro de los Baños — 12,149
+- Cacalomacan — 12,001
+- Huehuetoca — 11,948
+- San Pedro Los Baños — 11,886
+- Jilotepec de Molina Enríquez — 11,828
+- San Juan y San Pedro Tezompa — 11,819
+- San Pedro Tlaltizapan — 11,472
+- Progreso Industrial — 11,289
+- Villa Cuauhtémoc — 11,241
+- San Pablo Atlazalpan — 11,236
+- Calimaya — 11,165
+- San Bartolomé Tlaltelulco — 11,141
+- Jaltenco — 11,093
+- San Bartolo Cuautlalpan — 10,989
+- Atlautla — 10,967
+- Puerto Escondido (Tepeolulco Puerto Escondido) — 10,717
+- Santa Catarina Ayotzingo — 10,702
+- Santa María Zolotepec — 10,656
+- Profesor Carlos Hank González — 10,416
+- Fraccionamiento la Trinidad — 10,230
+- Otumba — 10,097
+- Santiago Tílapa — 10,087
+- Paseos de San Juan — 10,050
+- Santiago Yancuitlalpan — 10,013
+- Miraflores — 9,904
+- Chiautla — 9,839
+- Mexicaltzingo — 9,693
+- Tequisistlán Primero — 9,640
+- Huixquilucan de Degollado — 9,554
+- San Felipe Tlalmimilolpan — 9,512
+- Villa Guerrero — 9,509
+- Almoloya del Río — 9,507
+- Jorge Jiménez Cantú — 9,475
+- Cocotitlán — 9,365
+- Ex-hacienda de Xalpa — 9,105
+- Calixtlahuaca — 8,993
+- San Mateo Xoloc — 8,958
+- San Francisco Chimalpa — 8,953
+- San Pedro Cholula — 8,941
+- Coatepec — 8,841
+- San Pedro Chochula — 8,798
+- Villa del Carbón — 8,778
+- Santiaguito Tlalcilalcalli — 8,761
+- El Cerrillo Vista Hermosa — 8,699
+- Santa María Rayón — 8,590
+- Jilotzingo — 8,523
+- San Gaspar Tlahuelilpan — 8,456
+- San Juan Tilapa — 8,420
+- Ex-Rancho San Dimas — 8,371
+- El Pino — 8,332
+- San Miguel Totocuitlapilco — 8,207
+- San José las Palmas — 8,203
+- Santa Cruz Atizapán — 8,062
+- Malinalco — 8,045
+- Ejido San Lorenzo Cuauhtenco — 8,024
+- Santo Domingo de Guzmán — 8,008
+- San Bartolo — 7,951
+- Santo Tomás Chiconautla — 7,844
+- Jocotitlán — 7,575
+- San Lorenzo Tlacotepec — 7,566
+- San Gaspar Tonatico — 7,565
+- Villa Luvianos — 7,546
+- Santa Cruz Cuauhtenco — 7,460
+- San Francisco Zacacalco — 7,420
+- Barrio de México — 7,414
+- Montecillo — 7,371
+- Emiliano Zapata (Santo Domingo) — 7,331
+- Atizapán — 7,243
+- Coatepec Harinas — 7,243
+- La Concepción de los Baños — 7,207
+- Ixtlahuaca de Rayón — 7,114
+- Zacamulpa — 7,097
+- San Miguel Tlaixpan — 7,064
+- Ecatzingo de Hidalgo — 7,058
+- San Pedro Arriba — 7,040
+- San Francisco Tepeolulco — 6,954
+- San Nicolás Tolentino — 6,798
+- Tecamachalco — 6,780
+- San Joaquín Coapango — 6,774
+- Tonanitla — 6,774
+- Santa María Jajalpa — 6,755
+- San Juan Tehuixtitlán — 6,743
+- Santa Cruz del Monte — 6,703
+- Arenal — 6,700
+- Santa Ana Ixtlahuatzingo (Santa Ana) — 6,697
+- San Cristóbal Nexquipayac — 6,661
+- Fraccionamiento Colinas del Sol — 6,640
+- Santa Ana Jilotzingo — 6,625
+- La Cabecera — 6,559
+- Santa María Magdalena Ocotitlán — 6,547
+- Tequisistlán — 6,532
+- San Jerónimo Amanalco — 6,519
+- Tlapanaloya — 6,466
+- San Bartolo Tlaxihuicalco — 6,404
+- La Constitución Toltepec — 6,402
+- Ayapango — 6,361
+- Vista Hermosa — 6,344
+- Temascalapa — 6,314
+- San Bartolomé Atlatlahuca — 6,293
+- San Matías Cuijingo — 6,263
+- Santa María Nativitas — 6,258
+- Salitrillo — 6,231
+- Conjunto Urbano la Loma I — 6,192
+- Santa María Citendejé — 6,136
+- Tepetlaoxtoc de Hidalgo — 6,123
+- El Cóporo — 6,068
+- Chapultepec — 6,004
+- Amanalco de Becerra — 5,990
+- San Antonio Buenavista — 5,937
+- San Marcos Yachihuacaltepec — 5,917
+- Tenango del Aire — 5,915
+- San Nicolás Guadalupe — 5,905
+- San Sebastián — 5,904
+- Santiago Acutzilapan — 5,866
+- Granjas Ampliación Santa Rosa — 5,821
+- Acambay — 5,807
+- San Miguel Tenochtitlán — 5,805
+- Quinto Barrio (Ejido Cahuacán) — 5,795
+- Santa Ana Tlachiahualpa — 5,781
+- El Oro de Hidalgo — 5,776
+- Río Frío de Juárez — 5,774
+- Concepción Jolalpan — 5,761
+- San Lorenzo Oyamel — 5,753
+- Lomas de Altavista — 5,704
+- San Luis Tecuhautitlán — 5,694
+- San Bernardino — 5,667
+- Temamatla — 5,633
+- Santa Catarina del Monte — 5,599
+- San Pedro Abajo — 5,581
+- Acolman de Netzahualcóyotl — 5,571
+- San Pedro Zictepec — 5,571
+- Colorines — 5,543
+- La Candelaria Tlapala — 5,506
+- San Miguel Totoltepec — 5,471
+- Zaragoza — 5,393
+- San Andrés Ocotlán — 5,388
+- San Miguel Ameyalco — 5,387
+- San Lorenzo Tlalmimilolpan — 5,386
+- San Sebastián Xolalpa — 5,383
+- San Pablo Tecalco — 5,344
+- San Pedro Tlanixco — 5,307
+- Santa María Magdalena Cahuacán — 5,279
+- Tequexquináhuac — 5,279
+- San Mateo Atarasquíllo — 5,273
+- San Mateo Ixtacalco — 5,258
+- Xochimanca — 5,239
+- Jicaltepec Autopan — 5,228
+- San José el Vidrio — 5,204
+- Arbolada los Sauces — 5,190
+- Santa Gertrudis — 5,185
+- San Bartolo Oxtotitlán — 5,155
+- San Juan Coajomulco — 5,137
+- La Pastoría — 5,135
+- Santa Catarina — 5,116
+- Xocotlán — 5,082
+- San Bartolomé Coatepec — 5,021
+- Ex-Hacienda Santa Inés — 5,013
+- Jaltepec — 5,001
+- San Simón de la Laguna — 4,996
+- Nueva Santa Rosa — 4,990
+- Santiago Casandeje — 4,977
+- San Francisco Magú — 4,962
+- Santa Cruz Ayotuxco — 4,952
+- San Miguel Mimlapan — 4,949
+- San Miguel Almaya — 4,941
+- San Agustín Mextepec — 4,920
+- Atlatongo — 4,913
+- San Antonio Enchisi — 4,870
+- San Miguel Balderas — 4,866
+- San José el Cuartel — 4,855
+- San Jerónimo Acazulco — 4,827
+- Unidad Acaquilpan — 4,806
+- Enthavi — 4,744
+- San Pedro Techuchulco — 4,713
+- San Pedro el Alto — 4,708
+- San Felipe Coamango — 4,638
+- San Pedro Nexapa — 4,633
+- Texcalyacac — 4,623
+- San Nicolás Tlazala — 4,578
+- Santa Ana Ixtlahuaca (Santa Ana Ixtlahuacingo) — 4,574
+- San Nicolás Peralta — 4,573
+- El Salitre — 4,544
+- El Pedregal de Guadalupe Hidalgo — 4,534
+- La Magdalena — 4,505
+- San Mateo Tlalchichilpan — 4,478
+- Xometla — 4,454
+- Zumpahuacán — 4,450
+- Pueblo Nuevo — 4,422
+- Santa Isabel Ixtapan — 4,407
+- Loma Alta — 4,402
+- Santiago Tolman — 4,402
+- San Mateo Mozoquilpan — 4,381
+- San Juan Yautepec — 4,374
+- San Miguel Hila — 4,373
+- San Ildefonso — 4,371
+- San Felipe del Progreso — 4,350
+- Molino Abajo — 4,330
+- Jicaltepec Cuexcontitlán — 4,318
+- San Pedro Atlapulco — 4,288
+- Soyaniquilpan — 4,287
+- San Pedro del Rosal — 4,277
+- San Juan Tuxtepec — 4,251
+- Dos Ríos — 4,249
+- Santa María de Guadalupe — 4,213
+- Santa María la Asunción — 4,200
+- San Pedro Xalpa — 4,168
+- San Marcos Nepantla — 4,116
+- Calvario del Carmen — 4,101
+- Santa María del Llano — 4,078
+- Papalotla — 4,076
+- Axotlán — 4,071
+- San Mateo Texcalyacac — 4,038
+- Joquicingo — 4,033
+- Mayorazgo de León — 4,030
+- Villas de la Laguna — 4,024
+- Los Reyes — 4,012
+- Transfiguración — 4,002
+
+## Nayarit (31 cities)
+
+- Tepic — 332,863
+- Xalisco — 35,702
+- Ixtlán del Río — 23,303
+- San José del Valle — 22,541
+- Tuxpan — 21,709
+- Mezcales — 20,092
+- Acaponeta — 19,140
+- Santiago Ixcuintla — 18,241
+- Compostela — 17,573
+- Bucerías — 16,161
+- Tecuala — 14,511
+- Las Varas — 14,419
+- San Vicente — 14,324
+- Ruiz — 14,050
+- San Juan de Abajo — 10,442
+- San Blas — 10,187
+- Villa Hidalgo — 9,908
+- La Peñita de Jaltomba — 9,102
+- Valle de Banderas — 7,666
+- Francisco I. Madero — 7,091
+- Ahuacatlán — 6,754
+- Puga — 6,361
+- Las Jarretaderas — 6,262
+- El Porvenir — 6,046
+- Jala — 5,586
+- Zacualpan — 4,893
+- San Felipe Aztatán — 4,546
+- Santa María del Oro — 4,482
+- San Cayetano — 4,345
+- La Presa — 4,241
+- Jalcocotán — 4,207
+
+## Nuevo León (47 cities)
+
+- Monterrey — 1,135,512
+- Guadalupe — 673,616
+- Ciudad Apodaca — 467,157
+- Ciudad General Escobedo — 454,967
+- San Nicolás de los Garza — 412,199
+- Ciudad Benito Juárez — 308,285
+- Santa Catarina — 304,052
+- San Pedro Garza García — 132,128
+- García — 93,641
+- Linares — 70,378
+- Cadereyta Jiménez — 68,111
+- Cadereyta — 67,994
+- Montemorelos — 67,428
+- Jardines de la Silla — 53,742
+- Santiago — 36,840
+- Fraccionamiento Real Palmas — 34,636
+- Ciudad Sabinas Hidalgo — 33,068
+- Ciudad de Allende — 26,065
+- Parque Industrial Ciudad Mitras — 18,312
+- Mitras Poniente — 18,246
+- Anáhuac — 16,628
+- Hidalgo — 16,524
+- Ciénega de Flores — 15,162
+- Doctor Arroyo — 10,272
+- General Zuazua — 9,898
+- Santa Rosa — 9,880
+- Prados de Santa Rosa — 9,626
+- Carmen — 9,568
+- China — 8,997
+- Salinas Victoria — 8,979
+- Misión San Pablo — 8,174
+- Ciudad Cerralvo — 7,169
+- Galeana — 7,024
+- Ciudad General Terán — 6,333
+- Emiliano Zapata — 6,174
+- Real del Sol — 5,983
+- Héctor Caballero — 5,812
+- Valle de Lincoln — 5,759
+- Hualahuises — 5,687
+- Monte Kristal — 5,640
+- Loma la Paz — 5,629
+- Pesquería — 5,465
+- Villas de Alcalá — 5,405
+- Lampazos de Naranjo — 5,026
+- Las Torres — 4,925
+- Mina — 4,495
+- Alianza Real — 4,022
+
+## Oaxaca (100 cities)
+
+- Oaxaca — 255,029
+- Tuxtepec — 159,452
+- Heroica Ciudad de Juchitán de Zaragoza — 88,280
+- Salina Cruz — 84,438
+- Santo Domingo Tehuantepec — 67,739
+- Santa Cruz Xoxocotlán — 67,086
+- Ciudad de Huajuapan de León — 53,043
+- Loma Bonita — 40,934
+- Puerto Escondido — 29,903
+- Pinotepa Nacional — 29,604
+- Ixtepec — 25,381
+- Miahuatlán de Porfirio Díaz — 23,940
+- Santa María Atzompa — 21,788
+- San Antonio de la Cal — 20,198
+- Matías Romero Avendaño — 18,944
+- Heroica Ciudad de Tlaxiaco — 17,543
+- Crucecita — 15,130
+- Ocotlán de Morelos — 15,016
+- Villa de Zaachila — 13,959
+- San Jacinto Amilpas — 13,860
+- Tlacolula de Matamoros — 13,821
+- Vicente Guerrero — 13,794
+- San Pedro Pochutla — 13,685
+- Unión Hidalgo — 13,683
+- Asunción Nochixtlán — 13,284
+- Río Grande — 12,943
+- Cuilápam de Guerrero — 12,360
+- Heroica Villa de San Blas Atempa — 11,959
+- El Rosario — 11,707
+- Zimatlán de Álvarez — 10,986
+- Putla Villa de Guerrero — 10,925
+- Chahuites — 10,763
+- San Francisco Telixtlahuaca — 10,618
+- Santa Cruz Amilpas — 10,120
+- Santiago Jamiltepec — 10,107
+- Chahuite — 9,837
+- Brisas de Zicatela — 9,771
+- Heroica Ciudad de Ejutla de Crespo — 9,748
+- Santiago Juxtlahuaca — 9,565
+- Santa María Jalapa del Marqués — 8,996
+- Tlalixtac de Cabrera — 8,881
+- San Pablo Huixtepec — 8,786
+- Colonia Rincón Viejo — 8,540
+- Cosolapa — 8,320
+- San Pablo Villa de Mitla — 8,167
+- Isla Soyaltepec — 8,116
+- El Espinal — 7,823
+- Hacienda Blanca — 7,758
+- Santa María del Tule — 7,636
+- Santa María Xadani — 7,613
+- Teotitlán de Flores Magón — 7,598
+- San Pedro Tapanatepec — 7,441
+- Santa María Huatulco — 7,409
+- San Lorenzo Cacaotepec — 7,351
+- Villa de Etla — 7,285
+- Santiago Suchilquitongo — 7,276
+- Santo Domingo Zanatepec — 7,249
+- Asunción Ixtaltepec — 7,203
+- Vicente Camalote — 7,164
+- San Agustin de las Juntas — 6,923
+- Temascal — 6,566
+- San Lucas Ojitlán — 6,289
+- Santa Catarina Juquila — 6,220
+- San Felipe Jalapa de Díaz — 6,174
+- Acatlán de Pérez Figueroa — 6,040
+- San Mateo del Mar — 5,734
+- Pinotepa de Don Luis — 5,692
+- San Miguel Panixtlahuaca — 5,682
+- San Juan Colorado — 5,561
+- San Pablo Huitzo — 5,519
+- San Juan Bautista Valle Nacional — 5,488
+- San Dionisio Ocotepec — 5,459
+- Santo Domingo Petapa — 5,429
+- Bajos de Chila — 5,425
+- San Francisco Ixhuatan — 5,408
+- San Antonino Castillo Velasco — 5,354
+- Santos Reyes Nopala — 5,201
+- Tamazulapam Villa del Progreso — 5,028
+- San Pedro Amuzgos — 4,925
+- La Ventosa — 4,884
+- Zacatepec — 4,854
+- San Felipe Usila — 4,838
+- Santa María Huazolotitlán — 4,763
+- San Francisco del Mar — 4,724
+- San Pedro Jicayán — 4,710
+- Trinidad de Viguera — 4,608
+- San Sebastián Tutla — 4,534
+- Santa Catarina Mechoacán — 4,500
+- Santiago Etla — 4,374
+- Teotitlán del Valle — 4,357
+- San Andrés Huayápam — 4,344
+- San Pablo Guilá — 4,303
+- Magdalena Teitipac — 4,297
+- San Juan Guichicovi — 4,284
+- San Juan Cacahuatepec — 4,236
+- San Andrés Huaxpaltepec — 4,146
+- Santiago Yaitepec — 4,120
+- San José del Progreso — 4,110
+- San Cristóbal Amatlán — 4,097
+- San Francisco del Mar Viejo — 4,033
+
+## Puebla (171 cities)
+
+- Puebla — 1,692,181
+- Cholula — 292,881
+- Tehuacán — 248,716
+- San Martin Texmelucan de Labastida — 155,738
+- Teziutlan — 103,583
+- Amozoc de Mota — 95,322
+- Atlixco — 86,690
+- Huauchinango — 56,206
+- San Bernardino Tlaxcalancingo — 54,517
+- Izúcar de Matamoros — 42,936
+- San Andrés Cholula — 39,964
+- Xicotepec de Juárez — 39,803
+- Zacatlán — 33,736
+- Tecamachalco — 28,679
+- Ajalpan — 28,031
+- Sanctorum — 27,936
+- Tepeaca — 27,449
+- Moyotzingo — 27,137
+- Acatzingo — 25,811
+- Huejotzingo — 25,684
+- Cuautlancingo — 25,104
+- Ciudad Serdán — 23,824
+- Acajete — 20,923
+- Chignahuapan — 19,608
+- Acatlán de Osorio — 19,341
+- Altepexi — 18,217
+- Santiago Momoxpan — 17,622
+- San Salvador El Seco — 17,263
+- Casa Blanca — 17,262
+- Palmarito Tochapan — 17,213
+- Zaragoza — 16,752
+- Los Reyes de Juárez — 16,683
+- Santa Ana Xalmimilulco — 16,125
+- Tepatlaxco de Hidalgo — 16,085
+- San Rafael Tlanalapan — 15,998
+- Zinacatepec — 15,592
+- Libres — 15,536
+- San Miguel Canoa — 14,863
+- Coronango — 14,859
+- Miahuatlán — 13,909
+- Santa María Xonacatepec — 13,673
+- Almecatla — 13,217
+- Santa María Zacatepec — 12,466
+- Villa Lázaro Cárdenas — 12,253
+- San Gabriel Chilac — 12,149
+- Huixcolotla — 12,148
+- San Francisco Ocotlán — 11,636
+- Nealtican — 11,517
+- Chiautla de Tapia — 11,511
+- San Miguel Xoxtla — 11,269
+- Chinautla — 11,096
+- San Matias Tlalancaleca — 11,076
+- Atencingo — 10,879
+- Huautla de Jiménez — 10,528
+- Tlaixpan — 10,513
+- Ciudad de Chiautla de Tapia — 10,320
+- Quecholac — 10,216
+- Zacatepec — 10,204
+- Grajales — 10,054
+- Guadalupe Victoria — 10,035
+- Oriental — 9,957
+- San Marcos Tlacoyalco — 9,881
+- Tlatlauquitepec — 9,720
+- Magdalena Cuayucatepec — 9,227
+- La Resurrección — 9,065
+- Ciudad de Tlatlauquitepec — 9,047
+- San Hipólito — 8,999
+- Tlacotepec — 8,908
+- Xaltepec — 8,865
+- Villa Avila Camacho — 8,780
+- San Lucas el Grande — 8,546
+- Cuacnopalan — 8,516
+- San Andrés Azumiatla — 8,509
+- Santa Rita Tlahuapan — 8,412
+- Zacapoaxtla — 8,384
+- Necaxa — 8,375
+- San Juan Xiutetelco — 8,251
+- San Juan Tepulco — 8,232
+- Nuevo Necaxa — 8,203
+- Esperanza — 7,833
+- Santiago Alseseca — 7,744
+- Santiago Acatlán — 7,601
+- Tlachichuca — 7,574
+- San Lorenzo Chiautzingo — 7,477
+- Tenango de las Flores — 7,334
+- Santa María Ixtiyucán — 7,298
+- San Andrés Calpan — 7,161
+- Actipan de Morelos — 7,144
+- Cuapiaxtla de Madero — 7,139
+- Jolalpan — 7,022
+- Zacapechpan — 6,959
+- Yehualtepec — 6,903
+- Villanueva — 6,866
+- San Antonio Mihuacán — 6,826
+- Nopalucán — 6,789
+- San Sebastián de Aparicio — 6,644
+- Santa María la Alta — 6,626
+- San Jerónimo Coyula — 6,622
+- Tochtepec — 6,615
+- Soltepec — 6,547
+- Chautla — 6,540
+- Atempan — 6,457
+- La Magdalena Tetela Morelos — 6,421
+- Coxcatlán — 6,300
+- Venustiano Carranza — 6,263
+- Hueyapán — 6,227
+- San Juan Tuxco — 6,170
+- Teotlaltzingo — 6,166
+- San Agustín Tlaxco — 6,163
+- Atoyatempan — 6,154
+- San Gabriel Tetzoyocán — 6,060
+- Tlaltenango — 5,995
+- Ciudad de Cuetzalan — 5,957
+- Domingo Arenas — 5,864
+- Cuetzalan — 5,785
+- Cuanalá — 5,728
+- Chietla — 5,726
+- San Nicolás de los Ranchos — 5,685
+- Teontepec — 5,593
+- Santa Maria Coatepec — 5,524
+- Tehuitzingo — 5,456
+- Chapulco — 5,358
+- Hueytamalco — 5,335
+- El Rincón Citlaltépetl — 5,326
+- Tulcingo de Valle — 5,249
+- Atoluca — 5,187
+- Tianguismanalco — 5,187
+- Hueyotlipan — 5,176
+- Tecali — 5,156
+- Xochitlan Todos Santos — 5,097
+- Chalchihuapan — 5,061
+- San Martín Caltenco — 5,003
+- San Simón — 4,980
+- Tepexi — 4,933
+- San Juan Ixcaquixtla — 4,922
+- San Luis Tehuiloyocan — 4,878
+- Palmar de Bravo — 4,870
+- Santiago Tenango — 4,870
+- Rafael J. García — 4,869
+- San José Chiapa — 4,821
+- San Jerónimo Ocotitla — 4,809
+- Tepeojuma — 4,788
+- Santa Clara Ocoyucan — 4,747
+- Huehuetlan el Chico — 4,742
+- Tlanepantla — 4,707
+- Calmeca — 4,669
+- San Andrés Hueyacatitla — 4,529
+- Yaonahuac — 4,489
+- San Acateno — 4,481
+- Teteles de Avila Castillo — 4,471
+- Acuexcomac — 4,432
+- Xalacapan de Lucke — 4,398
+- San Rafael Ixtapalucan — 4,379
+- San Gregorio Atzompa — 4,378
+- Ahuatepec — 4,366
+- Zozutla — 4,351
+- San Bernabé Temoxtitla — 4,338
+- Tatoxcac — 4,297
+- Zongozotla — 4,266
+- Tacopan — 4,248
+- Tetela de Ocampo — 4,234
+- San Miguel Tenextatiloyan — 4,209
+- San Antonio Atotonilco — 4,162
+- Morelos Cañada — 4,121
+- Ahuatempan — 4,105
+- Calipan — 4,099
+- San Francisco Tepeyecac — 4,072
+- La Galarza — 4,063
+- San Buenaventura Tecaltzingo — 4,055
+- Santa María Nenetzintla — 4,024
+- Tlancualpican — 4,024
+
+## Querétaro (44 cities)
+
+- Santiago de Querétaro — 1,594,212
+- San Juan del Río — 138,878
+- El Pueblito — 71,254
+- Tequisquiapan — 29,799
+- Santa Rosa Jáuregui — 18,508
+- San José de los Olvera — 18,406
+- Venceremos — 15,538
+- San José el Alto — 14,094
+- Ezequiel Montes — 14,053
+- Cadereyta de Montes — 13,347
+- Juriquilla — 13,309
+- San Pedro Mártir — 11,552
+- Jalpan de Serra — 11,010
+- La Cañada — 10,506
+- Pedro Escobedo — 9,946
+- Santa María Magdalena — 9,099
+- La Negreta — 8,100
+- Amealco de Bonfil — 7,698
+- Colón — 7,014
+- La Pradera — 6,619
+- El Sauz — 6,569
+- La Lira — 6,394
+- La Estancia — 5,992
+- Amazcala — 5,768
+- Saldarriaga — 5,661
+- Villa Progreso — 5,604
+- La Valla — 5,597
+- San Nicolás — 5,576
+- La Llave — 5,497
+- Ajuchitlán — 5,483
+- San Clemente — 4,852
+- Paso de Mata — 4,632
+- General Lázaro Cárdenas — 4,572
+- La Piedad — 4,441
+- El Salitre — 4,408
+- Tlacote el Bajo — 4,396
+- General Lázaro Cárdenas (El Colorado) — 4,315
+- Colonia los Ángeles — 4,309
+- La D — 4,298
+- La Fuente — 4,272
+- La Griega — 4,181
+- Chichimequillas — 4,169
+- Buenavista — 4,115
+- Pie de Gallo — 4,089
+
+## Quintana Roo (17 cities)
+
+- Cancún — 888,797
+- Chetumal — 169,028
+- Playa del Carmen — 149,923
+- Cozumel — 77,236
+- Felipe Carrillo Puerto — 25,744
+- Tulum — 18,233
+- Alfredo V. Bonfil — 14,900
+- Isla Mujeres — 12,642
+- José María Morelos — 11,750
+- Bacalar — 11,513
+- Kantunilkín — 7,150
+- Puerto Aventuras — 5,979
+- Leona Vicario — 5,731
+- Calderitas — 5,326
+- Tihosuco — 4,994
+- Chunhuhub — 4,644
+- Nicolás Bravo — 4,011
+
+## San Luis Potosí (38 cities)
+
+- San Luis Potosí — 722,772
+- Soledad de Graciano Sánchez — 332,072
+- Ciudad Valles — 124,644
+- Matehuala — 77,328
+- Rioverde — 53,128
+- Ciudad Fernández — 32,006
+- Tamazunchale — 24,562
+- Ébano — 24,296
+- Salinas de Hidalgo — 16,821
+- Tamuín — 16,318
+- Cárdenas — 15,469
+- Cerritos — 14,804
+- Santa María del Río — 13,099
+- Charcas — 12,748
+- Cedral — 11,468
+- El Naranjo — 10,562
+- Ciudad del Maíz — 10,391
+- Villa de Reyes — 10,383
+- Tanquián de Escobedo — 10,127
+- Villa Zaragoza — 9,915
+- Axtla de Terrazas — 7,714
+- Villa de Arista — 7,575
+- San Ciro de Acosta — 7,026
+- La Pila — 6,722
+- Ponciano Arriaga — 6,665
+- Xilitla — 6,576
+- San Vicente Tancuayalab — 6,444
+- Dulce Grande — 5,967
+- Rayón — 5,928
+- Los Zacatones — 5,913
+- Venado — 5,743
+- Villa de Arriaga — 5,426
+- Tierra Nueva — 5,261
+- Moctezuma — 4,792
+- Escalerillas — 4,778
+- El Barril — 4,620
+- Ahualulco del Sonido Trece — 4,492
+- Tamasopo — 4,326
+
+## Sinaloa (49 cities)
+
+- Culiacán — 808,416
+- Mazatlán — 381,583
+- Los Mochis — 256,613
+- Guamúchil — 72,500
+- Guasave — 71,196
+- Escuinapa de Hidalgo — 30,790
+- Navolato — 29,153
+- Gabriel Leyva Solano — 27,536
+- Costa Rica — 24,874
+- Licenciado Benito Juárez — 24,185
+- Juan José Ríos — 23,553
+- El Rosario — 16,001
+- La Cruz — 15,657
+- Villa Unión — 13,404
+- Eldorado — 13,197
+- Adolfo Ruiz Cortines — 12,978
+- Adolfo Ruíz Cortínes — 12,947
+- El Fuerte — 12,566
+- Ahome — 11,331
+- General Ángel Flores (La Palma) — 9,812
+- Higuera de Zaragoza — 9,555
+- Choix — 9,306
+- Concordia — 8,328
+- El Diez — 6,939
+- La Reforma — 6,743
+- Estación Bamoa — 6,733
+- Cosalá — 6,577
+- Constancia — 6,500
+- Topolobampo — 6,361
+- Pericos — 6,341
+- Estación Naranjo — 6,307
+- Fraccionamiento los Ángeles — 6,282
+- San Blas — 6,075
+- San Miguel Zapotitlán — 6,048
+- Isla del Bosque — 5,820
+- Quilá — 5,793
+- Mochicahui — 5,623
+- Adolfo López Mateos (El Tamarindo) — 5,546
+- Mocorito — 5,426
+- Sinaloa de Leyva — 5,240
+- Angostura — 5,086
+- Ejido la Ventana — 4,931
+- San Ignacio — 4,543
+- Culiacancito — 4,309
+- Teacapán — 4,252
+- La Trinidad — 4,230
+- Los Ángeles — 4,217
+- Compuertas — 4,156
+- Agua Verde — 4,053
+
+## Sonora (48 cities)
+
+- Hermosillo — 812,229
+- Ciudad Obregón — 329,404
+- Nogales — 264,782
+- San Luis Río Colorado — 176,685
+- Heroica Guaymas — 117,253
+- Navojoa — 113,836
+- Agua Prieta — 77,254
+- Puerto Peñasco — 62,689
+- Heroica Caborca — 59,922
+- Empalme — 42,516
+- Esperanza — 38,969
+- Cananea — 31,560
+- Miguel Alemán (La Doce) — 30,869
+- Huatabampo — 30,475
+- Magdalena de Kino — 26,605
+- Pueblo Yaqui — 14,234
+- Villa Juárez — 13,770
+- Sonoyta — 12,849
+- Nacozari Viejo — 11,872
+- Santa Ana — 11,864
+- Nacozari de García — 11,489
+- Etchojoa — 9,710
+- Álamos — 9,345
+- Tobarito — 9,065
+- Vicam — 8,837
+- Marte R. Gómez (Tobarito) — 8,700
+- Bacobampo — 8,539
+- Altar — 7,927
+- Cócorit — 7,752
+- San Ignacio Río Muerto — 7,718
+- Pótam — 7,044
+- Imuris — 6,841
+- Esqueda — 6,749
+- Francisco Javier Mina — 6,242
+- Naco — 6,064
+- Bahía de Kino — 6,050
+- Pesqueira — 5,699
+- Pitiquito — 5,410
+- Benjamín Hill — 5,071
+- La Providencia — 4,916
+- La Unión — 4,812
+- Carbó — 4,516
+- Providencia — 4,501
+- Buaysiacobe — 4,356
+- Moctezuma (Sonora) — 4,326
+- San José de Bácum — 4,318
+- Bácum — 4,227
+- Sahuaripa — 4,041
+
+## Tabasco (55 cities)
+
+- Villahermosa — 353,577
+- Cárdenas — 91,558
+- Paraiso — 86,632
+- Comalcalco — 41,458
+- Tenosique — 32,579
+- Macuspana — 32,225
+- Huimanguillo — 27,344
+- Teapa — 26,548
+- Río de Teapa — 26,500
+- Frontera — 22,795
+- Playas del Rosario — 21,893
+- Emiliano Zapata — 20,030
+- Cunduacán — 19,824
+- Jalpa de Méndez — 15,695
+- Benito Juárez — 14,451
+- Balancán — 13,030
+- Nacajuca — 11,289
+- Parrilla II — 10,967
+- Pomoca — 10,864
+- Tecolutilla — 10,637
+- Parrilla — 9,664
+- Tamulté de las Sabanas — 8,824
+- La Venta — 8,821
+- Bosque de Saloya — 8,600
+- Vicente Guerrero — 8,188
+- Tacotalpa — 8,071
+- Medellín y Madero Segunda Sección — 7,825
+- La Selva — 7,690
+- Chontalpa — 7,336
+- Chichicapa — 7,091
+- Jonuta — 6,899
+- Río Viejo Primera Sección — 6,726
+- Macultepec — 6,485
+- Luis Gil Pérez — 6,083
+- Belén — 5,892
+- Pemex — 5,822
+- Huapinol — 5,768
+- La Curva — 5,651
+- Ayapa — 5,640
+- La Lima — 5,638
+- El Triunfo — 5,627
+- Santa Rosalía — 5,528
+- Miguel Hidalgo — 5,397
+- Aldama — 5,237
+- Quintín Arauz — 5,178
+- Anacleto Canabal 2da. Sección — 5,153
+- Jalapa — 4,999
+- Jalupa — 4,800
+- Fraccionamiento Ocuiltzapotlán Dos — 4,675
+- Aquiles Serdán (San Fernando) — 4,613
+- Buenavista — 4,468
+- Lomitas — 4,347
+- Aquiles Serdán — 4,277
+- Cucuyulapa — 4,120
+- Soyataco — 4,046
+
+## Tamaulipas (37 cities)
+
+- Reynosa — 589,466
+- Heroica Matamoros — 510,739
+- Nuevo Laredo — 416,055
+- Ciudad Victoria — 332,100
+- Tampico — 309,003
+- Ciudad Madero — 197,216
+- Miramar — 118,614
+- Ciudad Río Bravo — 95,647
+- Ciudad Mante — 84,787
+- Altamira — 59,536
+- Valle Hermoso — 48,918
+- San Fernando — 29,171
+- Ciudad Miguel Alemán — 19,997
+- Aldama — 13,661
+- Estación Manuel — 12,077
+- Ciudad Gustavo Díaz Ordaz — 11,523
+- González — 11,212
+- Soto la Marina — 10,620
+- Nuevo Progreso — 10,272
+- Ciudad Tula — 10,043
+- Xicoténcatl — 9,593
+- Ciudad Camargo — 7,984
+- Guillermo Zúñiga — 6,961
+- El Campanario y Oradel — 6,951
+- Estación Santa Engracia — 6,606
+- Abasolo — 6,008
+- Jaumave — 5,633
+- Cuauhtémoc — 5,563
+- Nueva Villa de Padilla — 5,517
+- Santander Jiménez — 5,504
+- Ocampo — 5,095
+- Hidalgo — 4,810
+- Mier — 4,762
+- Los Guerra — 4,566
+- Graciano Sánchez — 4,426
+- Nueva Ciudad Guerrero — 4,312
+- Llera de Canales — 4,148
+
+## Tlaxcala (65 cities)
+
+- Tlaxcala — 84,670
+- Villa Vicente Guerrero — 60,001
+- Huamantla — 51,996
+- Apizaco — 49,506
+- Santa Ana Chiautempan — 48,030
+- Zacatelco — 42,150
+- Calpulalpan — 33,263
+- Contla — 27,610
+- Papalotla — 22,969
+- La Magdalena Tlaltelulco — 16,834
+- Teolocholco — 16,240
+- Tetla — 15,161
+- Tlaxco — 14,806
+- Villa de El Carmen Tequexquitla — 14,249
+- Acuitlapilco — 13,386
+- Xicohtzinco — 12,255
+- Ciudad de Nanacamilpa — 12,177
+- Tenancingo — 11,636
+- Xaloztoc — 10,191
+- San Andrés Ahuashuatepec — 10,114
+- San Francisco Tetlanohcan — 9,858
+- Tetlanohcán — 9,832
+- Mazatecochco — 9,671
+- Amaxac de Guerrero — 9,114
+- San Isidro Buen Suceso — 8,769
+- Cuapiaxtla — 8,398
+- Tepetitla — 8,316
+- Santa Catarina Ayometla — 7,992
+- Zimatepec — 7,378
+- Panotla — 7,356
+- Santa Anita Huiloac — 7,183
+- Apetatitlán Antonio Carbajal — 7,026
+- Totolac — 6,989
+- Ignacio Zaragoza — 6,916
+- Santa Ana Nopalucan — 6,848
+- Ixtenco — 6,741
+- San Juan Huactzinco — 6,687
+- Villa Mariano Matamoros — 6,527
+- Zitlaltépec — 6,280
+- Texcalac — 6,279
+- San Esteban Tizatlán — 6,114
+- San Luis Apizaquito — 6,099
+- Villa Alta — 5,974
+- San José Tetel — 5,884
+- San José Xicohténcatl — 5,761
+- San Miguel Contla — 5,761
+- Benito Juárez — 5,674
+- Tocatlán — 5,564
+- San José Teacalco — 5,381
+- San Benito Xaltocan — 5,367
+- Santa María Ixtulco — 5,293
+- San Damián Texoloc — 5,033
+- San Lorenzo Axocomanitla — 5,007
+- Terrenate — 4,967
+- Hueyotlipan — 4,911
+- Santa Cruz Tlaxcala — 4,848
+- Sanctórum — 4,731
+- Santa Justina Ecatepec — 4,616
+- Atexcatzingo — 4,504
+- Santa Cruz Quilehtla — 4,455
+- San Jorge Tezoquipan — 4,438
+- Santa Isabel Xiloxoxtla — 4,436
+- Santa Apolonia Teacalco — 4,261
+- Tetlatlahuca — 4,218
+- Yauhquemehcan — 4,204
+
+## Veracruz (187 cities)
+
+- Veracruz — 428,323
+- Xalapa de Enríquez — 424,755
+- Coatzacoalcos — 310,698
+- Córdoba — 204,721
+- Poza Rica de Hidalgo — 185,242
+- Orizaba — 123,182
+- Minatitlán — 112,046
+- Túxpam de Rodríguez Cano — 84,750
+- San Andrés Tuxtla — 61,769
+- Martínez de la Torre — 60,074
+- Coatepec — 53,621
+- Papantla de Olarte — 53,546
+- Acayucan — 50,934
+- Tierra Blanca — 47,824
+- Las Choapas — 42,693
+- Pánuco — 40,754
+- Río Blanco — 40,611
+- Perote — 37,516
+- Agua Dulce — 36,079
+- Ciudad Mendoza — 35,641
+- Tlapacoyan — 35,338
+- Coatzintla — 34,036
+- Jáltipan de Morelos — 32,778
+- Huatusco — 31,305
+- Tantoyuca — 30,587
+- Cosamaloapan — 30,577
+- Catemaco — 27,615
+- Misantla — 26,827
+- Isla — 26,287
+- Ixtaczoquitlán — 26,187
+- Valente Diaz — 25,700
+- Nanchital de Lázaro Cárdenas del Río — 25,289
+- Álamo — 25,159
+- La Isla — 24,558
+- Allende — 23,620
+- Alvarado — 23,128
+- Cosoleacaque — 22,454
+- Cerro Azul — 22,268
+- Nogales — 22,085
+- Fortín de las Flores — 21,370
+- Naranjos — 20,073
+- Altotonga — 19,722
+- Banderilla — 19,649
+- José Cardel — 19,092
+- Lerdo de Tejada — 18,715
+- Xico — 18,652
+- Carlos A. Carrillo — 17,989
+- Tres Valles — 17,299
+- Fraccionamiento Ciudad Olmeca — 16,074
+- Santiago Tuxtla — 15,459
+- Villa Independencia — 15,297
+- Coscomatepec de Bravo — 15,252
+- Alto Lucero — 15,011
+- Benito Juárez — 14,990
+- Oteapan — 14,925
+- Juan Rodríguez Clara — 14,628
+- Las Amapolas — 14,553
+- Tihuatlan — 14,417
+- General Miguel Alemán — 14,287
+- Palmira — 14,256
+- Anahuac — 14,116
+- Sayula de Alemán — 13,980
+- Cuitláhuac — 13,651
+- Gutiérrez Zamora — 13,651
+- Paso del Macho — 13,413
+- Jalacingo — 13,310
+- Filomeno Mata — 13,304
+- Fraccionamiento Geovillas los Pinos — 12,840
+- Oluta — 12,709
+- Tempoal de Sánchez — 12,526
+- Soledad de Doblado — 12,398
+- Ángel R. Cabada — 12,033
+- Maltrata — 11,842
+- Córdoba (Santa Leticia) — 11,720
+- Plan de Ayala — 11,657
+- El Tejar — 11,168
+- Platón Sánchez — 10,758
+- Chocamán — 10,727
+- Moralillo — 10,191
+- Ixhuatlán del Sureste — 10,149
+- Teocelo — 9,967
+- Boca del Rio — 9,947
+- Ciudad Cuauhtémoc — 9,740
+- Las Vigas de Ramírez — 9,684
+- Texistepec — 9,655
+- Zaragoza — 9,639
+- Rafael Delgado — 9,594
+- Villa Zempoala — 9,249
+- Naolinco de Victoria — 9,233
+- Amatlán de los Reyes — 9,123
+- Playa Vicente — 9,083
+- Atzacan — 8,947
+- Lomas de Barrillas — 8,915
+- Piedras Negras — 8,767
+- Santiago de la Peña — 8,657
+- Colonia Santa Bárbara — 8,617
+- El Higo — 8,459
+- Pajapan — 8,434
+- Mundo Nuevo — 8,420
+- Coyutla — 8,413
+- Jacarandas — 8,351
+- Jalapilla — 8,245
+- Unión y Progreso — 8,181
+- Rinconada — 8,173
+- Tatahuicapan — 8,159
+- El Pueblito — 8,078
+- Totolapa — 8,060
+- Cuichapa — 7,697
+- Vega de Alatorre — 7,653
+- Tlacotalpan — 7,600
+- El Naranjito — 7,574
+- Cuautlapán — 7,549
+- Chinameca — 7,547
+- Tuzamapan — 7,522
+- Paso de Ovejas — 7,468
+- San Marcos de León — 7,256
+- Xocotla — 7,168
+- Acultzingo — 7,040
+- Monte Blanco — 6,911
+- Zongolica — 6,874
+- Coacotla — 6,873
+- Coacoatzintla — 6,832
+- Tesechoacan — 6,783
+- Villa Azueta — 6,754
+- Ixhuatlán del Café — 6,649
+- Lomas Verdes — 6,583
+- San Rafael — 6,515
+- Cabezas — 6,167
+- Guadalupe Victoria — 6,114
+- Juan Díaz Covarrubias — 6,091
+- Mecayapan — 6,068
+- Fraccionamiento Arboledas San Ramón — 6,050
+- Antón Lizardo — 6,003
+- Soconusco — 5,825
+- Villa Emilio Carranza — 5,727
+- Yanga — 5,598
+- Peñuela — 5,421
+- Tezonapa — 5,376
+- Chinampa de Gorostiza — 5,317
+- Manlio Fabio Altamirano — 5,283
+- Úrsulo Galván — 5,259
+- Huayacocotla — 5,211
+- Paso del Toro — 5,197
+- Mecatlán — 5,181
+- Tepetzintla — 5,166
+- El Castillo — 5,154
+- Soteapan — 5,118
+- Tamiahua — 5,086
+- Tamalín — 5,019
+- Primero de Mayo — 5,011
+- Comoapan — 5,009
+- Citlaltépec — 5,005
+- Ixhuatlancillo — 4,975
+- Pacho Viejo — 4,965
+- Puntilla Aldama — 4,855
+- San Pedro Mártir — 4,855
+- Boca del Monte — 4,832
+- Dos Ríos — 4,825
+- Los Altos — 4,771
+- Gabino Barreda — 4,726
+- Los Torrentes — 4,665
+- Otatitlán — 4,659
+- Ignacio de la Llave — 4,646
+- Cosautlán — 4,617
+- Teteltzingo — 4,605
+- Tecolutla — 4,591
+- Tlaltetela — 4,528
+- Chicontepec — 4,519
+- Potrero del Llano — 4,498
+- Estanzuela — 4,492
+- Villa Emiliano Zapata — 4,469
+- Paraje Nuevo — 4,465
+- Tomatlán — 4,348
+- Castillo de Teayo — 4,297
+- Cazones de Herrera — 4,260
+- Ozuluama de Mascareñas — 4,225
+- Buenavista — 4,212
+- Coxquihui — 4,160
+- Chacaltianguis — 4,133
+- Huiloapan de Cuauhtémoc — 4,125
+- El Chote — 4,124
+- Actopan — 4,102
+- Rafael Lucio — 4,097
+- San Juan Evangelista — 4,044
+- Jesús Carranza — 4,023
+- El Salto de Eyipantla — 4,011
+- Tlacojalpan — 4,006
+
+## Yucatán (60 cities)
+
+- Mérida — 1,201,000
+- Kanasín — 77,240
+- Valladolid — 48,973
+- Tizimín — 46,971
+- Umán — 39,611
+- Progreso — 37,369
+- Ticul — 32,796
+- Tecax — 25,751
+- Hunucmá — 24,910
+- Motul — 23,240
+- Oxkutzkab — 23,096
+- Peto — 19,821
+- Chichén-Itzá — 18,000
+- Izamal — 16,195
+- Chemax — 14,885
+- Maxcanú — 12,621
+- Espita — 11,551
+- Muna — 11,469
+- Acanceh — 10,968
+- Tixkokob — 10,968
+- Akil — 10,176
+- Tzucacab — 9,967
+- Tekit — 9,834
+- Halachó — 9,412
+- Tekoh — 9,134
+- Seyé — 8,369
+- Buctzotz — 7,515
+- Dzidzantun — 7,393
+- Conkal — 7,173
+- Caucel — 6,988
+- Celestún — 6,810
+- Cacalchen — 6,787
+- Temozon — 6,553
+- Kinchil — 6,307
+- Temax — 6,239
+- Homun — 6,146
+- Teabo — 6,115
+- Chicxulub Puerto — 6,010
+- Cholul — 5,880
+- Dzilam González — 5,875
+- Sotuta — 5,548
+- Chichimila — 5,528
+- Piste — 5,528
+- Panabá — 5,232
+- X-Cán — 5,191
+- Paseos de Itzincab — 5,013
+- Dzan — 4,939
+- Opichén — 4,751
+- Huhi — 4,745
+- Cholul Cantón — 4,716
+- Hoctun — 4,686
+- Baca — 4,553
+- Chocholá — 4,511
+- Cansahcab — 4,293
+- Komchén — 4,259
+- Popola — 4,176
+- Mani — 4,146
+- Hocaba — 4,127
+- Chicxulub Pueblo — 4,080
+- Campestre Flamboyanes — 4,027
+
+## Zacatecas (38 cities)
+
+- Guadalupe — 170,029
+- Fresnillo — 143,281
+- Zacatecas — 129,011
+- Jerez de García Salinas — 43,064
+- Río Grande — 32,944
+- Víctor Rosales — 32,721
+- Loreto — 24,260
+- Sombrerete — 21,702
+- Nochistlán de Mejía — 16,562
+- Tlaltenango de Sánchez Román — 16,396
+- Juan Aldama — 15,431
+- Jalpa — 14,199
+- Trancoso — 14,021
+- Miguel Auza — 13,551
+- Valparaíso — 12,919
+- Villanueva — 12,269
+- Tacoaleche — 8,612
+- San Pedro Piedra Gorda — 8,297
+- Tabasco — 7,317
+- Concepción del Oro — 7,210
+- Morelos — 6,602
+- Villa García — 6,535
+- Luis Moya — 6,335
+- Villa González Ortega — 6,181
+- Cañitas de Felipe Pescador — 6,166
+- Juchipila — 6,035
+- Villa de Cos — 5,759
+- Nieves — 5,653
+- Pinos — 5,611
+- San Jose de Lourdes — 5,339
+- Pozo de Gamboa — 5,221
+- Sain Alto — 5,037
+- Plateros — 4,902
+- Villa Hidalgo — 4,617
+- Tepechitlán — 4,600
+- General Pánfilo Natera — 4,599
+- Gonzales Ortega — 4,137
+- Río Florido — 4,005
+
