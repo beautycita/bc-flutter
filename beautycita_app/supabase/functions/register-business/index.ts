@@ -221,9 +221,10 @@ serve(async (req) => {
     }
 
     // 4. Create default weekly schedule
-    // Use discovered salon hours if available, otherwise default Mon-Sat 9am-7pm
-    let defaultStart = "09:00";
-    let defaultEnd = "19:00";
+    // Use discovered salon hours if available, otherwise default Mon-Sat 10am-8pm.
+    // Owner can adjust post-registration in the schedule editor.
+    let defaultStart = "10:00";
+    let defaultEnd = "20:00";
     if (discoveredSalon?.working_hours) {
       // working_hours is a text field, try to extract open/close times (e.g. "9:00-20:00" or "Lun-Sáb 10:00-19:00")
       const hoursMatch = String(discoveredSalon.working_hours).match(/(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})/);

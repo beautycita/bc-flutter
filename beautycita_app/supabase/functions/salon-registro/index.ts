@@ -1304,9 +1304,10 @@ Deno.serve(async (req: Request) => {
           return json({ error: "Error al crear perfil de estilista" }, 500);
         }
 
-        // Create default schedule — use discovered salon working_hours if available
-        let defaultStart = "09:00";
-        let defaultEnd = "19:00";
+        // Create default schedule — use discovered salon working_hours if available,
+        // otherwise Mon-Sat 10am-8pm (owner can change anytime).
+        let defaultStart = "10:00";
+        let defaultEnd = "20:00";
         if (discoveredSalon?.working_hours) {
           const hoursMatch = String(discoveredSalon.working_hours).match(/(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})/);
           if (hoursMatch) {
