@@ -36,7 +36,7 @@ class AdminShellScreen extends ConsumerWidget {
     _AdminTab(icon: Icons.directions_walk, label: 'RP Tracking', section: 'Gestion'),
     _AdminTab(icon: Icons.receipt_long, label: 'Retenciones SAT', section: 'Finanzas'),
     _AdminTab(icon: Icons.bar_chart, label: 'Executive', section: 'Finanzas'),
-    _AdminTab(icon: Icons.psychology_outlined, label: 'Inteligencia', section: 'Finanzas'),
+    _AdminTab(icon: Icons.psychology_outlined, label: 'Intel', section: 'Intel'),
   ];
 
   /// Tabs visible ONLY to superadmin — system config.
@@ -213,7 +213,7 @@ class _AdminContent extends ConsumerWidget {
         return const AdminTaxReportsScreen();
       case 'Executive':
         return const AdminExecutiveDashboardScreen();
-      case 'Inteligencia':
+      case 'Intel':
         return const AdminIntelligenceScreen();
       case 'Motor':
         return const AdminEngineScreen();

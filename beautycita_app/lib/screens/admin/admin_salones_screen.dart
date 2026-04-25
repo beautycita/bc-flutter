@@ -15,6 +15,7 @@ import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 import 'admin_pipeline_screen.dart';
 import 'admin_salon_detail_screen.dart';
+import 'admin_salones_insights_screen.dart';
 
 const _salonExportColumns = [
   ExportColumn('name', 'Nombre'),
@@ -61,7 +62,7 @@ class AdminSalonesScreen extends StatelessWidget {
             tabs: const [
               Tab(text: 'Salones'),
               Tab(text: 'Pipeline'),
-              Tab(text: 'Inteligencia'),
+              Tab(text: 'Insights'),
             ],
           ),
           const Expanded(
@@ -69,7 +70,7 @@ class AdminSalonesScreen extends StatelessWidget {
               children: [
                 _SalonesTab(),
                 AdminPipelineScreen(),
-                _IntelligenceTab(),
+                AdminSalonesInsightsScreen(),
               ],
             ),
           ),
