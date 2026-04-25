@@ -309,10 +309,11 @@ async function handleTransactions(
         id, business_id, starts_at, price, payment_method, payment_status,
         isr_withheld, iva_withheld, tax_base, provider_net,
         service_name, status, created_at, booking_source,
-        businesses!inner(name, rfc, tax_regime)
+        businesses!inner(name, rfc, tax_regime, is_test)
       `)
       .eq("status", "completed")
       .in("booking_source", ["bc_marketplace", "invite_link"])
+      .eq("businesses.is_test", false)
       .order("starts_at", { ascending: false });
 
     if (externalFreeVisible) {
@@ -370,16 +371,24 @@ async function handleWithholdings(
   const data = await queryWithRetry(() => {
     let query = supabase
       .from("tax_withholdings")
-      .select("*")
+      .select("*, businesses!inner(is_test)")
       .eq("period_year", year)
       .eq("period_month", month)
+      .eq("businesses.is_test", false)
       .order("created_at", { ascending: false });
 
     if (params.business_id) query = query.eq("business_id", params.business_id);
     return query.range(offset, offset + limit - 1);
   }, "withholdings");
 
-  return { period: { year, month }, data: data ?? [] };
+  // Strip the join-only is_test marker before returning to SAT.
+  return {
+    period: { year, month },
+    data: (data ?? []).map((w: any) => {
+      const { businesses: _drop, ...rest } = w;
+      return rest;
+    }),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -395,7 +404,8 @@ async function handleProviders(
     let query = supabase
       .from("businesses")
       .select("id, name, rfc, tax_regime, tax_residency, city, state, is_active, created_at")
-      .eq("is_active", true);
+      .eq("is_active", true)
+      .eq("is_test", false);
 
     if (params.rfc) query = query.eq("rfc", params.rfc);
     if (params.business_id) query = query.eq("id", params.business_id);
@@ -422,9 +432,10 @@ async function handleSummary(
   const data = await queryWithRetry(() => {
     let query = supabase
       .from("sat_monthly_reports")
-      .select("*")
+      .select("*, businesses!inner(is_test)")
       .eq("period_year", year)
-      .eq("period_month", month);
+      .eq("period_month", month)
+      .eq("businesses.is_test", false);
 
     if (params.business_id) query = query.eq("business_id", params.business_id);
     return query;

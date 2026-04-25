@@ -92,13 +92,18 @@ serve(async (req) => {
       return json({ error: "Valid year and month (1-12) are required" }, 400);
     }
 
-    // Fetch active withholdings for the period (exclude reversed)
+    // Fetch active withholdings for the period (exclude reversed AND test
+    // businesses — the snapshot persists into sat_monthly_reports, so any
+    // contamination here is permanent. Defense in depth: the same JOIN guard
+    // exists in sat-access /withholdings and the BEFORE INSERT trigger on
+    // tax_withholdings rejects test-business writes outright.)
     const { data: withholdings, error: fetchError } = await supabase
       .from("tax_withholdings")
-      .select("*")
+      .select("*, businesses!inner(is_test)")
       .eq("period_year", year)
       .eq("period_month", month)
       .neq("status", "reversed")
+      .eq("businesses.is_test", false)
       .order("created_at", { ascending: true });
 
     if (fetchError) {
