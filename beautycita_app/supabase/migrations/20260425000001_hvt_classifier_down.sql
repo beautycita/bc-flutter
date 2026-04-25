@@ -13,8 +13,11 @@ DROP POLICY IF EXISTS "tier_assignments: admin read" ON public.discovered_salon_
 DROP POLICY IF EXISTS "tiers: superadmin all" ON public.discovered_salon_tiers;
 DROP POLICY IF EXISTS "tiers: read by anyone authed" ON public.discovered_salon_tiers;
 
+-- Drop the assignments table first (FKs to both other tables), then the
+-- signal columns on discovered_salons (their tier_id FK references
+-- discovered_salon_tiers), then the tiers table itself. Doing this in any
+-- other order trips check_violation against a still-attached FK.
 DROP TABLE IF EXISTS public.discovered_salon_tier_assignments;
-DROP TABLE IF EXISTS public.discovered_salon_tiers;
 
 ALTER TABLE public.discovered_salons
   DROP COLUMN IF EXISTS tier_classified_at,
@@ -27,6 +30,8 @@ ALTER TABLE public.discovered_salons
   DROP COLUMN IF EXISTS owner_chain_size,
   DROP COLUMN IF EXISTS hvt_score,
   DROP COLUMN IF EXISTS tier_id;
+
+DROP TABLE IF EXISTS public.discovered_salon_tiers;
 
 DELETE FROM public.app_config WHERE key IN (
   'hvt_weight_chain','hvt_weight_years','hvt_weight_reputation',
