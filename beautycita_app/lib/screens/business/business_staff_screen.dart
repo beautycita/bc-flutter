@@ -18,9 +18,7 @@ import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
+import '../../services/qr_print_service.dart';
 import '../../repositories/staff_repository.dart';
 import '../../widgets/aphrodite_copy_field.dart';
 import '../../widgets/bc_image_editor.dart';
@@ -1819,7 +1817,7 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
               children: [
                 Expanded(
                   child: FilledButton.icon(
-                    onPressed: () => _printQrCode(context, uploadUrl, staffName),
+                    onPressed: () => _printQrCode(context, uploadUrl, staffName, pin: pin),
                     icon: const Icon(Icons.print, size: 16),
                     label: const Text('Imprimir'),
                     style: FilledButton.styleFrom(
@@ -1857,57 +1855,20 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
     );
   }
 
-  Future<void> _printQrCode(BuildContext context, String url, String staffName) async {
-    final doc = pw.Document();
-
-    // Generate QR as image bytes
-    final qrPainter = QrPainter(
-      data: url,
-      version: QrVersions.auto,
+  Future<void> _printQrCode(
+    BuildContext context,
+    String url,
+    String staffName, {
+    required String pin,
+  }) async {
+    // Replaces the legacy single half-page card with a 12-up sticker grid
+    // sized for ~1m scan distance (40mm QR). Stylist sticks one in the
+    // mirror corner; remaining 11 cover other stations or restocks.
+    await QrPrintService.printStylistStickers(
+      uploadUrl: url,
+      stylistName: staffName,
+      pin: pin,
     );
-    final picData = await qrPainter.toImageData(600);
-    if (picData == null) return;
-    final qrImage = pw.MemoryImage(picData.buffer.asUint8List());
-
-    doc.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.letter,
-        build: (pw.Context ctx) {
-          return pw.Center(
-            child: pw.Container(
-              width: PdfPageFormat.letter.width / 2,
-              height: PdfPageFormat.letter.height / 2,
-              padding: const pw.EdgeInsets.all(24),
-              child: pw.Column(
-                mainAxisAlignment: pw.MainAxisAlignment.center,
-                children: [
-                  pw.Text('BeautyCita', style: pw.TextStyle(fontSize: 28, fontWeight: pw.FontWeight.bold)),
-                  pw.SizedBox(height: 8),
-                  pw.Text('Portafolio — Antes y Despues', style: const pw.TextStyle(fontSize: 14)),
-                  pw.SizedBox(height: 24),
-                  pw.Image(qrImage, width: 200, height: 200),
-                  pw.SizedBox(height: 16),
-                  pw.Text(staffName, style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
-                  pw.SizedBox(height: 12),
-                  pw.Text(
-                    'Escanea este codigo con tu celular para subir\nfotos de tu trabajo (antes y despues).',
-                    textAlign: pw.TextAlign.center,
-                    style: const pw.TextStyle(fontSize: 11),
-                  ),
-                  pw.SizedBox(height: 8),
-                  pw.Text(
-                    'Necesitaras tu PIN para acceder.',
-                    style: pw.TextStyle(fontSize: 10, fontStyle: pw.FontStyle.italic),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-
-    await Printing.layoutPdf(onLayout: (_) => doc.save());
   }
 
   // ---- Schedule editor ----

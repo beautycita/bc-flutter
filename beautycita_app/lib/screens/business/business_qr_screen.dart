@@ -9,6 +9,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../config/constants.dart';
 import '../../providers/business_provider.dart';
+import '../../services/qr_print_service.dart';
 import '../../services/toast_service.dart';
 import '../../widgets/empty_state.dart';
 
@@ -184,6 +185,25 @@ class _QrContentState extends State<_QrContent> {
             ],
           ),
 
+          const SizedBox(height: AppConstants.paddingSM),
+
+          // Print 4-up cards with cut lines (full sheet, scissor along the
+          // dashed perimeter on each card). Routes through QrPrintService.
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _saving ? null : _printCards,
+              icon: const Icon(Icons.print_rounded, size: 20),
+              label: Text(
+                'Imprimir tarjetas (4 por hoja)',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+
           const SizedBox(height: AppConstants.paddingMD),
 
           // Info card
@@ -263,6 +283,20 @@ class _QrContentState extends State<_QrContent> {
     setState(() => _saving = true);
     try {
       await SharePlus.instance.share(ShareParams(text: 'Escanea para reservar: ${widget.qrUrl}'));
+    } catch (e, stack) {
+      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _printCards() async {
+    setState(() => _saving = true);
+    try {
+      await QrPrintService.printExpressCitaCards(
+        qrUrl: widget.qrUrl,
+        businessName: widget.businessName,
+      );
     } catch (e, stack) {
       ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     } finally {
