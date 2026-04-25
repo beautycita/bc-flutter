@@ -14,6 +14,7 @@ import '../../widgets/pagination_bar.dart';
 import '../../widgets/salon_segments_dashboard.dart';
 import '../../utils/salon_default_avatar.dart';
 import 'salon_detail_panel.dart';
+import 'salons_insights_page.dart';
 
 /// Admin salons management page with two tabs:
 /// "Registrados" (businesses table) and "Descubiertos" (discovered_salons table).
@@ -41,7 +42,7 @@ class _SalonsPageState extends ConsumerState<SalonsPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) {
         setState(() {
@@ -80,6 +81,7 @@ class _SalonsPageState extends ConsumerState<SalonsPage>
             tabs: const [
               Tab(text: 'Registrados'),
               Tab(text: 'Descubiertos'),
+              Tab(text: 'Insights'),
             ],
             labelColor: colors.primary,
             unselectedLabelColor:
@@ -112,6 +114,7 @@ class _SalonsPageState extends ConsumerState<SalonsPage>
                 onCheckedChanged: (s) =>
                     setState(() => _checkedDiscovered = s),
               ),
+              const SalonsInsightsPage(),
             ],
           ),
         ),

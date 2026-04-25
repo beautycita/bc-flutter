@@ -55,6 +55,9 @@ abstract final class BCTables {
   static const String discoveredSalons = 'discovered_salons';
   static const String salonOutreachLog = 'salon_outreach_log';
   static const String outreachTemplates = 'outreach_templates';
+  static const String discoveredSalonTiers = 'discovered_salon_tiers';
+  static const String discoveredSalonTierAssignments =
+      'discovered_salon_tier_assignments';
 
   // ── Business CRM ────────────────────────────────────────────────
   static const String businessClients = 'business_clients';

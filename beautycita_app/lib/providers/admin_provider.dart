@@ -1055,6 +1055,50 @@ final searchDiscoveredSalonsProvider = FutureProvider.family<List<Map<String, dy
     }).toList();
   }
 
+  // HVT enrichment: the search_discovered_salons RPC predates the tier
+  // columns on discovered_salons. Fetch tier_id + hvt_score + tier_locked
+  // in one follow-up query so the Pipeline screen can render tier badges
+  // and sort by HVT score without a breaking RPC migration.
+  if (results.isNotEmpty) {
+    final ids = results
+        .map((s) => s['id']?.toString())
+        .whereType<String>()
+        .toList(growable: false);
+    if (ids.isNotEmpty) {
+      try {
+        final hvtRows = await SupabaseClientService.client
+            .from('discovered_salons')
+            .select('id, tier_id, hvt_score, tier_locked, owner_chain_size')
+            .inFilter('id', ids);
+        final byId = <String, Map<String, dynamic>>{
+          for (final r in (hvtRows as List).cast<Map<String, dynamic>>())
+            r['id'] as String: r,
+        };
+        for (final s in results) {
+          final extra = byId[s['id'] as String];
+          if (extra == null) continue;
+          s['tier_id'] = extra['tier_id'];
+          s['hvt_score'] = extra['hvt_score'];
+          s['tier_locked'] = extra['tier_locked'];
+          s['owner_chain_size'] = extra['owner_chain_size'];
+        }
+      } catch (_) {
+        // Tier columns are admin-only via existing RLS — non-admin sessions
+        // would error here. Silently fall back to tier-less rows.
+      }
+    }
+  }
+
+  // Optional sort-by-hvt: when the caller sets sort_by='hvt_score', resort
+  // the merged list by hvt_score descending. Untouched otherwise.
+  if (params['sort_by'] == 'hvt_score') {
+    results.sort((a, b) {
+      final av = (a['hvt_score'] as num?)?.toDouble() ?? -1;
+      final bv = (b['hvt_score'] as num?)?.toDouble() ?? -1;
+      return bv.compareTo(av);
+    });
+  }
+
   return results;
 });
 

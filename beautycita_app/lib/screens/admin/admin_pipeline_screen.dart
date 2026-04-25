@@ -1886,6 +1886,10 @@ class _LeadCard extends StatelessWidget {
     final interestCount = lead['interest_count'] as int? ?? 0;
     final lastOutreachAt = lead['last_outreach_at'] as String?;
     final outreachChannel = lead['outreach_channel'] as String?;
+    // HVT enrichment from admin_provider follow-up fetch.
+    final tierId = lead['tier_id'] as String?;
+    final hvtScore = (lead['hvt_score'] as num?)?.toDouble();
+    final tierLocked = lead['tier_locked'] == true;
 
     final locationLine =
         [city, state].where((s) => s.isNotEmpty).join(', ');
@@ -1966,6 +1970,15 @@ class _LeadCard extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(width: 6),
+                            // HVT tier badge (highest first — tier dot + score).
+                            if (tierId != null) ...[
+                              _TierBadge(
+                                tierId: tierId,
+                                score: hvtScore,
+                                locked: tierLocked,
+                              ),
+                              const SizedBox(width: 4),
+                            ],
                             // Source badge
                             if (source != null)
                               _SmallBadge(
@@ -2138,6 +2151,70 @@ class _SmallBadge extends StatelessWidget {
           fontWeight: FontWeight.w700,
           color: color,
         ),
+      ),
+    );
+  }
+}
+
+/// Inline HVT tier badge — small dot + label + (optional) score, with a
+/// padlock icon when tier_locked. Colors match discovered_salon_tiers seed.
+class _TierBadge extends StatelessWidget {
+  final String tierId;
+  final double? score;
+  final bool locked;
+  const _TierBadge({required this.tierId, required this.score, required this.locked});
+
+  static const _meta = <String, ({String label, Color color})>{
+    't1': (label: 'Estrella',    color: Color(0xFFFFD700)),
+    't2': (label: 'Líder',       color: Color(0xFFC0C0C0)),
+    't3': (label: 'Establecido', color: Color(0xFFCD7F32)),
+    't4': (label: 'Estándar',    color: Color(0xFFA8A8A8)),
+    't5': (label: 'Volumen',     color: Color(0xFF7FB069)),
+    't6': (label: 'Marginal',    color: Color(0xFF5C5C5C)),
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final m = _meta[tierId] ?? (label: tierId, color: Colors.grey);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: m.color.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(AppConstants.radiusFull),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(color: m.color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            m.label,
+            style: GoogleFonts.nunito(
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              color: m.color,
+            ),
+          ),
+          if (score != null) ...[
+            const SizedBox(width: 4),
+            Text(
+              score!.toStringAsFixed(0),
+              style: GoogleFonts.nunito(
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+                color: m.color,
+              ),
+            ),
+          ],
+          if (locked) ...[
+            const SizedBox(width: 3),
+            Icon(Icons.lock, size: 9, color: m.color),
+          ],
+        ],
       ),
     );
   }
