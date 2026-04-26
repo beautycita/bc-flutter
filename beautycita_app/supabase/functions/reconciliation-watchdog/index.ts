@@ -25,21 +25,16 @@ const WA_API_TOKEN = Deno.env.get("BEAUTYPI_WA_TOKEN") ?? "";
 const BC_PHONE = Deno.env.get("BC_ALERT_PHONE") ?? "";
 
 async function sendAlert(message: string): Promise<boolean> {
-  if (!WA_API_URL || !BC_PHONE) return false;
+  if (!BC_PHONE) return false;
   try {
-    const ac = new AbortController();
-    const t = setTimeout(() => ac.abort(), 5000);
-    const res = await fetch(`${WA_API_URL}/api/wa/send`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${WA_API_TOKEN}`,
-      },
-      body: JSON.stringify({ phone: BC_PHONE, message }),
-      signal: ac.signal,
+    const { createClient: _createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+    const { enqueueWa, WA_PRIORITY } = await import("../_shared/wa_queue.ts");
+    const supabase = _createClient(SUPABASE_URL, SERVICE_KEY);
+    const id = await enqueueWa(supabase, BC_PHONE, message, {
+      priority: WA_PRIORITY.CRITICAL,
+      source: "reconciliation-watchdog",
     });
-    clearTimeout(t);
-    return res.ok;
+    return id !== null;
   } catch (_) { return false; }
 }
 
@@ -105,21 +100,49 @@ Deno.serve(async (req) => {
       checked_at: string;
     };
 
-    // Alert on critical or error
+    // Alert on critical or error — but only on state TRANSITION. The
+    // should_alert_reconciliation() RPC dedups same-fingerprint cycles and
+    // re-emits at a 24h heartbeat to confirm the failure is still active.
     if (result.worst_status === "critical" || result.worst_status === "error") {
-      const lines = [
-        result.worst_status === "critical"
-          ? "🚨 *BeautyCita accounting invariant FAILED*"
-          : "⚠️ *BeautyCita reconciliation check ERRORED*",
-        "",
-        formatCheck(result.user_saldo),
-        formatCheck(result.business_debt),
-        formatCheck(result.platform),
-        "",
-        `_Checked at ${result.checked_at}_`,
-        "Run admin query on reconciliation_log for offenders.",
-      ];
-      await sendAlert(lines.join("\n"));
+      const fingerprint = [
+        result.worst_status,
+        result.user_saldo.status, Number(result.user_saldo.drift ?? 0).toFixed(2),
+        result.business_debt.status, Number(result.business_debt.drift ?? 0).toFixed(2),
+        result.platform.status, Number(result.platform.drift ?? 0).toFixed(2),
+        result.user_saldo.offender_count ?? 0,
+        result.business_debt.offender_count ?? 0,
+      ].join("|");
+
+      const { data: shouldFire } = await supabase.rpc("should_alert_reconciliation", {
+        p_fingerprint: fingerprint,
+        p_status: result.worst_status,
+        p_heartbeat_hours: 24,
+      });
+
+      if (shouldFire === true) {
+        const lines = [
+          result.worst_status === "critical"
+            ? "🚨 *BeautyCita accounting invariant FAILED*"
+            : "⚠️ *BeautyCita reconciliation check ERRORED*",
+          "",
+          formatCheck(result.user_saldo),
+          formatCheck(result.business_debt),
+          formatCheck(result.platform),
+          "",
+          `_Checked at ${result.checked_at}_`,
+          "Run admin query on reconciliation_log for offenders.",
+        ];
+        await sendAlert(lines.join("\n"));
+      } else {
+        console.log(`[recon-watchdog] suppressed duplicate alert (fp=${fingerprint})`);
+      }
+    } else if (result.worst_status === "ok") {
+      // Clear the dedup fingerprint so a future re-occurrence fires fresh.
+      await supabase.rpc("should_alert_reconciliation", {
+        p_fingerprint: "ok",
+        p_status: "ok",
+        p_heartbeat_hours: 24,
+      });
     }
 
     return new Response(JSON.stringify(result), {
