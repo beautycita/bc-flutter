@@ -269,11 +269,14 @@ serve(async (req) => {
             break;
           }
 
-          // Idempotency: dedup via debt_payments stripe_payment_intent_id.
+          // Idempotency: a single PI fans out to N debt_payments rows (one
+          // per tax_obligation debt FIFO-applied). limit(1).maybeSingle()
+          // avoids the "more than one row" error on retries.
           const { data: existingPayment } = await supabase
             .from("debt_payments")
             .select("id")
             .eq("stripe_payment_intent_id", paymentIntent.id)
+            .limit(1)
             .maybeSingle();
           if (existingPayment) {
             console.log(`[STRIPE-WEBHOOK] tax debt payment already applied for PI ${paymentIntent.id}`);
