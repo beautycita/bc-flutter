@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:beautycita/config/fonts.dart';
 import 'notification_templates_screen.dart';
 import 'feature_toggles_screen.dart';
+import 'admin_outreach_audit_screen.dart';
 
-/// Sistema wrapper — two sub-tabs: Notificaciones, Toggles.
+/// Sistema wrapper — three sub-tabs: Notificaciones, Toggles, Outreach.
 class AdminSystemScreen extends StatelessWidget {
   const AdminSystemScreen({super.key});
 
@@ -11,7 +12,7 @@ class AdminSystemScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Column(
         children: [
           TabBar(
@@ -29,6 +30,7 @@ class AdminSystemScreen extends StatelessWidget {
             tabs: const [
               Tab(text: 'Notificaciones'),
               Tab(text: 'Toggles'),
+              Tab(text: 'Outreach'),
             ],
           ),
           const Expanded(
@@ -36,6 +38,7 @@ class AdminSystemScreen extends StatelessWidget {
               children: [
                 NotificationTemplatesScreen(),
                 FeatureTogglesScreen(),
+                AdminOutreachAuditScreen(),
               ],
             ),
           ),

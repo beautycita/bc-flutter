@@ -121,6 +121,46 @@ class BulkJobSummary {
   BulkJobSummary({required this.id, required this.total, required this.preview});
 }
 
+class BulkJobStatus {
+  final String id;
+  final String status; // queued | draining | completed | cancelled | failed
+  final String channel;
+  final int totalCount;
+  final int sentCount;
+  final int skippedCount;
+  final int failedCount;
+  final String? templateName;
+  final DateTime createdAt;
+
+  BulkJobStatus({
+    required this.id,
+    required this.status,
+    required this.channel,
+    required this.totalCount,
+    required this.sentCount,
+    required this.skippedCount,
+    required this.failedCount,
+    this.templateName,
+    required this.createdAt,
+  });
+
+  bool get isActive => status == 'queued' || status == 'draining';
+  int get processed => sentCount + skippedCount + failedCount;
+  double get progress => totalCount == 0 ? 0 : processed / totalCount;
+
+  factory BulkJobStatus.fromJson(Map<String, dynamic> j) => BulkJobStatus(
+        id: j['id'] as String,
+        status: j['status'] as String,
+        channel: j['channel'] as String,
+        totalCount: (j['total_count'] as num?)?.toInt() ?? 0,
+        sentCount: (j['sent_count'] as num?)?.toInt() ?? 0,
+        skippedCount: (j['skipped_count'] as num?)?.toInt() ?? 0,
+        failedCount: (j['failed_count'] as num?)?.toInt() ?? 0,
+        templateName: j['template_name'] as String?,
+        createdAt: DateTime.parse(j['created_at'] as String),
+      );
+}
+
 class OutreachService {
   /// List active templates filtered by recipient table (and optionally invite-only).
   static Future<List<OutreachTemplate>> listTemplates({
@@ -229,6 +269,29 @@ class OutreachService {
       total: (data['total'] as num).toInt(),
       preview: (data['preview'] as String?) ?? '',
     );
+  }
+
+  /// List active bulk jobs for the current admin (queued + draining), most
+  /// recent first. Used by the persistent progress banner.
+  static Future<List<BulkJobStatus>> listActiveJobs() async {
+    final client = SupabaseClientService.client;
+    final userId = client.auth.currentUser?.id;
+    if (userId == null) return [];
+    final res = await client
+        .from('bulk_outreach_jobs')
+        .select('id, status, channel, total_count, sent_count, skipped_count, '
+            'failed_count, created_at, template:outreach_templates(name)')
+        .eq('admin_user_id', userId)
+        .inFilter('status', ['queued', 'draining'])
+        .order('created_at', ascending: false)
+        .limit(5);
+    return (res as List).cast<Map<String, dynamic>>().map((row) {
+      final tpl = row['template'] as Map<String, dynamic>?;
+      return BulkJobStatus.fromJson({
+        ...row,
+        'template_name': tpl?['name'],
+      });
+    }).toList();
   }
 
   /// Cancel a bulk job (queued or draining).

@@ -1039,6 +1039,22 @@ final searchDiscoveredSalonsProvider = FutureProvider.family<List<Map<String, dy
     results = results.where((s) => s['assigned_rp_id'] == null).toList();
   }
 
+  // Phone-only client filter: surface salons with no verified WA + no email.
+  // The RPC doesn't expose contact_status as a search arg yet, so filter
+  // client-side off the row's phone/whatsapp/email/whatsapp_verified fields.
+  if (params['phone_only_client'] == true) {
+    results = results.where((s) {
+      final phone = (s['phone'] as String?) ?? '';
+      final whatsapp = (s['whatsapp'] as String?) ?? '';
+      final waVerified = (s['whatsapp_verified'] as bool?) ?? false;
+      final email = (s['email'] as String?) ?? '';
+      final hasPhone = phone.isNotEmpty;
+      final hasWa = whatsapp.isNotEmpty && waVerified;
+      final hasEmail = email.contains('@');
+      return hasPhone && !hasWa && !hasEmail;
+    }).toList();
+  }
+
   // Client-side location filtering (country + state not in RPC)
   final countryFilter = params['country_filter'] as String?;
   final stateFilter = params['state_filter'] as String?;

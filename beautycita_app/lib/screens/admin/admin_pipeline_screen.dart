@@ -185,6 +185,9 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
   Set<String> _statusFilters = {};
   bool? _hasWhatsapp;
   bool? _hasInterest;
+  /// Surface salons with no verified WA + no email (only phone). They're the
+  /// outreach-blocker queue: enrichment needed before they can be contacted.
+  bool _phoneOnly = false;
   String? _sourceFilter;
   String? _rpStatusFilter;
   String? _assignedRpId;
@@ -216,6 +219,7 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
     }
     if (_hasWhatsapp == true) parts.add('wa:1');
     if (_hasInterest == true) parts.add('int:1');
+    if (_phoneOnly) parts.add('phoneonly:1');
     if (_sourceFilter != null) parts.add('src:$_sourceFilter');
     if (_rpStatusFilter != null) parts.add('rps:$_rpStatusFilter');
     if (_assignedRpId != null) parts.add('rp:$_assignedRpId');
@@ -232,6 +236,7 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
           'status_filter': _statusFilters.toList(),
         if (_hasWhatsapp == true) 'has_whatsapp': true,
         if (_hasInterest == true) 'has_interest': true,
+        if (_phoneOnly) 'phone_only_client': true,
         if (_sourceFilter != null) 'source_filter': _sourceFilter,
         if (_rpStatusFilter != null) 'p_rp_status_filter': _rpStatusFilter,
         if (_assignedRpId != null) 'p_assigned_rp_id': _assignedRpId,
@@ -748,6 +753,10 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
               statusFilters: _statusFilters,
               hasWhatsapp: _hasWhatsapp,
               hasInterest: _hasInterest,
+              phoneOnly: _phoneOnly,
+              onPhoneOnlyToggle: () {
+                setState(() => _phoneOnly = !_phoneOnly);
+              },
               sourceFilter: _sourceFilter,
               rpStatusFilter: _rpStatusFilter,
               assignedRpId: _assignedRpId,
@@ -1264,6 +1273,8 @@ class _FilterChipsRow extends StatelessWidget {
   final Set<String> statusFilters;
   final bool? hasWhatsapp;
   final bool? hasInterest;
+  final bool phoneOnly;
+  final VoidCallback onPhoneOnlyToggle;
   final String? sourceFilter;
   final String? rpStatusFilter;
   final String? assignedRpId;
@@ -1288,6 +1299,8 @@ class _FilterChipsRow extends StatelessWidget {
     required this.statusFilters,
     required this.hasWhatsapp,
     required this.hasInterest,
+    required this.phoneOnly,
+    required this.onPhoneOnlyToggle,
     required this.sourceFilter,
     required this.rpStatusFilter,
     required this.assignedRpId,
@@ -1420,6 +1433,36 @@ class _FilterChipsRow extends StatelessWidget {
                   size: 14,
                   color: hasWhatsapp == true ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).extension<BCThemeExtension>()!.successColor,
                 ),
+              ),
+            ),
+
+            // Phone-only chip — surfaces salons missing email + verified WA so
+            // enrichment can be prioritized before bulk outreach.
+            Padding(
+              padding: const EdgeInsets.only(right: AppConstants.paddingXS),
+              child: FilterChip(
+                label: Text(
+                  'Solo teléfono',
+                  style: GoogleFonts.nunito(
+                    fontSize: 12,
+                    color: phoneOnly ? Theme.of(context).colorScheme.onPrimary : colors.onSurface,
+                  ),
+                ),
+                selected: phoneOnly,
+                onSelected: (_) => onPhoneOnlyToggle(),
+                selectedColor: Colors.deepOrange,
+                checkmarkColor: Theme.of(context).colorScheme.onPrimary,
+                backgroundColor: colors.surfaceContainerHighest.withValues(alpha: 0.5),
+                side: BorderSide(
+                  color: phoneOnly
+                      ? Colors.deepOrange
+                      : colors.onSurface.withValues(alpha: 0.15),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                visualDensity: VisualDensity.compact,
+                showCheckmark: false,
+                avatar: Text('📞', style: TextStyle(fontSize: 12,
+                  color: phoneOnly ? Theme.of(context).colorScheme.onPrimary : Colors.deepOrange)),
               ),
             ),
 

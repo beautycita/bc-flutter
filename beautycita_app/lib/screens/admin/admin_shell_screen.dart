@@ -17,6 +17,7 @@ import 'bookings_screen.dart';
 import 'reviews_screen.dart';
 import 'admin_chat_screen.dart';
 import 'admin_intelligence_screen.dart';
+import '../../widgets/admin/outreach_jobs_banner.dart';
 
 /// Index of the currently selected admin tab.
 final adminTabProvider = StateProvider<int>((ref) => 0);
@@ -178,12 +179,21 @@ class _AdminContent extends ConsumerWidget {
           Navigator.of(context).pop();
         },
       ),
-      body: IndexedStack(
-        index: safeTab,
-        children: List.generate(
-          allTabs.length,
-          (i) => _buildTabContent(allTabs, i),
-        ),
+      body: Column(
+        children: [
+          // Persistent banner showing active outreach bulk-send jobs across
+          // all admin tabs. Hides itself when no jobs are active.
+          const OutreachJobsBanner(),
+          Expanded(
+            child: IndexedStack(
+              index: safeTab,
+              children: List.generate(
+                allTabs.length,
+                (i) => _buildTabContent(allTabs, i),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
