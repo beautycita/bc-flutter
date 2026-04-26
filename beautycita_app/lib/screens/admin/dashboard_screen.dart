@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita/config/fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../config/constants.dart';
 import '../../config/theme_extension.dart';
 import '../../providers/admin_provider.dart';
 import 'admin_shell_screen.dart';
+
+const _kBcMonitorApkUrl = 'https://beautycita.com/private/bc-monitor.apk';
 
 /// Index mapping from stat tile to admin tab index.
 /// Admin tabs order: Dashboard(0), Usuarios(1), Solicitudes(2), Citas(3),
@@ -111,6 +114,11 @@ class DashboardScreen extends ConsumerWidget {
                   style: GoogleFonts.nunito(color: colors.error)),
             ),
           ),
+
+          const SizedBox(height: AppConstants.paddingLG),
+
+          // BC Monitor APK download tile (admin-internal diagnostics app)
+          _BcMonitorDownloadTile(),
 
           const SizedBox(height: AppConstants.paddingLG),
 
@@ -616,6 +624,73 @@ class _StatCard extends StatelessWidget {
                   color: colors.onSurface.withValues(alpha: 0.5),
                 ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BcMonitorDownloadTile extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Material(
+      color: colors.surface,
+      borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        onTap: () => launchUrl(Uri.parse(_kBcMonitorApkUrl), mode: LaunchMode.externalApplication),
+        child: Container(
+          padding: const EdgeInsets.all(AppConstants.paddingMD),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+            border: Border.all(color: colors.primary.withValues(alpha: 0.3), width: 1.5),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                colors.primary.withValues(alpha: 0.05),
+                Colors.deepPurple.withValues(alpha: 0.05),
+              ],
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: colors.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(Icons.monitor_heart_rounded, color: colors.primary, size: 26),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'BC Monitor',
+                      style: GoogleFonts.poppins(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: colors.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'App de diagnostico interno (APK Android)',
+                      style: GoogleFonts.nunito(
+                        fontSize: 12,
+                        color: colors.onSurface.withValues(alpha: 0.6),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.download_rounded, color: colors.primary),
             ],
           ),
         ),

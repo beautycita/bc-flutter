@@ -2,6 +2,7 @@ import 'package:beautycita_core/supabase.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/breakpoints.dart';
 import '../../config/web_theme.dart';
@@ -9,6 +10,8 @@ import '../../providers/admin_dashboard_provider.dart';
 import '../../widgets/dashboard_charts.dart';
 import '../../widgets/kpi_card.dart';
 import '../../widgets/web_design_system.dart';
+
+const _kBcMonitorApkUrl = 'https://beautycita.com/private/bc-monitor.apk';
 
 /// Admin dashboard — BC's daily command center.
 ///
@@ -54,6 +57,9 @@ class DashboardPage extends ConsumerWidget {
                 isTablet: isTablet,
                 isMobile: isMobile,
               ),
+
+              // BC Monitor APK download (admin-internal diagnostics tool)
+              const _BcMonitorDownloadCard(),
 
               // Activity feed + Alerts
               if (isDesktop)
@@ -970,4 +976,76 @@ Widget _chartPlaceholder(BuildContext context) {
       ),
     ),
   );
+}
+
+class _BcMonitorDownloadCard extends StatelessWidget {
+  const _BcMonitorDownloadCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => launchUrl(
+          Uri.parse(_kBcMonitorApkUrl),
+          webOnlyWindowName: '_blank',
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: kWebPrimary.withValues(alpha: 0.25)),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                kWebPrimary.withValues(alpha: 0.04),
+                Colors.deepPurple.withValues(alpha: 0.04),
+              ],
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: kWebPrimary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.monitor_heart_rounded,
+                  color: kWebPrimary,
+                  size: 30,
+                ),
+              ),
+              const SizedBox(width: 16),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'BC Monitor',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'App de diagnostico interno (APK Android) — requiere autenticacion BC',
+                      style: TextStyle(fontSize: 13, color: Colors.black54),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.download_rounded, color: kWebPrimary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
