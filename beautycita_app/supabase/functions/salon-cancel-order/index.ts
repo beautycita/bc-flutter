@@ -74,19 +74,22 @@ Deno.serve(async (req: Request) => {
   const ownerId = (order.businesses as Record<string, unknown>)?.owner_id as string | undefined;
   if (ownerId !== user.id) return json({ error: "Forbidden" }, 403);
 
-  if (!["paid", "shipped"].includes(order.status as string)) {
+  if (!["paid", "awaiting_pickup", "shipped"].includes(order.status as string)) {
     return json({ error: `Cannot cancel order in status '${order.status}'` }, 409);
   }
 
-  // Atomic status flip — only one caller wins the race
+  // Atomic status flip — only one caller wins the race. Also revoke any
+  // outstanding pickup QR so a stale token can't be redeemed post-cancel.
   const { data: claimed, error: claimErr } = await supabase
     .from("orders")
     .update({
-      status: "cancelled",
+      status: "refunded",
+      refund_reason: "salon_cancel",
       refunded_at: new Date().toISOString(),
+      pickup_qr_revoked_at: new Date().toISOString(),
     })
     .eq("id", order.id)
-    .in("status", ["paid", "shipped"])
+    .in("status", ["paid", "awaiting_pickup", "shipped"])
     .select("id");
 
   if (claimErr) {

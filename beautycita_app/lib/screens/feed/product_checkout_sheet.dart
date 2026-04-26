@@ -75,6 +75,7 @@ class _ProductCheckoutSheetState extends State<ProductCheckoutSheet> {
   bool _processing = false;
   String? _orderId;
   String _paymentMethod = 'card'; // 'card' or 'saldo'
+  String _fulfillmentMethod = 'ship'; // 'ship' or 'pickup'
   double _userSaldo = 0;
 
   double get _total => widget.price * widget.quantity;
@@ -162,7 +163,8 @@ class _ProductCheckoutSheetState extends State<ProductCheckoutSheet> {
         body: {
           'product_id': widget.productId,
           'quantity': widget.quantity,
-          'shipping_address': shippingAddress,
+          'fulfillment_method': _fulfillmentMethod,
+          if (_fulfillmentMethod == 'ship') 'shipping_address': shippingAddress,
         },
       );
 
@@ -311,7 +313,10 @@ class _ProductCheckoutSheetState extends State<ProductCheckoutSheet> {
     final userId = SupabaseClientService.currentUserId;
     if (userId == null) throw Exception('No autenticado');
 
-    // Atomic RPC: lock saldo, deduct, create order, record commission
+    // Atomic RPC: lock saldo, deduct, create order, record commission.
+    // For pickup orders the RPC also mints a one-time pickup_token returned in
+    // the response; we don't render it directly here (Pedidos tab regenerates
+    // via generate-pickup-qr edge fn for live display).
     final result = await SupabaseClientService.client.rpc('purchase_product_with_saldo', params: {
       'p_user_id': userId,
       'p_business_id': widget.businessId,
@@ -319,8 +324,9 @@ class _ProductCheckoutSheetState extends State<ProductCheckoutSheet> {
       'p_product_name': widget.productName,
       'p_quantity': widget.quantity,
       'p_total_amount': _total,
-      'p_shipping_address': shippingAddress,
+      'p_shipping_address': _fulfillmentMethod == 'ship' ? shippingAddress : null,
       'p_idempotency_key': const Uuid().v4(),
+      'p_fulfillment_method': _fulfillmentMethod,
     }) as Map<String, dynamic>;
 
     _orderId = result['order_id'] as String;

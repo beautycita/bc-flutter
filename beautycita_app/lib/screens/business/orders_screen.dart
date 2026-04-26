@@ -6,6 +6,7 @@ import '../../config/constants.dart';
 import '../../config/theme_extension.dart';
 import '../../providers/order_provider.dart';
 import '../../services/supabase_client.dart';
+import 'pickup_scanner_screen.dart';
 import '../../services/toast_service.dart';
 // ignore: depend_on_referenced_packages
 import 'package:beautycita/widgets/admin/admin_widgets.dart';
@@ -110,6 +111,16 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
 
     return Scaffold(
       backgroundColor: Colors.transparent,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          final result = await Navigator.of(context).push<Map<String, dynamic>?>(
+            MaterialPageRoute(builder: (_) => const PickupScannerScreen()),
+          );
+          if (result != null) ref.invalidate(businessOrdersProvider);
+        },
+        icon: const Icon(Icons.qr_code_scanner_rounded),
+        label: const Text('Escanear recoleccion'),
+      ),
       body: Column(
         children: [
           // Tab bar
@@ -259,15 +270,11 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
   }
 
   Future<void> _markShipped(Order order) async {
-    final service = ref.read(orderServiceProvider);
-    try {
-      await service.markShipped(order.id, businessId: order.businessId);
-      ref.invalidate(businessOrdersProvider);
-      ToastService.showSuccess('Pedido marcado como enviado');
-    } catch (e) {
-      ToastService.showErrorWithDetails(
-          'No se pudo actualizar el pedido', e);
-    }
+    // Old "mark shipped" action button is now redundant — the order card
+    // already has an "Ingresa numero de rastreo" button that calls
+    // mark_order_shipped atomically. Keep this stub for the OrdersList
+    // contract; show a hint pointing the user to the tracking button.
+    ToastService.showInfo('Ingresa el numero de rastreo para marcar como enviado');
   }
 
   Future<void> _markDelivered(Order order) async {
@@ -845,12 +852,14 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
                           setSheetState(() => saving = true);
                           try {
                             final service = ref.read(orderServiceProvider);
-                            await service.updateTrackingNumber(order.id, tracking, businessId: order.businessId);
+                            // Atomic ship transition: tracking + status='shipped'
+                            // + claim_window_ends_at all in one server-side hop.
+                            await service.markShipped(order.id, tracking);
                             ref.invalidate(businessOrdersProvider);
-                            ToastService.showSuccess('Numero de rastreo guardado');
+                            ToastService.showSuccess('Pedido enviado — guia $tracking');
                             if (ctx.mounted) Navigator.pop(ctx);
                           } catch (e) {
-                            ToastService.showErrorWithDetails('Error al guardar', e);
+                            ToastService.showErrorWithDetails('Error al enviar', e);
                           } finally {
                             if (ctx.mounted) setSheetState(() => saving = false);
                           }

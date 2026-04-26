@@ -154,7 +154,9 @@ serve(async (req) => {
       if (isOrderDispute) {
         await supabase.from("orders").update({
           status: "refunded",
+          refund_reason: "claim_resolved_buyer",
           refunded_at: new Date().toISOString(),
+          pickup_qr_revoked_at: new Date().toISOString(),
         }).eq("id", dispute.order_id);
       } else {
         await supabase.from("appointments").update({

@@ -12,10 +12,11 @@ import 'package:beautycita/providers/booking_flow_provider.dart'
     show bookingFlowProvider;
 import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita/services/supabase_client.dart';
-import 'package:go_router/go_router.dart';
-import '../widgets/empty_state.dart';
 import 'package:beautycita/services/toast_service.dart';
 import 'package:beautycita/providers/order_provider.dart';
+import 'package:go_router/go_router.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import '../widgets/empty_state.dart';
 import 'package:beautycita_core/models.dart' show Order;
 
 /// Disputes for the current user, keyed by appointment_id OR order_id.
@@ -1194,12 +1195,18 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
       case 'paid':
         statusColor = Colors.amber.shade700;
         statusLabel = 'Pendiente envio';
+      case 'awaiting_pickup':
+        statusColor = Colors.purple.shade600;
+        statusLabel = 'Esperando recoleccion';
       case 'shipped':
         statusColor = Colors.blue.shade600;
         statusLabel = 'Enviado';
       case 'delivered':
         statusColor = ext.successColor;
         statusLabel = 'Entregado';
+      case 'completed':
+        statusColor = ext.successColor;
+        statusLabel = 'Finalizado';
       case 'refunded':
         statusColor = colorScheme.error;
         statusLabel = 'Reembolsado';
@@ -1270,6 +1277,10 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
                 color: colorScheme.onSurface.withValues(alpha: 0.5),
               ),
             ),
+          ],
+          if (order.isAwaitingPickup) ...[
+            const SizedBox(height: AppConstants.paddingMD),
+            _PickupQrPanel(order: order),
           ],
           if (order.isShippingUrgent && order.isPaid) ...[
             const SizedBox(height: AppConstants.paddingXS),
@@ -1964,6 +1975,119 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen>
           color: color,
           fontWeight: FontWeight.w700,
         ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// Pickup QR panel — shown on awaiting_pickup orders in Pedidos tab
+// =============================================================================
+class _PickupQrPanel extends ConsumerStatefulWidget {
+  final Order order;
+  const _PickupQrPanel({required this.order});
+
+  @override
+  ConsumerState<_PickupQrPanel> createState() => _PickupQrPanelState();
+}
+
+class _PickupQrPanelState extends ConsumerState<_PickupQrPanel> {
+  String? _token;
+  DateTime? _expiresAt;
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+  }
+
+  Future<void> _refresh() async {
+    setState(() => _loading = true);
+    try {
+      final svc = ref.read(orderServiceProvider);
+      final res = await svc.generatePickupQr(widget.order.id);
+      if (res != null && mounted) {
+        setState(() {
+          _token = res.token;
+          _expiresAt = res.expiresAt;
+        });
+      }
+    } catch (e) {
+      if (mounted) ToastService.showErrorWithDetails('Error al generar QR', e);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
+    if (_loading && _token == null) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20),
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+    if (_token == null) {
+      return TextButton.icon(
+        onPressed: _refresh,
+        icon: const Icon(Icons.refresh_rounded),
+        label: const Text('Generar QR de recoleccion'),
+      );
+    }
+    final left = _expiresAt != null
+        ? _expiresAt!.difference(DateTime.now())
+        : Duration.zero;
+    final daysLeft = left.inDays;
+    final hoursLeft = left.inHours.remainder(24);
+    return Container(
+      padding: const EdgeInsets.all(AppConstants.paddingMD),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerHighest.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text('Muestra este codigo al recoger',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+          const SizedBox(height: AppConstants.paddingSM),
+          QrImageView(
+            data: _token!,
+            size: 220,
+            backgroundColor: Colors.white,
+          ),
+          const SizedBox(height: AppConstants.paddingXS),
+          SelectableText(
+            _token!,
+            style: GoogleFonts.poppins(
+              fontSize: 10,
+              color: colors.onSurface.withValues(alpha: 0.5),
+            ),
+            maxLines: 1,
+          ),
+          const SizedBox(height: AppConstants.paddingXS),
+          Text(
+            daysLeft > 0
+                ? 'Caduca en $daysLeft d ${hoursLeft}h'
+                : 'Caduca en ${left.inHours} h',
+            style: GoogleFonts.nunito(
+              fontSize: 12,
+              color: ext.warningColor,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: AppConstants.paddingSM),
+          TextButton.icon(
+            onPressed: _loading ? null : _refresh,
+            icon: const Icon(Icons.refresh_rounded, size: 16),
+            label: const Text('Refrescar QR'),
+          ),
+        ],
       ),
     );
   }

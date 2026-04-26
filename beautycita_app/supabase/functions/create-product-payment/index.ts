@@ -38,7 +38,10 @@ interface ShippingAddress {
 interface ProductPaymentRequest {
   product_id: string;
   quantity: number;
-  shipping_address: ShippingAddress;
+  /** Required when fulfillment_method = 'ship'; ignored for pickup. */
+  shipping_address?: ShippingAddress;
+  /** 'ship' (default, requires shipping_address) | 'pickup' (in-store collection). */
+  fulfillment_method?: "ship" | "pickup";
 }
 
 serve(async (req) => {
@@ -67,13 +70,16 @@ serve(async (req) => {
 
     const body: ProductPaymentRequest = await req.json();
     const { product_id, quantity = 1, shipping_address } = body;
+    const fulfillmentMethod = body.fulfillment_method === "pickup" ? "pickup" : "ship";
 
     if (!product_id) {
       return json({ error: "product_id is required" }, 400, req);
     }
 
-    if (!shipping_address || !shipping_address.name || !shipping_address.street) {
-      return json({ error: "shipping_address with name and street is required" }, 400, req);
+    if (fulfillmentMethod === "ship") {
+      if (!shipping_address || !shipping_address.name || !shipping_address.street) {
+        return json({ error: "shipping_address with name and street is required for ship orders" }, 400, req);
+      }
     }
 
     if (quantity < 1 || !Number.isInteger(quantity)) {
@@ -245,8 +251,9 @@ serve(async (req) => {
         business_name: business.name,
         user_id: user.id,
         quantity: quantity.toString(),
-        shipping_address: JSON.stringify(shipping_address),
+        shipping_address: fulfillmentMethod === "ship" ? JSON.stringify(shipping_address) : "null",
         payment_type: "product",
+        fulfillment_method: fulfillmentMethod,
       },
     });
 

@@ -328,6 +328,32 @@ serve(async (req) => {
           if (existingOrder) {
             console.log(`[STRIPE-WEBHOOK] Order already exists for PI ${paymentIntent.id}, skipping`);
           } else {
+            // Pickup vs ship branches diverge on initial status + shipping address.
+            const fulfillmentMethod = metadata.fulfillment_method === "pickup" ? "pickup" : "ship";
+            const initialStatus = fulfillmentMethod === "pickup" ? "awaiting_pickup" : "paid";
+
+            // For pickup orders, mint the QR token here (server-side, internal).
+            // The buyer fetches the cleartext via generate-pickup-qr (regenerate
+            // path) — we don't echo it in webhook output.
+            let pickupQrTokenHash: string | null = null;
+            let pickupQrExpiresAt: string | null = null;
+            let pickupQrIssuedAt: string | null = null;
+            if (fulfillmentMethod === "pickup") {
+              const buf = new Uint8Array(32);
+              crypto.getRandomValues(buf);
+              const cleartext = btoa(String.fromCharCode(...buf))
+                .replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
+              const hashBuf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(cleartext));
+              pickupQrTokenHash = Array.from(new Uint8Array(hashBuf))
+                .map((b) => b.toString(16).padStart(2, "0")).join("");
+              const now = new Date();
+              pickupQrIssuedAt = now.toISOString();
+              pickupQrExpiresAt = new Date(now.getTime() + 7 * 86400_000).toISOString();
+              // The buyer regenerates via generate-pickup-qr to retrieve a fresh cleartext.
+              // (We do NOT email/SMS the token; it's only ever returned through the
+              // authenticated regenerate path.)
+            }
+
             const { error: orderError } = await supabase.from("orders").insert({
               buyer_id: metadata.user_id,
               business_id: metadata.business_id,
@@ -337,14 +363,20 @@ serve(async (req) => {
               total_amount: paymentIntent.amount / 100,
               commission_amount: (paymentIntent.application_fee_amount ?? 0) / 100,
               stripe_payment_intent_id: paymentIntent.id,
-              status: "paid",
-              shipping_address: (() => { try { return JSON.parse(metadata.shipping_address ?? "null"); } catch { return null; } })(),
+              status: initialStatus,
+              fulfillment_method: fulfillmentMethod,
+              pickup_qr_token_hash: pickupQrTokenHash,
+              pickup_qr_expires_at: pickupQrExpiresAt,
+              pickup_qr_issued_at: pickupQrIssuedAt,
+              shipping_address: fulfillmentMethod === "ship"
+                ? (() => { try { return JSON.parse(metadata.shipping_address ?? "null"); } catch { return null; } })()
+                : null,
             });
 
             if (orderError) {
               console.error(`[STRIPE-WEBHOOK] Failed to create order: ${orderError.message}`);
             } else {
-              console.log(`[STRIPE-WEBHOOK] Product order created for PI ${paymentIntent.id}`);
+              console.log(`[STRIPE-WEBHOOK] Product order created for PI ${paymentIntent.id} (${fulfillmentMethod} → ${initialStatus})`);
             }
           }
           break;
@@ -856,7 +888,9 @@ serve(async (req) => {
           if (order && order.status !== "refunded") {
             await supabase.from("orders").update({
               status: "refunded",
+              refund_reason: "chargeback",
               refunded_at: new Date().toISOString(),
+              pickup_qr_revoked_at: new Date().toISOString(), // safe even if null already
             }).eq("id", order.id);
 
             // Create seller debt
