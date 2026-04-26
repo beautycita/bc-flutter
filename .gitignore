@@ -72,3 +72,9 @@ scripts/import_outscraper*.py
 scripts/test_sat_api.sh
 behavioral-intelligence/
 .claude/
+
+# Local-only banking research / personal planning docs
+docs/banking.html
+docs/banking-research-*.html
+docs/bc-banking-and-legacy-plan-*.html
+docs/.*.kate-swp
