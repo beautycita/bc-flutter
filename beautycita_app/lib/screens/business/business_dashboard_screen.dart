@@ -10,6 +10,7 @@ import 'package:beautycita_core/supabase.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 import 'package:beautycita/widgets/admin/admin_widgets.dart';
+import 'package:beautycita/widgets/business/cash_trust_banner.dart';
 import '../../providers/banking_setup_provider.dart';
 import 'banking_setup_screen.dart';
 
@@ -65,6 +66,9 @@ class BusinessDashboardScreen extends ConsumerWidget {
           const _TopStaffSection(),
 
           const SizedBox(height: AppConstants.paddingMD),
+
+          // Cash trust suspension banner (renders only when blocked)
+          const CashTrustBanner(),
 
           // Outstanding Debt Warning
           _DebtCard(),

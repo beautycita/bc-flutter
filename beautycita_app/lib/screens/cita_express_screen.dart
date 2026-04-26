@@ -1319,17 +1319,52 @@ class _ConfirmView extends ConsumerWidget {
         ),
         const SizedBox(height: AppConstants.paddingSM),
 
-        // Cash direct option
+        // Saldo (BC wallet) — primary ExpressCita payment method.
         _PaymentMethodTile(
-          icon: Icons.payments_rounded,
-          label: 'Efectivo al estilista',
-          subtitle: 'Paga directamente en el salon',
-          selected: selectedMethod == 'cash_direct',
+          icon: Icons.account_balance_wallet_rounded,
+          label: 'Saldo BeautyCita',
+          subtitle: 'Pago instantaneo desde tu saldo',
+          selected: selectedMethod == 'saldo',
           colors: colors,
           onTap: () => ref
               .read(citaExpressProvider.notifier)
-              .setPaymentMethod('cash_direct'),
+              .setPaymentMethod('saldo'),
         ),
+        const SizedBox(height: AppConstants.paddingSM),
+        _PaymentMethodTile(
+          icon: Icons.credit_card_rounded,
+          label: 'Tarjeta',
+          subtitle: 'Visa, Mastercard, Amex',
+          selected: selectedMethod == 'card',
+          colors: colors,
+          onTap: () => ref
+              .read(citaExpressProvider.notifier)
+              .setPaymentMethod('card'),
+        ),
+        const SizedBox(height: AppConstants.paddingSM),
+        _PaymentMethodTile(
+          icon: Icons.store_rounded,
+          label: 'OXXO',
+          subtitle: 'Paga en cualquier OXXO con voucher',
+          selected: selectedMethod == 'oxxo',
+          colors: colors,
+          onTap: () => ref
+              .read(citaExpressProvider.notifier)
+              .setPaymentMethod('oxxo'),
+        ),
+        if (state.cashEligible) ...[
+          const SizedBox(height: AppConstants.paddingSM),
+          _PaymentMethodTile(
+            icon: Icons.payments_outlined,
+            label: 'Efectivo',
+            subtitle: 'Paga en el salon al llegar',
+            selected: selectedMethod == 'cash_direct',
+            colors: colors,
+            onTap: () => ref
+                .read(citaExpressProvider.notifier)
+                .setPaymentMethod('cash_direct'),
+          ),
+        ],
         const SizedBox(height: AppConstants.paddingXL),
 
         // CONFIRMAR button

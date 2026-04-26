@@ -259,6 +259,60 @@ serve(async (req) => {
           break;
         }
 
+        // --- Salon tax debt payment (Pagar ahora flow) ---
+        if (metadata.payment_type === "salon_tax_debt") {
+          const businessId = metadata.business_id;
+          const amountMxn = paymentIntent.amount / 100;
+
+          if (!businessId) {
+            console.log(`[STRIPE-WEBHOOK] salon_tax_debt without business_id, skipping`);
+            break;
+          }
+
+          // Idempotency: dedup via debt_payments stripe_payment_intent_id.
+          const { data: existingPayment } = await supabase
+            .from("debt_payments")
+            .select("id")
+            .eq("stripe_payment_intent_id", paymentIntent.id)
+            .maybeSingle();
+          if (existingPayment) {
+            console.log(`[STRIPE-WEBHOOK] tax debt payment already applied for PI ${paymentIntent.id}`);
+            break;
+          }
+
+          // FIFO apply across open tax_obligation rows.
+          const { data: openDebts } = await supabase
+            .from("salon_debts")
+            .select("id, remaining_amount")
+            .eq("business_id", businessId)
+            .eq("debt_type", "tax_obligation")
+            .gt("remaining_amount", 0)
+            .order("created_at", { ascending: true });
+
+          let remaining = amountMxn;
+          for (const row of openDebts ?? []) {
+            if (remaining <= 0) break;
+            const apply = Math.min(remaining, Number(row.remaining_amount));
+            const newRemaining = Number(row.remaining_amount) - apply;
+            await supabase.from("salon_debts").update({
+              remaining_amount: newRemaining,
+              cleared_at: newRemaining === 0 ? new Date().toISOString() : null,
+            }).eq("id", row.id);
+            await supabase.from("debt_payments").insert({
+              debt_id: row.id,
+              business_id: businessId,
+              amount: apply,
+              source: "stripe_pagar_ahora",
+              stripe_payment_intent_id: paymentIntent.id,
+            }).catch((e: any) => console.error(`[STRIPE-WEBHOOK] debt_payments insert: ${e.message}`));
+            remaining -= apply;
+          }
+          console.log(`[STRIPE-WEBHOOK] Applied $${amountMxn - remaining} MXN to tax debt for biz ${businessId}; PI ${paymentIntent.id}`);
+          // The salon_debts AFTER UPDATE trigger calls compute_cash_eligibility,
+          // which lifts the cash_blocked_at flag if all tax debt is now zero.
+          break;
+        }
+
         // --- Product order payments (marketplace) ---
         if (metadata.payment_type === "product") {
           // Idempotency: skip if order already exists for this payment intent

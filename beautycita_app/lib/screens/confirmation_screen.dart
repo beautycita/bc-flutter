@@ -517,10 +517,12 @@ class _BizPaymentPolicy {
   final bool stripeEnabled;
   final bool depositRequired;
   final double depositPercentage;
+  final bool cashEligible;
   const _BizPaymentPolicy({
     required this.stripeEnabled,
     required this.depositRequired,
     required this.depositPercentage,
+    required this.cashEligible,
   });
 
   bool get stripeBlocked => !stripeEnabled;
@@ -528,35 +530,33 @@ class _BizPaymentPolicy {
       depositRequired ? (price * depositPercentage).clamp(0, price) : 0;
 }
 
-/// Payment policy for a salon: Stripe availability + deposit requirements.
-/// Used by the payment selector to decide which tiles to show and whether
-/// "En salon" requires a saldo-based deposit first.
+const _BizPaymentPolicy _emptyBizPaymentPolicy = _BizPaymentPolicy(
+  stripeEnabled: false,
+  depositRequired: false,
+  depositPercentage: 0,
+  cashEligible: false,
+);
+
+/// Payment policy for a salon: Stripe availability + deposit requirements +
+/// cash trust eligibility. Cash trust: salon must have crossed the BC-tx
+/// threshold AND have no tax-debt block. See migration 20260426000002.
 final _bizPaymentPolicyProvider =
     FutureProvider.family<_BizPaymentPolicy, String>((ref, businessId) async {
-  if (businessId.isEmpty) {
-    return const _BizPaymentPolicy(
-      stripeEnabled: false,
-      depositRequired: false,
-      depositPercentage: 0,
-    );
-  }
+  if (businessId.isEmpty) return _emptyBizPaymentPolicy;
   final data = await SupabaseClientService.client
       .from(BCTables.businesses)
-      .select('stripe_charges_enabled, deposit_required, deposit_percentage')
+      .select('stripe_charges_enabled, deposit_required, deposit_percentage, cash_eligible_at, cash_blocked_at, is_test')
       .eq('id', businessId)
       .maybeSingle();
-  if (data == null) {
-    return const _BizPaymentPolicy(
-      stripeEnabled: false,
-      depositRequired: false,
-      depositPercentage: 0,
-    );
-  }
+  if (data == null) return _emptyBizPaymentPolicy;
+  final isTest = data['is_test'] as bool? ?? false;
+  final eligibleAt = data['cash_eligible_at'];
+  final blockedAt = data['cash_blocked_at'];
   return _BizPaymentPolicy(
     stripeEnabled: data['stripe_charges_enabled'] as bool? ?? false,
     depositRequired: data['deposit_required'] as bool? ?? false,
-    // deposit_percentage is stored as 0..1 (e.g. 0.20 for 20%)
     depositPercentage: (data['deposit_percentage'] as num?)?.toDouble() ?? 0,
+    cashEligible: !isTest && eligibleAt != null && blockedAt == null,
   );
 });
 
@@ -597,13 +597,9 @@ class _PaymentMethodSelectorState extends ConsumerState<_PaymentMethodSelector> 
     final hasCards = cards.isNotEmpty;
 
     final policyAsync = ref.watch(_bizPaymentPolicyProvider(widget.businessId));
-    final policy = policyAsync.valueOrNull ??
-        const _BizPaymentPolicy(
-          stripeEnabled: false,
-          depositRequired: false,
-          depositPercentage: 0,
-        );
+    final policy = policyAsync.valueOrNull ?? _emptyBizPaymentPolicy;
     final stripeBlocked = policy.stripeBlocked;
+    final cashEligible = policy.cashEligible;
     final depositAmount = policy.depositFor(widget.servicePrice);
     final hasDeposit = depositAmount > 0;
 
@@ -613,18 +609,35 @@ class _PaymentMethodSelectorState extends ConsumerState<_PaymentMethodSelector> 
     final servicePrice = widget.servicePrice;
     final coversFullPrice = saldo >= servicePrice && servicePrice > 0;
 
-    // Auto-pick the best default method once per mount. Priority:
-    // saldo-covers-full > stripeBlocked fallback > card > oxxo.
-    // Customer can always switch to "En salon" manually afterwards.
-    if (!_didAutoSelect) {
+    // Available-method matrix:
+    //   - saldo: covers full price → only saldo
+    //   - card / oxxo: stripe enabled
+    //   - cash_direct: salon earned trust (cashEligible)
+    //   - cash_with_deposit: salon requires deposit AND saldo covers it
+    final methods = <String>[];
+    if (coversFullPrice) {
+      methods.add('saldo');
+    } else {
+      if (!stripeBlocked) methods.addAll(['card', 'oxxo']);
+      if (stripeBlocked && saldo > 0) methods.add('saldo');
+      if (hasDeposit && saldo >= depositAmount) {
+        methods.add('cash_with_deposit');
+      } else if (!hasDeposit && cashEligible) {
+        methods.add('cash_direct');
+      }
+    }
+    final unbookable = methods.isEmpty;
+
+    // Auto-pick the best default method once per mount.
+    if (!_didAutoSelect && !unbookable) {
       _didAutoSelect = true;
       String preferred;
       if (coversFullPrice) {
         preferred = 'saldo';
-      } else if (stripeBlocked) {
-        preferred = saldo > 0 ? 'saldo' : 'cash_direct';
+      } else if (methods.contains('card')) {
+        preferred = hasCards ? 'card' : (methods.contains('oxxo') ? 'oxxo' : methods.first);
       } else {
-        preferred = hasCards ? 'card' : 'oxxo';
+        preferred = methods.first;
       }
       if (widget.selected != preferred) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -745,11 +758,34 @@ class _PaymentMethodSelectorState extends ConsumerState<_PaymentMethodSelector> 
           const SizedBox(height: 10),
         ],
 
-        if (!coversFullPrice) _paymentTiles(
+        if (unbookable) ...[
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.orange.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.orange.withValues(alpha: 0.25)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.hourglass_bottom_rounded, color: Colors.orange, size: 22),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Este salon esta finalizando su configuracion. '
+                    'Vuelve pronto o agrega saldo a tu cuenta para reservar.',
+                    style: GoogleFonts.nunito(fontSize: 12, color: Colors.orange.shade800, height: 1.35),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ] else if (!coversFullPrice) _paymentTiles(
           stripeBlocked: stripeBlocked,
           hasDeposit: hasDeposit,
           saldo: saldo,
           depositAmount: depositAmount,
+          cashEligible: cashEligible,
         ),
       ],
     );
@@ -760,12 +796,11 @@ class _PaymentMethodSelectorState extends ConsumerState<_PaymentMethodSelector> 
     required bool hasDeposit,
     required double saldo,
     required double depositAmount,
+    required bool cashEligible,
   }) {
     // Build the set of tiles applicable to this salon + user.
-    // Policy matrix:
-    //   stripeBlocked=true                → saldo + "en salon" only
-    //   stripeBlocked=false, hasDeposit=0 → tarjeta + oxxo + "en salon"
-    //   hasDeposit>0                      → tarjeta + oxxo + "en salon w/ deposit"
+    // "En salon" / cash tile only renders when the salon has earned cash trust.
+    // If not eligible, the tile is silently absent (no copy explaining why).
     final tiles = <Widget>[];
 
     if (!stripeBlocked) {
@@ -801,7 +836,6 @@ class _PaymentMethodSelectorState extends ConsumerState<_PaymentMethodSelector> 
       tiles.add(const SizedBox(width: 10));
     }
 
-    // "En salon" tile — always present, but the behavior changes with deposit.
     if (hasDeposit) {
       final canCoverDeposit = saldo >= depositAmount;
       tiles.add(_PaymentMethodCard(
@@ -814,7 +848,7 @@ class _PaymentMethodSelectorState extends ConsumerState<_PaymentMethodSelector> 
         isSelected: widget.selected == 'cash_with_deposit',
         onTap: canCoverDeposit ? () => widget.onSelect('cash_with_deposit') : null,
       ));
-    } else {
+    } else if (cashEligible) {
       tiles.add(_PaymentMethodCard(
         icon: Icons.payments_outlined,
         label: 'En salon',

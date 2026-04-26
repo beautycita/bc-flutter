@@ -10,6 +10,7 @@ import '../../config/router.dart';
 import '../../config/web_theme.dart';
 import '../../providers/business_portal_provider.dart';
 import '../../providers/demo_providers.dart';
+import '../../widgets/cash_trust_banner.dart';
 import '../../widgets/kpi_card.dart';
 import '../../widgets/web_design_system.dart';
 
@@ -87,6 +88,7 @@ class _DashboardContent extends ConsumerWidget {
               ],
               const SizedBox(height: 24),
               // ── Financial sections ──
+              const CashTrustBanner(),
               _OutstandingDebtCard(ref: ref),
               _TaxDeductionsCard(ref: ref, isMobile: isMobile),
               const SizedBox(height: 16),

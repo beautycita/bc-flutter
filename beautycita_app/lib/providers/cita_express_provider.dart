@@ -41,6 +41,7 @@ class CitaExpressState {
   final String? error;
   final String paymentMethod;
   final List<ResultCard>? nearbyAlternatives;
+  final bool cashEligible;
 
   const CitaExpressState({
     this.step = CitaExpressStep.loading,
@@ -54,8 +55,9 @@ class CitaExpressState {
     this.selectedResult,
     this.bookingId,
     this.error,
-    this.paymentMethod = 'cash_direct',
+    this.paymentMethod = 'saldo',
     this.nearbyAlternatives,
+    this.cashEligible = false,
   });
 
   CitaExpressState copyWith({
@@ -75,6 +77,7 @@ class CitaExpressState {
     String? paymentMethod,
     List<ResultCard>? nearbyAlternatives,
     bool clearNearbyAlternatives = false,
+    bool? cashEligible,
   }) {
     return CitaExpressState(
       step: step ?? this.step,
@@ -90,6 +93,7 @@ class CitaExpressState {
       error: error,
       paymentMethod: paymentMethod ?? this.paymentMethod,
       nearbyAlternatives: clearNearbyAlternatives ? null : (nearbyAlternatives ?? this.nearbyAlternatives),
+      cashEligible: cashEligible ?? this.cashEligible,
     );
   }
 }
@@ -166,10 +170,17 @@ class CitaExpressNotifier extends StateNotifier<CitaExpressState> {
         return;
       }
 
+      final isTest = bizResponse['is_test'] as bool? ?? false;
+      final cashEligibleAt = bizResponse['cash_eligible_at'];
+      final cashBlockedAt = bizResponse['cash_blocked_at'];
+      final cashEligible =
+          !isTest && cashEligibleAt != null && cashBlockedAt == null;
+
       state = state.copyWith(
         step: CitaExpressStep.serviceSelect,
         businessInfo: bizResponse,
         services: activeServices,
+        cashEligible: cashEligible,
       );
     } catch (e) {
       if (kDebugMode) debugPrint('[CitaExpress] Error loading business: $e');
