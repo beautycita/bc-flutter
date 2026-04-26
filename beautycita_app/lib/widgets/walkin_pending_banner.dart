@@ -58,7 +58,7 @@ class WalkinPendingBanner extends ConsumerWidget {
     final pending = ref.watch(_walkinPendingProvider);
     return pending.when(
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
       data: (rows) {
         if (rows.isEmpty) return const SizedBox.shrink();
         return Column(

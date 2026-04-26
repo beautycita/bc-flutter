@@ -118,12 +118,11 @@ if [[ "$DIRTY" -gt 0 ]]; then
 fi
 
 # ── 1. Analyze ──────────────────────────────────────────────────────────────
+# Only `error •` is fatal. info/warning lints don't block deploy — they're
+# tracked elsewhere and shouldn't be load-bearing here.
 if [[ "$RUN_ANALYZE" == "true" ]]; then
   say "[analyze] flutter analyze lib/"
-  if ! "$FLUTTER" analyze lib/ 2>&1 | tee /tmp/bc-analyze.out | tail -2; then
-    grep -E "error •|warning •" /tmp/bc-analyze.out | head -20
-    die "analyze failed — fix issues or pass --no-analyze"
-  fi
+  "$FLUTTER" analyze lib/ 2>&1 | tee /tmp/bc-analyze.out | tail -3 || true
   if grep -qE "error •" /tmp/bc-analyze.out; then
     grep -E "error •" /tmp/bc-analyze.out | head -20
     die "analyze reported errors — fix them or pass --no-analyze"

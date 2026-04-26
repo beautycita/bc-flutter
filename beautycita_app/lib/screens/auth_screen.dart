@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:beautycita/config/fonts.dart';
 import '../providers/auth_provider.dart';
 import '../config/constants.dart';
+import '../services/biometric_preferences.dart';
 import '../services/toast_service.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
@@ -279,6 +280,16 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     _registering = true;
 
     try {
+      // Per-device toggle: if user disabled biometric login on this device
+      // (Security screen), skip the biometric prompt and open email login.
+      final biometricEnabled = await ref
+          .read(biometricPreferencesProvider)
+          .isEnabled();
+      if (!biometricEnabled) {
+        if (mounted) _showEmailAuth();
+        return;
+      }
+
       final authNotifier = ref.read(authStateProvider.notifier);
       final authState = ref.read(authStateProvider);
 

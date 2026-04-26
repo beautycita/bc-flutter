@@ -6,7 +6,11 @@ import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/config/theme_extension.dart';
 import 'package:beautycita/providers/profile_provider.dart';
 import 'package:beautycita/providers/security_provider.dart';
+import 'package:beautycita/services/biometric_preferences.dart';
+import 'package:beautycita/services/biometric_service.dart';
+import 'package:beautycita/services/supabase_client.dart';
 import 'package:beautycita/services/toast_service.dart';
+import 'package:beautycita/services/user_session.dart';
 import 'package:beautycita/widgets/phone_verify_gate_sheet.dart';
 import 'package:beautycita/services/updater_service.dart';
 import 'package:beautycita/widgets/settings_widgets.dart';
@@ -34,7 +38,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen>
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-    const count = 3; // linked accounts, devices, about
+    const count = 4; // linked accounts, biometric, devices, about
     _fadeAnims = List.generate(count, (i) {
       final start = i * 0.12;
       final end = (start + 0.4).clamp(0.0, 1.0);
@@ -243,8 +247,25 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen>
 
           const SizedBox(height: AppConstants.paddingLG),
 
-          // ── Dispositivos ──
+          // ── Biometrico ──
           _animated(1, Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SectionHeader(label: 'Biometrico'),
+              _buildCard(cs, ext, children: [
+                _BiometricToggleTile(),
+                Divider(height: 1, color: ext.cardBorderColor),
+                _BiometricRegisterTile(),
+                Divider(height: 1, color: ext.cardBorderColor),
+                _BiometricForgetTile(),
+              ]),
+            ],
+          )),
+
+          const SizedBox(height: AppConstants.paddingLG),
+
+          // ── Dispositivos ──
+          _animated(2, Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SectionHeader(label: 'Dispositivos'),
@@ -268,7 +289,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen>
           const SizedBox(height: AppConstants.paddingLG),
 
           // ── Acerca de ──
-          _animated(2, Column(
+          _animated(3, Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SectionHeader(label: 'Acerca de'),
@@ -584,6 +605,146 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen>
           },
         );
       },
+    );
+  }
+}
+
+// =============================================================================
+// Biometric tiles
+// =============================================================================
+
+class _BiometricToggleTile extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
+    final enabledAsync = ref.watch(biometricEnabledProvider);
+    final enabled = enabledAsync.valueOrNull ?? true;
+
+    return SettingsTile(
+      icon: Icons.fingerprint,
+      iconColor: enabled ? ext.successColor : null,
+      label: 'Inicio de sesion biometrico',
+      trailing: Switch(
+        value: enabled,
+        onChanged: (v) async {
+          await ref.setBiometricEnabled(v);
+          if (context.mounted) {
+            ToastService.showSuccess(
+              v ? 'Biometrico activado en este dispositivo'
+                : 'Biometrico desactivado en este dispositivo',
+            );
+          }
+        },
+      ),
+    );
+  }
+}
+
+class _BiometricRegisterTile extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<_BiometricRegisterTile> createState() => _BiometricRegisterTileState();
+}
+
+class _BiometricRegisterTileState extends ConsumerState<_BiometricRegisterTile> {
+  bool _running = false;
+
+  Future<void> _registerThisDevice() async {
+    setState(() => _running = true);
+    try {
+      final bio = BiometricService();
+      final available = await bio.isBiometricAvailable();
+      if (!available) {
+        if (mounted) ToastService.showError('Este dispositivo no soporta biometrico');
+        return;
+      }
+      final ok = await bio.authenticate();
+      if (!ok) {
+        if (mounted) ToastService.showError('Autenticacion biometrica fallida');
+        return;
+      }
+      // Persist current Supabase user_id into secure storage so future
+      // biometric logins on this device work without password.
+      final session = UserSession();
+      final supabaseId = SupabaseClientService.currentUserId;
+      if (supabaseId == null) {
+        if (mounted) ToastService.showError('No hay sesion activa');
+        return;
+      }
+      await session.saveSupabaseUserId(supabaseId);
+      if (mounted) {
+        ToastService.showSuccess('Dispositivo registrado para biometrico');
+      }
+    } catch (e) {
+      if (mounted) ToastService.showError('Error: $e');
+    } finally {
+      if (mounted) setState(() => _running = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return SettingsTile(
+      icon: Icons.add_circle_outline,
+      label: 'Registrar este dispositivo',
+      trailing: _running
+          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+          : Icon(Icons.chevron_right_outlined, size: 20, color: cs.onSurface.withValues(alpha: 0.3)),
+      onTap: _running ? null : _registerThisDevice,
+    );
+  }
+}
+
+class _BiometricForgetTile extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<_BiometricForgetTile> createState() => _BiometricForgetTileState();
+}
+
+class _BiometricForgetTileState extends ConsumerState<_BiometricForgetTile> {
+  bool _running = false;
+
+  Future<void> _forgetThisDevice() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Olvidar este dispositivo'),
+        content: const Text(
+          'Se borrara el registro biometrico de este dispositivo. '
+          'En el proximo inicio de sesion deberas usar email y contrasena, '
+          'o registrar de nuevo el biometrico aqui.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Olvidar')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _running = true);
+    try {
+      // Wipe local biometric state but DO NOT sign out the active Supabase
+      // session — we just want next-launch biometric to require re-register.
+      await UserSession().clearBiometricRegistration();
+      if (mounted) ToastService.showSuccess('Biometrico borrado de este dispositivo');
+    } catch (e) {
+      if (mounted) ToastService.showError('Error: $e');
+    } finally {
+      if (mounted) setState(() => _running = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return SettingsTile(
+      icon: Icons.no_encryption_outlined,
+      iconColor: cs.error,
+      label: 'Olvidar biometrico de este dispositivo',
+      trailing: _running
+          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+          : Icon(Icons.chevron_right_outlined, size: 20, color: cs.onSurface.withValues(alpha: 0.3)),
+      onTap: _running ? null : _forgetThisDevice,
     );
   }
 }

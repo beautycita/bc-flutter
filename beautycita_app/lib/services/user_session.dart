@@ -189,6 +189,21 @@ class UserSession {
     }
   }
 
+  /// Clear local biometric registration without signing out of Supabase.
+  /// Used by Security screen "Olvidar biometrico de este dispositivo".
+  /// After this call, isRegistered() returns false and the auth screen will
+  /// require email/password (or re-registration) on next launch.
+  Future<void> clearBiometricRegistration() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_keyUsername);
+    await prefs.remove(_keyRegisteredAt);
+    await prefs.remove(_keyLastLoginAt);
+    await prefs.remove(_keyUserId);
+    await prefs.remove(_keySupabaseUserId);
+    await _secureStorage.delete(key: _keyUserId);
+    await _secureStorage.delete(key: _keySupabaseUserId);
+  }
+
   /// Clear all session data (logout)
   Future<void> clear() async {
     // Sign out of Supabase first (invalidates JWT)
