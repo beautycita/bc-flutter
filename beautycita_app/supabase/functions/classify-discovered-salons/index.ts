@@ -189,7 +189,10 @@ Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   const authHeader = req.headers.get("authorization") ?? "";
-  const isCron = CRON_SECRET && authHeader === `Bearer ${CRON_SECRET}`;
+  const cronHeader = req.headers.get("x-cron-secret") ?? "";
+  const isCron = !!CRON_SECRET && (
+    authHeader === `Bearer ${CRON_SECRET}` || cronHeader === CRON_SECRET
+  );
   const isService = authHeader === `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`;
 
   // For non-cron/non-service callers: must be admin/superadmin authed user.
