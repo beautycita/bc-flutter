@@ -31,24 +31,19 @@ async function sendWhatsAppFallback(
   title: string,
   body: string
 ): Promise<boolean> {
-  if (!BEAUTYPI_WA_URL || !phone) return false;
+  if (!phone) return false;
   try {
     const message = `*${title}*\n${body}`;
-    const ac = new AbortController();
-    const t = setTimeout(() => ac.abort(), 5000);
-    const res = await fetch(`${BEAUTYPI_WA_URL}/api/wa/send`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${BEAUTYPI_WA_TOKEN}`,
-      },
-      body: JSON.stringify({ phone, message }),
-      signal: ac.signal,
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const { createClient: _createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+    const { enqueueWa, WA_PRIORITY } = await import("../_shared/wa_queue.ts");
+    const supabase = _createClient(supabaseUrl, serviceKey);
+    const id = await enqueueWa(supabase, phone, message, {
+      priority: WA_PRIORITY.TRANSACTIONAL,
+      source: "send-push-notification:fallback",
     });
-    clearTimeout(t);
-    const ok = res.ok;
-    console.log(`[WA-FALLBACK] ${ok ? "Sent" : "Failed"} to ${phone}`);
-    return ok;
+    return id !== null;
   } catch (e) {
     console.error("[WA-FALLBACK] Error:", e);
     return false;

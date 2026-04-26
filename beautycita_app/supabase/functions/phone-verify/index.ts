@@ -12,6 +12,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendInfobipWhatsApp } from "../_shared/infobip.ts";
+import { enqueueWa, WA_PRIORITY } from "../_shared/wa_queue.ts";
 
 async function hashOtp(otp: string): Promise<string> {
   const data = new TextEncoder().encode(otp);
@@ -86,26 +87,18 @@ async function sendWhatsApp(phone: string, code: string): Promise<{ sent: boolea
 
     const message = `*BeautyCita* - Tu codigo de verificacion es: *${code}*\n\nValido por ${OTP_EXPIRY_MINUTES} minutos. No compartas este codigo.`;
 
-    const ac2 = new AbortController();
-    const t2 = setTimeout(() => ac2.abort(), 25000);
-    const sendRes = await fetch(`${BEAUTYPI_WA_URL}/api/wa/send`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${BEAUTYPI_WA_TOKEN}`,
-      },
-      body: JSON.stringify({ phone, message }),
-      signal: ac2.signal,
+    // Route through global throttle queue. CRITICAL priority jumps the line
+    // ahead of bulk/marketing traffic. Drainer enforces the 20s pace gate.
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    );
+    const queueId = await enqueueWa(supabase, phone, message, {
+      priority: WA_PRIORITY.CRITICAL,
+      source: "phone-verify",
+      idempotencyKey: `otp-${phone}-${code}`,
     });
-    clearTimeout(t2);
-
-    if (!sendRes.ok) {
-      console.log(`[WA] Send failed: ${sendRes.status}`);
-      return { sent: false, channel: "whatsapp" };
-    }
-
-    const sendData = await sendRes.json();
-    return { sent: sendData.sent === true, channel: "whatsapp" };
+    return { sent: queueId !== null, channel: "whatsapp" };
   } catch (e) {
     console.error(`[WA] Error: ${e}`);
     return { sent: false, channel: "whatsapp" };

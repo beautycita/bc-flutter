@@ -41,26 +41,22 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
+// Renders → enqueues into wa_message_queue (the global throttle queue).
+// Actual paced delivery is handled by wa-global-drain.
 async function sendWa(phone: string, message: string): Promise<boolean> {
-  if (!BEAUTYPI_WA_URL) return false;
   try {
-    const ac = new AbortController();
-    const t = setTimeout(() => ac.abort(), 20_000);
-    const res = await fetch(`${BEAUTYPI_WA_URL}/api/wa/send`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${BEAUTYPI_WA_TOKEN}`,
-      },
-      body: JSON.stringify({ phone, message }),
-      signal: ac.signal,
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const { createClient: _createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+    const { enqueueWa, WA_PRIORITY } = await import("../_shared/wa_queue.ts");
+    const supabase = _createClient(supabaseUrl, serviceKey);
+    const id = await enqueueWa(supabase, phone, message, {
+      priority: WA_PRIORITY.TRANSACTIONAL,
+      source: "wa-queue-drain:template",
     });
-    clearTimeout(t);
-    if (!res.ok) return false;
-    const data = await res.json();
-    return data.sent === true;
+    return id !== null;
   } catch (e) {
-    console.error(`[wa-queue-drain] send error: ${e}`);
+    console.error(`[wa-queue-drain] enqueue error: ${e}`);
     return false;
   }
 }

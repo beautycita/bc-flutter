@@ -14,6 +14,7 @@ import { corsHeaders, handleCorsPreflightIfOptions } from "../_shared/cors.ts";
 import { requireFeature } from "../_shared/check-toggle.ts";
 import { checkRateLimit, ipKey } from "../_shared/rate-limit.ts";
 import { cacheGet, cacheSet, cacheDel } from "../_shared/redis.ts";
+import { enqueueWa, WA_PRIORITY } from "../_shared/wa_queue.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -57,30 +58,21 @@ function generateOtp(): string {
   return String(a[0] % 1_000_000).padStart(6, "0");
 }
 
-/** Direct WA send (no phone-verify dep — that fn requires auth). */
+/** OTP via global WA throttle queue. CRITICAL priority — jumps bulk traffic. */
 async function sendOtpViaWa(phone: string, code: string, businessName: string): Promise<boolean> {
-  if (!BEAUTYPI_WA_URL) return false;
   try {
     const msg =
       `*${businessName}* solicita tu confirmacion para registrarte como cliente en BeautyCita.\n\n` +
       `Tu codigo es: *${code}*\n\nValido por 10 minutos.`;
-    const ac = new AbortController();
-    const t = setTimeout(() => ac.abort(), 20_000);
-    const res = await fetch(`${BEAUTYPI_WA_URL}/api/wa/send`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${BEAUTYPI_WA_TOKEN}`,
-      },
-      body: JSON.stringify({ phone, message: msg }),
-      signal: ac.signal,
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const id = await enqueueWa(supabase, phone, msg, {
+      priority: WA_PRIORITY.CRITICAL,
+      source: "qr-walkin-register",
+      idempotencyKey: `walkin-otp-${phone}-${code}`,
     });
-    clearTimeout(t);
-    if (!res.ok) return false;
-    const data = await res.json();
-    return data.sent === true;
+    return id !== null;
   } catch (e) {
-    console.error(`[qr-walkin-register] OTP send failed: ${e}`);
+    console.error(`[qr-walkin-register] OTP enqueue failed: ${e}`);
     return false;
   }
 }

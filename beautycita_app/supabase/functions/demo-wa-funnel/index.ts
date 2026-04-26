@@ -43,28 +43,19 @@ const WA_API = Deno.env.get("BEAUTYPI_WA_URL") || "http://172.22.0.1:3200";
 const WA_TOKEN = Deno.env.get("BEAUTYPI_WA_TOKEN") || "";
 
 async function sendWA(phone: string, message: string): Promise<boolean> {
-  if (!WA_API) return false;
   try {
-    const ac = new AbortController();
-    const t = setTimeout(() => ac.abort(), 5000);
-    const res = await fetch(`${WA_API}/api/wa/send`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${WA_TOKEN}`,
-      },
-      body: JSON.stringify({ phone, message }),
-      signal: ac.signal,
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const { createClient: _createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+    const { enqueueWa, WA_PRIORITY } = await import("../_shared/wa_queue.ts");
+    const supabase = _createClient(supabaseUrl, serviceKey);
+    const id = await enqueueWa(supabase, phone, message, {
+      priority: WA_PRIORITY.BULK,
+      source: "demo-wa-funnel",
     });
-    clearTimeout(t);
-    if (!res.ok) {
-      console.error(`[demo-wa] WA send failed: ${res.status}`);
-      return false;
-    }
-    const data = await res.json();
-    return data.sent === true;
+    return id !== null;
   } catch (e) {
-    console.error(`[demo-wa] WA error: ${e}`);
+    console.error(`[demo-wa] WA enqueue error: ${e}`);
     return false;
   }
 }

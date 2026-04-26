@@ -10,6 +10,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendInfobipWhatsApp } from "../_shared/infobip.ts";
+import { enqueueWa, WA_PRIORITY } from "../_shared/wa_queue.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -190,17 +191,13 @@ async function sendWhatsApp(
 
     const message =
       `*BeautyCita* - Tu codigo de verificacion es: *${code}*\n\nValido por ${OTP_EXPIRY_MINUTES} minutos. No compartas este codigo.`;
-    const sendRes = await fetch(`${BEAUTYPI_WA_URL}/api/wa/send`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${BEAUTYPI_WA_TOKEN}`,
-      },
-      body: JSON.stringify({ phone, message }),
+    const supabase = createClient(supabaseUrl, serviceKey);
+    const id = await enqueueWa(supabase, phone, message, {
+      priority: WA_PRIORITY.CRITICAL,
+      source: "salon-registro:otp",
+      idempotencyKey: `salon-reg-otp-${phone}-${code}`,
     });
-    if (!sendRes.ok) return { sent: false, channel: "whatsapp" };
-    const sendData = await sendRes.json();
-    return { sent: sendData.sent === true, channel: "whatsapp" };
+    return { sent: id !== null, channel: "whatsapp" };
   } catch (e) {
     console.error(`[SALON-REG][WA] Error: ${e}`);
     return { sent: false, channel: "whatsapp" };

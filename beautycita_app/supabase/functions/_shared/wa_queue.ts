@@ -1,8 +1,15 @@
 // =============================================================================
-// wa_queue.ts — Shared WhatsApp send-with-retry helper
+// wa_queue.ts — Global WhatsApp send chokepoint (1 msg / 20s)
 // =============================================================================
-// Used by any edge function that sends WhatsApp messages.
-// On failure, queues the message for retry instead of silently dropping it.
+// EVERY WA send MUST go through enqueueWa(). Direct fetch() to /api/wa/send is
+// forbidden — the BeautyPI account block risk requires platform-wide spacing.
+//
+// - enqueueWa()         → public; INSERTs into wa_message_queue, returns id
+// - sendWhatsAppWithRetry() / trySendWhatsApp() → BACKWARD-COMPAT shims that
+//                       now also enqueue (so callers that haven't migrated yet
+//                       still hit the chokepoint)
+// - drainWaQueue()      → called by the wa-queue-drain cron tick; respects 20s
+//                       pace via the SQL claim_next_wa_message() function
 // =============================================================================
 
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -10,63 +17,90 @@ import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-
 const BEAUTYPI_WA_URL = Deno.env.get("BEAUTYPI_WA_URL") ?? "";
 const BEAUTYPI_WA_TOKEN = Deno.env.get("BEAUTYPI_WA_TOKEN") ?? "";
 
-/** Backoff schedule: 5min, 15min, 60min */
-const RETRY_DELAYS_MS = [5 * 60_000, 15 * 60_000, 60 * 60_000];
+// Priority levels (lower = higher priority).
+export const WA_PRIORITY = {
+  CRITICAL: 0,        // OTP, security
+  TRANSACTIONAL: 3,   // booking confirmation, walk-in, chat reply
+  NORMAL: 5,          // default
+  INFORMATIONAL: 7,   // reminders, follow-ups
+  BULK: 9,            // outreach, demo funnel
+} as const;
+
+export interface EnqueueWaOpts {
+  priority?: number;
+  source?: string;
+  idempotencyKey?: string;
+  metadata?: Record<string, unknown>;
+  scheduledFor?: Date;
+}
 
 /**
- * Try to send a WhatsApp message. If it fails, queue it for retry.
- * Returns true if sent immediately, false if queued or failed.
+ * Enqueue a WA message for the global throttle queue.
+ * Returns the queue row id (or existing id if idempotency_key matched).
+ */
+export async function enqueueWa(
+  supabase: SupabaseClient,
+  phone: string,
+  message: string,
+  opts: EnqueueWaOpts = {},
+): Promise<string | null> {
+  if (!phone || !message) return null;
+  const { data, error } = await supabase.rpc("enqueue_wa_message", {
+    p_phone: phone,
+    p_message: message,
+    p_priority: opts.priority ?? WA_PRIORITY.NORMAL,
+    p_source: opts.source ?? null,
+    p_idempotency_key: opts.idempotencyKey ?? null,
+    p_metadata: opts.metadata ?? {},
+    p_scheduled_for: opts.scheduledFor?.toISOString() ?? new Date().toISOString(),
+  });
+  if (error) {
+    console.error("[WA-QUEUE] enqueueWa failed:", error.message);
+    return null;
+  }
+  return data as string;
+}
+
+/**
+ * Backward-compat: sendWhatsAppWithRetry now enqueues into the global queue
+ * instead of attempting an immediate send. Keeps existing callers working.
  */
 export async function sendWhatsAppWithRetry(
   supabase: SupabaseClient,
   phone: string,
   message: string,
-  metadata: Record<string, unknown> = {}
+  metadata: Record<string, unknown> = {},
 ): Promise<{ sent: boolean; queued: boolean }> {
-  if (!phone || !message) {
-    return { sent: false, queued: false };
-  }
-
-  const sent = await trySendWhatsApp(phone, message);
-
-  if (sent) {
-    return { sent: true, queued: false };
-  }
-
-  // Send failed — queue for retry
-  const nextRetry = new Date(Date.now() + RETRY_DELAYS_MS[0]);
-
-  const { error } = await supabase.from("wa_message_queue").insert({
-    phone,
-    message,
-    status: "pending",
-    attempts: 1,
-    next_retry_at: nextRetry.toISOString(),
-    last_error: "Initial send failed",
+  const id = await enqueueWa(supabase, phone, message, {
+    priority: WA_PRIORITY.NORMAL,
     metadata,
+    source: "legacy:sendWhatsAppWithRetry",
   });
-
-  if (error) {
-    console.error("[WA-QUEUE] Failed to queue message:", error.message);
-    return { sent: false, queued: false };
-  }
-
-  console.log(`[WA-QUEUE] Queued message for ${phone}, retry at ${nextRetry.toISOString()}`);
-  return { sent: false, queued: true };
+  return { sent: false, queued: id !== null };
 }
 
 /**
- * Raw WA send — no retry logic. Used internally and by queue processor.
+ * Backward-compat: trySendWhatsApp now enqueues. Returns true if accepted into
+ * the queue (will be sent within 20s × queue depth), false on validation failure.
  */
-export async function trySendWhatsApp(
-  phone: string,
-  message: string
-): Promise<boolean> {
-  if (!BEAUTYPI_WA_URL || !phone) return false;
+export async function trySendWhatsApp(phone: string, message: string): Promise<boolean> {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  if (!supabaseUrl || !serviceKey) return false;
+  const supabase = createClient(supabaseUrl, serviceKey);
+  const id = await enqueueWa(supabase, phone, message, { source: "legacy:trySendWhatsApp" });
+  return id !== null;
+}
 
+/**
+ * INTERNAL — direct WA send. Only the drainer should call this.
+ * Returns {sent, error} so the drainer can mark the queue row appropriately.
+ */
+async function rawSendWa(phone: string, message: string): Promise<{ sent: boolean; error?: string }> {
+  if (!BEAUTYPI_WA_URL) return { sent: false, error: "WA URL not configured" };
   try {
     const ac = new AbortController();
-    const t = setTimeout(() => ac.abort(), 8000);
+    const t = setTimeout(() => ac.abort(), 12000);
     const res = await fetch(`${BEAUTYPI_WA_URL}/api/wa/send`, {
       method: "POST",
       headers: {
@@ -77,96 +111,100 @@ export async function trySendWhatsApp(
       signal: ac.signal,
     });
     clearTimeout(t);
-
-    if (!res.ok) {
-      console.error(`[WA] Send failed for ${phone}: ${res.status}`);
-      return false;
-    }
-
+    if (!res.ok) return { sent: false, error: `wa proxy ${res.status}` };
     const data = await res.json();
-    return data.sent === true;
-  } catch (err) {
-    console.error(`[WA] Error sending to ${phone}:`, err);
-    return false;
+    return data.sent === true
+      ? { sent: true }
+      : { sent: false, error: data.error ?? "wa proxy returned sent=false" };
+  } catch (e) {
+    return { sent: false, error: String(e) };
   }
 }
 
 /**
- * Process the WA retry queue. Called by marketing-automation cron.
- * Returns counts of sent/failed/remaining.
+ * Drain the WA queue. Pulls up to N messages, respects the 20s pace gate via
+ * claim_next_wa_message() (which atomically advances the pace row).
+ *
+ * Safe to invoke concurrently — the pace row + SKIP LOCKED guarantees only one
+ * worker can claim any given message and that successive claims are ≥20s apart.
+ *
+ * Per-call budget is bounded by maxIterations (default 3) and edge-fn timeout.
+ * If the pace gate blocks the first claim, we exit quickly (the next cron tick
+ * will retry).
  */
-export async function processWaRetryQueue(
-  supabase: SupabaseClient
-): Promise<{ sent: number; failed: number; remaining: number }> {
-  const now = new Date();
+export async function drainWaQueue(
+  supabase: SupabaseClient,
+  maxIterations = 3,
+): Promise<{ sent: number; failed: number; skipped: number }> {
   let sent = 0;
   let failed = 0;
+  let skipped = 0;
 
-  // Fetch pending messages whose next_retry_at has passed
-  const { data: pending, error } = await supabase
-    .from("wa_message_queue")
-    .select("id, phone, message, attempts, max_attempts")
-    .eq("status", "pending")
-    .lte("next_retry_at", now.toISOString())
-    .order("next_retry_at", { ascending: true })
-    .limit(50);
+  for (let i = 0; i < maxIterations; i++) {
+    const { data, error } = await supabase.rpc("claim_next_wa_message");
+    if (error) {
+      console.error("[WA-QUEUE] claim_next failed:", error.message);
+      break;
+    }
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row || !row.id) {
+      // Either pace gate blocking us, or queue empty. Either way, stop.
+      break;
+    }
 
-  if (error) {
-    console.error("[WA-QUEUE] Query error:", error.message);
-    return { sent: 0, failed: 0, remaining: 0 };
-  }
+    const result = await rawSendWa(row.phone, row.message);
 
-  if (!pending || pending.length === 0) {
-    return { sent: 0, failed: 0, remaining: 0 };
-  }
-
-  console.log(`[WA-QUEUE] Processing ${pending.length} queued messages`);
-
-  for (const msg of pending) {
-    const ok = await trySendWhatsApp(msg.phone, msg.message);
-    const newAttempts = msg.attempts + 1;
-
-    if (ok) {
-      await supabase
-        .from("wa_message_queue")
-        .update({ status: "sent", attempts: newAttempts })
-        .eq("id", msg.id);
+    if (result.sent) {
+      await supabase.rpc("mark_wa_message_sent", { p_id: row.id });
       sent++;
-      console.log(`[WA-QUEUE] Sent queued message ${msg.id} to ${msg.phone}`);
-    } else if (newAttempts >= msg.max_attempts) {
-      // Max retries exhausted
-      await supabase
-        .from("wa_message_queue")
-        .update({
-          status: "failed",
-          attempts: newAttempts,
-          last_error: `Failed after ${newAttempts} attempts`,
-        })
-        .eq("id", msg.id);
-      failed++;
-      console.error(`[WA-QUEUE] Permanently failed ${msg.id} after ${newAttempts} attempts`);
+      console.log(`[WA-QUEUE] sent ${row.id} → ${row.phone} (source: ${row.source ?? "n/a"})`);
     } else {
-      // Schedule next retry with exponential backoff
-      const delayIndex = Math.min(newAttempts - 1, RETRY_DELAYS_MS.length - 1);
-      const nextRetry = new Date(now.getTime() + RETRY_DELAYS_MS[delayIndex]);
+      // Backoff: 1m, 5m, 15m by attempt number.
+      const backoffByAttempt = [60, 300, 900];
+      const delay = backoffByAttempt[Math.min(row.attempts - 1, backoffByAttempt.length - 1)];
+      await supabase.rpc("mark_wa_message_failed", {
+        p_id: row.id,
+        p_error: result.error ?? "unknown",
+        p_retry_in_seconds: delay,
+      });
+      failed++;
+      console.error(`[WA-QUEUE] send failed ${row.id} (attempt ${row.attempts}): ${result.error}`);
+    }
 
-      await supabase
-        .from("wa_message_queue")
-        .update({
-          attempts: newAttempts,
-          next_retry_at: nextRetry.toISOString(),
-          last_error: `Attempt ${newAttempts} failed`,
-        })
-        .eq("id", msg.id);
-      console.log(`[WA-QUEUE] Retry ${newAttempts} for ${msg.id}, next at ${nextRetry.toISOString()}`);
+    // Wait the inter-send gap. claim_next already reserved the pace, so we
+    // sleep here to let the previous send actually deliver before the next
+    // claim. 20s default; tunable via wa_send_pace.min_spacing_seconds.
+    if (i < maxIterations - 1) {
+      await new Promise((res) => setTimeout(res, 20_000));
     }
   }
 
-  // Count remaining pending
+  return { sent, failed, skipped };
+}
+
+/**
+ * Watchdog: requeue 'sending' rows that have been stuck > 2 minutes.
+ * Called from cron tick before drain.
+ */
+export async function runWaWatchdog(supabase: SupabaseClient): Promise<number> {
+  const { data, error } = await supabase.rpc("wa_queue_watchdog");
+  if (error) {
+    console.error("[WA-QUEUE] watchdog failed:", error.message);
+    return 0;
+  }
+  return Number(data ?? 0);
+}
+
+// ── DEPRECATED LEGACY EXPORT ────────────────────────────────────────────────
+// processWaRetryQueue used backoff-based retry. Replaced by drainWaQueue +
+// the global pace gate. Left as an alias for any out-of-tree callers.
+export async function processWaRetryQueue(
+  supabase: SupabaseClient,
+): Promise<{ sent: number; failed: number; remaining: number }> {
+  const r = await drainWaQueue(supabase);
   const { count } = await supabase
     .from("wa_message_queue")
     .select("id", { count: "exact", head: true })
     .eq("status", "pending");
-
-  return { sent, failed, remaining: count ?? 0 };
+  return { sent: r.sent, failed: r.failed, remaining: count ?? 0 };
 }

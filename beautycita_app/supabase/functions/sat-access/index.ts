@@ -73,18 +73,15 @@ async function alertBC(reason: string, details: string) {
     console.error("[SAT-ALERT] BC_ALERT_PHONE env var missing — WA alert skipped");
   } else {
     try {
-      const ac = new AbortController();
-      const t = setTimeout(() => ac.abort(), 5000);
-      await fetch(`${WA_API_URL}/api/wa/send`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${WA_API_TOKEN}`,
-        },
-        body: JSON.stringify({ phone: BC_PHONE, message: msg }),
-        signal: ac.signal,
+      const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+      const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+      const { createClient: _createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+      const { enqueueWa, WA_PRIORITY } = await import("../_shared/wa_queue.ts");
+      const supabase = _createClient(supabaseUrl, serviceKey);
+      await enqueueWa(supabase, BC_PHONE, msg, {
+        priority: WA_PRIORITY.CRITICAL,
+        source: "sat-access:alert",
       });
-      clearTimeout(t);
     } catch (e) {
       console.error("[SAT-ALERT] WA alert failed:", e);
     }

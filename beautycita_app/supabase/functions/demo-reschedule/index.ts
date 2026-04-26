@@ -67,24 +67,19 @@ function formatDateEs(isoDate: string): { date: string; time: string } {
 }
 
 async function sendDemo(phone: string, message: string): Promise<boolean> {
-  if (!WA_API_URL) return false;
-  const ac = new AbortController();
-  const t = setTimeout(() => ac.abort(), 5000);
   try {
-    const res = await fetch(`${WA_API_URL}/api/wa/send`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${WA_API_TOKEN}`,
-      },
-      body: JSON.stringify({ phone, message }),
-      signal: ac.signal,
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const { createClient: _createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+    const { enqueueWa, WA_PRIORITY } = await import("../_shared/wa_queue.ts");
+    const supabase = _createClient(supabaseUrl, serviceKey);
+    const id = await enqueueWa(supabase, phone, message, {
+      priority: WA_PRIORITY.BULK,
+      source: "demo-reschedule",
     });
-    return res.ok;
+    return id !== null;
   } catch {
     return false;
-  } finally {
-    clearTimeout(t);
   }
 }
 

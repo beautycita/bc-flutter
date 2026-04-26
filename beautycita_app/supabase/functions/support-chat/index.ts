@@ -208,16 +208,14 @@ Deno.serve(async (req) => {
     const preview = message.length > 80 ? message.substring(0, 80) + "..." : message;
     const alertMsg = `*Soporte BeautyCita*\nNuevo mensaje de ${userName}:\n"${preview}"\n\nResponde en la app > Admin > Chat`;
     try {
-      await fetch(`${BEAUTYPI_WA_URL}/api/wa/send`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${BEAUTYPI_WA_TOKEN}`,
-        },
-        body: JSON.stringify({ phone: SUPPORT_ALERT_PHONE, message: alertMsg }),
+      const { enqueueWa, WA_PRIORITY } = await import("../_shared/wa_queue.ts");
+      await enqueueWa(db, SUPPORT_ALERT_PHONE, alertMsg, {
+        priority: WA_PRIORITY.TRANSACTIONAL,
+        source: "support-chat",
+        idempotencyKey: `support-${msg.id}`,
       });
     } catch (e) {
-      console.error(`[SUPPORT] WA alert failed: ${e}`);
+      console.error(`[SUPPORT] WA enqueue failed: ${e}`);
       // Don't fail — message is in DB, alert is just a notification
     }
 

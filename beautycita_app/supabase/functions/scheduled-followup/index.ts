@@ -106,23 +106,18 @@ async function sendWhatsApp(to: string, body: string): Promise<boolean> {
       return false;
     }
 
-    // Send message
-    const sendRes = await fetch(`${BEAUTYPI_WA_URL}/api/wa/send`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${BEAUTYPI_WA_TOKEN}`,
-      },
-      body: JSON.stringify({ phone: to, message: body }),
+    // Enqueue into global throttle queue (informational priority — bookings &
+    // OTPs jump ahead).
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const { createClient: _createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+    const { enqueueWa, WA_PRIORITY } = await import("../_shared/wa_queue.ts");
+    const supabase = _createClient(supabaseUrl, serviceKey);
+    const id = await enqueueWa(supabase, to, body, {
+      priority: WA_PRIORITY.INFORMATIONAL,
+      source: "scheduled-followup",
     });
-
-    if (!sendRes.ok) {
-      console.error(`[WA] Send failed for ${to}: ${sendRes.status}`);
-      return false;
-    }
-
-    const sendData = await sendRes.json();
-    return sendData.sent === true;
+    return id !== null;
   } catch (e) {
     console.error(`[WA] Error sending to ${to}: ${e}`);
     return false;

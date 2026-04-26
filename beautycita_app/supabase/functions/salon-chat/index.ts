@@ -243,16 +243,15 @@ Deno.serve(async (req) => {
     const waMsg = `*BeautyCita*\nMensaje de ${userName} (ref: [BC-${shortId}]):\n"${preview}"`;
 
     try {
-      await fetch(`${BEAUTYPI_WA_URL}/api/wa/send`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${BEAUTYPI_WA_TOKEN}`,
-        },
-        body: JSON.stringify({ phone: bridge.wa_phone, message: waMsg }),
+      const { enqueueWa, WA_PRIORITY } = await import("../_shared/wa_queue.ts");
+      // Idempotency: same chat message must never enqueue twice.
+      await enqueueWa(db, bridge.wa_phone, waMsg, {
+        priority: WA_PRIORITY.TRANSACTIONAL,
+        source: "salon-chat",
+        idempotencyKey: `salon-chat-${msg.id}`,
       });
     } catch (e) {
-      console.error(`[SALON-CHAT] WA send failed: ${e}`);
+      console.error(`[SALON-CHAT] WA enqueue failed: ${e}`);
       // Don't fail — message is in DB, WA is just a notification
     }
 

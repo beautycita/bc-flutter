@@ -38,30 +38,18 @@ function formatDateEs(isoDate: string): { date: string; time: string } {
 }
 
 async function sendWhatsApp(phone: string, message: string): Promise<boolean> {
-  if (!BEAUTYPI_WA_URL) return false;
-  try {
-    const ac = new AbortController();
-    const t = setTimeout(() => ac.abort(), 5000);
-    const res = await fetch(`${BEAUTYPI_WA_URL}/api/wa/send`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${BEAUTYPI_WA_TOKEN}`,
-      },
-      body: JSON.stringify({ phone, message }),
-      signal: ac.signal,
-    });
-    clearTimeout(t);
-    if (!res.ok) {
-      console.error(`[RESCHEDULE] WA send failed for ${phone}: ${res.status}`);
-      return false;
-    }
-    const data = await res.json();
-    return data.sent === true;
-  } catch (err) {
-    console.error(`[RESCHEDULE] WA error for ${phone}:`, err);
-    return false;
-  }
+  // Route through global throttle queue (1 msg / 20s).
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  if (!supabaseUrl || !serviceKey) return false;
+  const { createClient: _createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+  const { enqueueWa, WA_PRIORITY } = await import("../_shared/wa_queue.ts");
+  const supabase = _createClient(supabaseUrl, serviceKey);
+  const id = await enqueueWa(supabase, phone, message, {
+    priority: WA_PRIORITY.TRANSACTIONAL,
+    source: "reschedule-notification",
+  });
+  return id !== null;
 }
 
 Deno.serve(async (req) => {

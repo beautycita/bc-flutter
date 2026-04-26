@@ -94,6 +94,10 @@ Deno.serve(async (req) => {
       return json({ sent: false, error: "Alert recipient not configured" }, 500);
     }
 
+    // Image sends bypass the text queue (separate Pi endpoint, image payload).
+    // Admin-to-admin only (BC's screenshot tool) — not part of the bulk-block
+    // risk surface. Pi-side throttle covers this path. TODO: extend queue with
+    // image content_type column to bring this under unified control.
     const waRes = await fetch(`${BEAUTYPI_WA_URL}/api/wa/send-image`, {
       method: "POST",
       headers: {
