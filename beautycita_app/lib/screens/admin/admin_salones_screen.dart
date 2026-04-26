@@ -16,6 +16,7 @@ import '../../services/toast_service.dart';
 import 'admin_pipeline_screen.dart';
 import 'admin_salon_detail_screen.dart';
 import 'admin_salones_insights_screen.dart';
+import '../../widgets/admin/outreach_send_sheet.dart';
 
 const _salonExportColumns = [
   ExportColumn('name', 'Nombre'),
@@ -127,6 +128,29 @@ class _SalonesTabState extends ConsumerState<_SalonesTab> {
     setState(() => _activeQuery = '');
   }
 
+  Future<void> _sendBulkOutreach(List<Map<String, dynamic>> salons) async {
+    final ids = salons
+        .map((s) => s['id']?.toString())
+        .whereType<String>()
+        .toList();
+    if (ids.isEmpty) return;
+    if (ids.length > 100) {
+      ToastService.showError(
+        'Hay ${ids.length} salones visibles. Máximo 100 por envío — afina los filtros primero.',
+      );
+      return;
+    }
+    final sent = await showOutreachSendSheet(
+      context: context,
+      recipientTable: 'businesses',
+      recipientIds: ids,
+      recipientLabel: 'Enviar mensaje a ${ids.length} salón${ids.length == 1 ? "" : "es"} registrado${ids.length == 1 ? "" : "s"}',
+    );
+    if (sent && context.mounted) {
+      ref.invalidate(adminAllSalonsProvider(_providerKey));
+    }
+  }
+
   void _showExportSheet(List<Map<String, dynamic>> salons) {
     showBurstBottomSheet(
       context: context,
@@ -230,6 +254,21 @@ class _SalonesTabState extends ConsumerState<_SalonesTab> {
                 onPressed: () =>
                     setState(() => _showOrphanedOnly = !_showOrphanedOnly),
               ),
+              // Send message to all visible salones (max 100)
+              resultsAsync.whenOrNull(
+                data: (salons) => salons.isNotEmpty
+                    ? IconButton(
+                        icon: Icon(
+                          Icons.send_outlined,
+                          color: colors.primary,
+                          size: 22,
+                        ),
+                        tooltip: 'Enviar mensaje a salones visibles',
+                        onPressed: () => _sendBulkOutreach(salons),
+                      )
+                    : null,
+              ) ??
+                  const SizedBox.shrink(),
               // Export button
               resultsAsync.whenOrNull(
                 data: (salons) => salons.isNotEmpty

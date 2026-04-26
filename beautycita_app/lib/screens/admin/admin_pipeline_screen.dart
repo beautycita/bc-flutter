@@ -17,6 +17,7 @@ import '../../services/export_service.dart';
 import 'package:beautycita_core/supabase.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
+import '../../widgets/admin/outreach_send_sheet.dart';
 import 'pipeline_lead_detail_sheet.dart';
 
 // ---------------------------------------------------------------------------
@@ -817,8 +818,26 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
                 : const Offset(0, 1),
             child: _BulkActionBar(
               count: _selectedIds.length,
-              onOutreach: () {
-                ToastService.showInfo('Proximamente');
+              onOutreach: () async {
+                if (_selectedIds.isEmpty) return;
+                final ids = _selectedIds.toList();
+                if (ids.length > 100) {
+                  ToastService.showError(
+                    'Máximo 100 salones por envío. Hay ${ids.length} seleccionados.',
+                  );
+                  return;
+                }
+                final sent = await showOutreachSendSheet(
+                  context: context,
+                  recipientTable: 'discovered_salons',
+                  recipientIds: ids,
+                  recipientLabel: 'Enviar mensaje a ${ids.length} salones',
+                );
+                if (sent && context.mounted) {
+                  _exitSelection();
+                  ref.invalidate(searchDiscoveredSalonsProvider(_searchKey));
+                  ref.invalidate(pipelineFunnelStatsProvider(_searchKey));
+                }
               },
               onStatus: _showStatusPickerDialog,
               onAssignRp: _showBulkAssignDialog,
@@ -1883,6 +1902,9 @@ class _LeadCard extends StatelessWidget {
     final rpName = lead['rp_full_name'] as String?;
     final phone = lead['phone'] as String? ?? '';
     final waVerified = lead['whatsapp_verified'] as bool? ?? false;
+    final emailRaw = lead['email'] as String? ?? '';
+    final hasEmail = emailRaw.contains('@');
+    final phoneOnly = !waVerified && !hasEmail && phone.isNotEmpty;
     final interestCount = lead['interest_count'] as int? ?? 0;
     final lastOutreachAt = lead['last_outreach_at'] as String?;
     final outreachChannel = lead['outreach_channel'] as String?;
@@ -1998,6 +2020,16 @@ class _LeadCard extends StatelessWidget {
                               _SmallBadge(
                                 label: rpName,
                                 color: _rpStatusColor(context, rpStatus),
+                              ),
+                            ],
+                            // Phone-only — no email, no verified WA. Highlight
+                            // for outreach prep: these need email/WA enrichment
+                            // before bulk send works.
+                            if (phoneOnly) ...[
+                              const SizedBox(width: 4),
+                              const _SmallBadge(
+                                label: '📞 Solo teléfono',
+                                color: Colors.deepOrange,
                               ),
                             ],
                           ],

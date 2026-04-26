@@ -63,32 +63,40 @@ Deno.serve(async (req) => {
   try {
     const { thread_prefix, message, from_phone } = await req.json();
 
-    // ── BAJA opt-out handler (LFPDPPP compliance) ──
-    // If the incoming message is just "BAJA" or "baja", mark sender as opted out
-    if (message && message.trim().toLowerCase() === "baja" && from_phone) {
+    // ── BAJA opt-out handler (LFPDPPP / CAN-SPAM canonical registry) ──
+    // Inbound "BAJA" / "STOP" / "UNSUBSCRIBE" → write to marketing_opt_outs.
+    // The sync_marketing_opt_out_denorm trigger fans the opt-out out to
+    // discovered_salons.opted_out + profiles.opted_out_marketing automatically.
+    const trimmed = (message ?? "").trim().toLowerCase();
+    const isOptOut = ["baja", "stop", "unsubscribe", "unsuscribir"].includes(trimmed);
+    if (isOptOut && from_phone) {
       const digits = from_phone.replace(/[^\d]/g, "");
       const last10 = digits.slice(-10);
 
-      // Opt out in discovered_salons (by phone match)
-      const { data: optedOut } = await db
+      const { error: optErr } = await db
+        .from("marketing_opt_outs")
+        .upsert({
+          phone: last10,
+          source: "wa_baja",
+          notes: `inbound BAJA reply from ${from_phone}`,
+        }, { onConflict: "phone", ignoreDuplicates: false });
+
+      if (optErr) {
+        console.error(`[WA-IN] opt-out registry write failed: ${optErr.message}`);
+      }
+
+      // Count how many discovered_salons rows were affected, for logging.
+      const { count } = await db
         .from("discovered_salons")
-        .update({ opted_out: true, opted_out_at: new Date().toISOString() })
+        .select("id", { count: "exact", head: true })
         .or(`phone.ilike.%${last10},whatsapp.ilike.%${last10}`)
-        .eq("opted_out", false)
-        .select("id");
+        .eq("opted_out", true);
 
-      // Also opt out in profiles (by phone match)
-      await db
-        .from("profiles")
-        .update({ opted_out_marketing: true })
-        .ilike("phone", `%${last10}`);
-
-      const count = optedOut?.length ?? 0;
-      console.log(`[WA-IN] BAJA from ${from_phone}: ${count} discovered_salons opted out`);
+      console.log(`[WA-IN] BAJA from ${from_phone}: opt-out registered, ${count ?? 0} salons affected`);
 
       return json({
         action: "opt_out",
-        opted_out_count: count,
+        opted_out_count: count ?? 0,
         message: "Listo, no recibiras mas mensajes de BeautyCita. Si cambias de opinion, visita beautycita.com",
       });
     }

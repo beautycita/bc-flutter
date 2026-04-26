@@ -468,21 +468,14 @@ serve(async (req: Request) => {
               const checkData = await checkRes.json();
 
               if (checkData.onWhatsApp) {
-                // Send the outreach message
-                const sendRes = await fetch(`${WA_API_URL}/api/wa/send`, {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${WA_API_TOKEN}`,
-                  },
-                  body: JSON.stringify({
-                    phone: recipientPhone,
-                    message: messagePrefix + message,
-                  }),
-                  signal: AbortSignal.timeout(10000),
+                // Enqueue into the global throttle queue (BULK priority, 20s pacing).
+                const { enqueueWa, WA_PRIORITY } = await import("../_shared/wa_queue.ts");
+                const queueId = await enqueueWa(serviceClient, recipientPhone, messagePrefix + message, {
+                  priority: WA_PRIORITY.BULK,
+                  source: "outreach-discovered-salon:invite",
+                  idempotencyKey: `discover-invite-${discovered_salon_id}-${Date.now()}`,
                 });
-                const sendData = await sendRes.json();
-                outreachSent = sendData.sent === true;
+                outreachSent = queueId !== null;
 
                 // Update user_salon_invites record if WA sent successfully
                 if (outreachSent && inviteRecord?.id) {
@@ -666,20 +659,13 @@ serve(async (req: Request) => {
           return jsonResponse({ error: "Recipient not on WhatsApp", phone: recipientPhone }, 400);
         }
 
-        // Send the message
-        const sendRes = await fetch(`${WA_API_URL}/api/wa/send`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${WA_API_TOKEN}`,
-          },
-          body: JSON.stringify({
-            phone: recipientPhone,
-            message: messagePrefix + message,
-          }),
+        // Enqueue into global throttle queue
+        const { enqueueWa, WA_PRIORITY } = await import("../_shared/wa_queue.ts");
+        const queueId = await enqueueWa(serviceClient, recipientPhone, messagePrefix + message, {
+          priority: WA_PRIORITY.BULK,
+          source: "outreach-discovered-salon:manual",
         });
-        const sendData = await sendRes.json();
-        const sent = sendData.sent === true;
+        const sent = queueId !== null;
 
         // Log to outreach log table
         await serviceClient

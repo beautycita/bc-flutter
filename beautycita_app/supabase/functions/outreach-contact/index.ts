@@ -235,33 +235,18 @@ serve(async (req: Request) => {
         return jsonResponse({ error: "Salon has no phone number" }, 400);
       }
 
-      // Check WhatsApp then send
+      // Enqueue into global throttle queue. Single-send admin path uses BULK
+      // priority (admins are sending invites that compete with the bulk queue).
       let sent = false;
       try {
-        const checkRes = await fetch(`${WA_API_URL}/api/wa/check`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${WA_API_TOKEN}`,
-          },
-          body: JSON.stringify({ phone: recipientPhone }),
+        const { enqueueWa, WA_PRIORITY } = await import("../_shared/wa_queue.ts");
+        const queueId = await enqueueWa(serviceClient, recipientPhone, resolved.text, {
+          priority: WA_PRIORITY.BULK,
+          source: "outreach-contact:single",
         });
-        const checkData = await checkRes.json();
-
-        if (checkData.onWhatsApp) {
-          const sendRes = await fetch(`${WA_API_URL}/api/wa/send`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${WA_API_TOKEN}`,
-            },
-            body: JSON.stringify({ phone: recipientPhone, message: resolved.text }),
-          });
-          const sendData = await sendRes.json();
-          sent = sendData.sent === true;
-        }
+        sent = queueId !== null;
       } catch (e) {
-        console.error(`[outreach-contact:send_wa] WA send failed: ${e}`);
+        console.error(`[outreach-contact:send_wa] enqueue failed: ${e}`);
       }
 
       // Log to salon_outreach_log

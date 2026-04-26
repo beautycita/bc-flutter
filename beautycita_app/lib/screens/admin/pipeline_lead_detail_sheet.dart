@@ -9,6 +9,7 @@ import '../../providers/rp_provider.dart';
 import 'package:beautycita_core/supabase.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
+import '../../widgets/admin/outreach_send_sheet.dart';
 
 // ---------------------------------------------------------------------------
 // Entry point
@@ -1494,10 +1495,31 @@ class _LeadDetailSheetState extends State<_LeadDetailSheet> {
   }
 
   Widget _buildQuickActions(BuildContext context, WidgetRef ref) {
+    final salonId = _lead['id']?.toString();
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: [
+        // Send templated invite (single recipient → opens unified send sheet).
+        if (salonId != null)
+          _quickBtn(
+            label: 'Enviar mensaje',
+            icon: Icons.send,
+            color: Theme.of(context).colorScheme.primary,
+            onTap: () async {
+              final sent = await showOutreachSendSheet(
+                context: context,
+                recipientTable: 'discovered_salons',
+                recipientIds: [salonId],
+                recipientLabel: 'Enviar mensaje a ${_lead['business_name'] ?? "este salón"}',
+              );
+              if (sent && context.mounted) {
+                // Refresh outreach timeline + status after enqueue
+                ref.invalidate(pipelineOutreachLogProvider(salonId));
+              }
+            },
+          ),
+
         // "Registered" status is set automatically when a salon completes
         // onboarding through the app. Admin cannot manually set it.
         if (_status == 'registered')

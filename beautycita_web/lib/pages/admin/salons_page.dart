@@ -8,6 +8,7 @@ import '../../services/csv_export.dart';
 import '../../widgets/bc_data_table.dart';
 import '../../widgets/bulk_action_bar.dart';
 import '../../widgets/filter_bar.dart';
+import '../../widgets/outreach_send_dialog.dart';
 import '../../widgets/master_detail_layout.dart';
 import '../../widgets/admin_typeahead_search.dart';
 import '../../widgets/pagination_bar.dart';
@@ -466,6 +467,19 @@ class _RegisteredTab extends ConsumerWidget {
                   icon: const Icon(Icons.download, size: 18),
                   label: const Text('Exportar'),
                 ),
+                TextButton.icon(
+                  onPressed: () async {
+                    final ids = checkedSalons.map((s) => s.id).toList();
+                    final sent = await showOutreachSendDialog(
+                      context: context,
+                      recipientTable: 'businesses',
+                      recipientIds: ids,
+                    );
+                    if (sent) onCheckedChanged({});
+                  },
+                  icon: const Icon(Icons.send, size: 18),
+                  label: const Text('Enviar mensaje'),
+                ),
               ],
             )
           : null,
@@ -882,14 +896,27 @@ class _DiscoveredTab extends ConsumerWidget {
               onClearSelection: () => onCheckedChanged({}),
               actions: [
                 TextButton.icon(
+                  onPressed: () async {
+                    final ids = checkedSalons.map((s) => s.id).toList();
+                    final sent = await showOutreachSendDialog(
+                      context: context,
+                      recipientTable: 'discovered_salons',
+                      recipientIds: ids,
+                    );
+                    if (sent) onCheckedChanged({});
+                  },
+                  icon: const Icon(Icons.send, size: 18),
+                  label: const Text('Enviar mensaje'),
+                ),
+                TextButton.icon(
                   onPressed: () => _sendBulkWaInvites(
                     context,
                     ref,
                     checkedSalons.toList(),
                     onCheckedChanged,
                   ),
-                  icon: const Icon(Icons.send, size: 18),
-                  label: const Text('Enviar WA'),
+                  icon: const Icon(Icons.outgoing_mail, size: 18),
+                  label: const Text('Invite legacy'),
                 ),
               ],
             )
