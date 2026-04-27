@@ -14,7 +14,6 @@ import 'package:beautycita/services/user_session.dart';
 import 'package:beautycita/widgets/phone_verify_gate_sheet.dart';
 import 'package:beautycita/services/updater_service.dart';
 import 'package:beautycita/widgets/settings_widgets.dart';
-import 'package:beautycita/widgets/profile_sections.dart';
 import 'package:beautycita/config/routes.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -109,50 +108,9 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen>
     final cs = Theme.of(context).colorScheme;
     final ext = Theme.of(context).extension<BCThemeExtension>()!;
 
-    // Menu mode — render the 5-tile nav, no inline sections.
+    // Menu mode — render hero + status + grouped link cards.
     if (widget.section == null) {
-      return Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        appBar: AppBar(title: const Text('Seguridad')),
-        body: ListView(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppConstants.screenPaddingHorizontal,
-            vertical: AppConstants.paddingMD,
-          ),
-          children: [
-            ProfileQuickLinkTile(
-              icon: Icons.account_tree_outlined,
-              label: 'Cuentas vinculadas',
-              color: const Color(0xFF8B5CF6),
-              onTap: () => context.push('/cuenta/security/linked-accounts'),
-            ),
-            ProfileQuickLinkTile(
-              icon: Icons.fingerprint_rounded,
-              label: 'Biometrico',
-              color: const Color(0xFF0EA5E9),
-              onTap: () => context.push('/cuenta/security/biometric'),
-            ),
-            ProfileQuickLinkTile(
-              icon: Icons.devices_outlined,
-              label: 'Dispositivos enlazados',
-              color: const Color(0xFFEC4899),
-              onTap: () => context.push('/devices'),
-            ),
-            ProfileQuickLinkTile(
-              icon: Icons.credit_card_outlined,
-              label: 'Metodos de pago',
-              color: const Color(0xFFEF4444),
-              onTap: () => context.push(AppRoutes.paymentMethods),
-            ),
-            ProfileQuickLinkTile(
-              icon: Icons.info_outline_rounded,
-              label: 'Acerca de la app',
-              color: const Color(0xFF6B7280),
-              onTap: () => context.push('/cuenta/security/about'),
-            ),
-          ],
-        ),
-      );
+      return _buildMenu(cs, ext, sec);
     }
 
     final showLinked = widget.section == SecuritySection.linkedAccounts;
@@ -378,6 +336,362 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen>
 
           const SizedBox(height: AppConstants.paddingXXL),
         ],
+      ),
+    );
+  }
+
+  Widget _buildMenu(ColorScheme cs, BCThemeExtension ext, SecurityState sec) {
+    final profile = ref.watch(profileProvider);
+    final phoneVerified = profile.hasVerifiedPhone;
+    final hasPhone = profile.phone != null;
+    final identityScore = _identityScore(sec, phoneVerified);
+    final scoreLabel = identityScore >= 4
+        ? 'Excelente'
+        : identityScore >= 3
+            ? 'Bueno'
+            : identityScore >= 2
+                ? 'Mejorable'
+                : 'Bajo';
+    final scoreColor = identityScore >= 4
+        ? ext.successColor
+        : identityScore >= 3
+            ? ext.successColor
+            : identityScore >= 2
+                ? ext.warningColor
+                : cs.error;
+
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      appBar: AppBar(title: const Text('Seguridad')),
+      body: ListView(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppConstants.screenPaddingHorizontal,
+          vertical: AppConstants.paddingMD,
+        ),
+        children: [
+          // ── Hero banner with score ──
+          _animated(0, _buildHero(cs, ext, identityScore, scoreLabel, scoreColor)),
+          const SizedBox(height: AppConstants.paddingLG),
+
+          // ── Status summary card (4 chips) ──
+          _animated(1, _buildStatusGrid(cs, ext, sec, hasPhone, phoneVerified)),
+          const SizedBox(height: AppConstants.paddingLG),
+
+          // ── IDENTIDAD ──
+          _animated(2, Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SectionHeader(label: 'Identidad'),
+              _buildCard(cs, ext, children: [
+                _menuTile(
+                  icon: Icons.account_tree_outlined,
+                  iconColor: const Color(0xFF8B5CF6),
+                  label: 'Cuentas vinculadas',
+                  subtitle: _linkedAccountsSubtitle(sec, hasPhone, phoneVerified),
+                  onTap: () => context.push('/cuenta/security/linked-accounts'),
+                  cs: cs,
+                  ext: ext,
+                ),
+                Divider(height: 1, color: ext.cardBorderColor),
+                _menuTile(
+                  icon: Icons.fingerprint_rounded,
+                  iconColor: const Color(0xFF0EA5E9),
+                  label: 'Biometrico',
+                  subtitle: 'Inicio rapido con huella o rostro',
+                  onTap: () => context.push('/cuenta/security/biometric'),
+                  cs: cs,
+                  ext: ext,
+                ),
+              ]),
+            ],
+          )),
+          const SizedBox(height: AppConstants.paddingLG),
+
+          // ── DISPOSITIVOS Y PAGOS ──
+          _animated(3, Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SectionHeader(label: 'Dispositivos y pagos'),
+              _buildCard(cs, ext, children: [
+                _menuTile(
+                  icon: Icons.devices_outlined,
+                  iconColor: const Color(0xFFEC4899),
+                  label: 'Dispositivos enlazados',
+                  subtitle: 'Sesiones activas en otros telefonos y navegadores',
+                  onTap: () => context.push('/devices'),
+                  cs: cs,
+                  ext: ext,
+                ),
+                Divider(height: 1, color: ext.cardBorderColor),
+                _menuTile(
+                  icon: Icons.credit_card_outlined,
+                  iconColor: const Color(0xFFEF4444),
+                  label: 'Metodos de pago',
+                  subtitle: 'Tarjetas guardadas para reservar mas rapido',
+                  onTap: () => context.push(AppRoutes.paymentMethods),
+                  cs: cs,
+                  ext: ext,
+                ),
+              ]),
+            ],
+          )),
+          const SizedBox(height: AppConstants.paddingLG),
+
+          // ── APP ──
+          _animated(3, Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SectionHeader(label: 'Aplicacion'),
+              _buildCard(cs, ext, children: [
+                _menuTile(
+                  icon: Icons.info_outline_rounded,
+                  iconColor: const Color(0xFF6B7280),
+                  label: 'Acerca de la app',
+                  subtitle:
+                      'Version ${AppConstants.version} · build ${AppConstants.buildNumber}',
+                  trailingBadge: UpdaterService.instance.apkUpdateAvailable
+                      ? _NewBadge(color: ext.infoColor)
+                      : null,
+                  onTap: () => context.push('/cuenta/security/about'),
+                  cs: cs,
+                  ext: ext,
+                ),
+              ]),
+            ],
+          )),
+          const SizedBox(height: AppConstants.paddingXXL),
+        ],
+      ),
+    );
+  }
+
+  /// 0-5 score: each verified factor counts.
+  int _identityScore(SecurityState sec, bool phoneVerified) {
+    var s = 0;
+    if (sec.isGoogleLinked) s++;
+    if (sec.isEmailConfirmed) s++;
+    if (phoneVerified) s++;
+    if (sec.hasPassword) s++;
+    if (ref.watch(biometricEnabledProvider).value == true) s++;
+    return s;
+  }
+
+  String _linkedAccountsSubtitle(
+      SecurityState sec, bool hasPhone, bool phoneVerified) {
+    final pieces = <String>[];
+    if (sec.isGoogleLinked) pieces.add('Google');
+    if (sec.isEmailConfirmed) pieces.add('Email');
+    if (phoneVerified) pieces.add('Telefono');
+    if (sec.hasPassword) pieces.add('Contrasena');
+    if (pieces.isEmpty) return 'Configura Google, email, telefono y contrasena';
+    return pieces.join(' · ');
+  }
+
+  Widget _buildHero(ColorScheme cs, BCThemeExtension ext, int score,
+      String label, Color scoreColor) {
+    final onBrand = cs.onPrimary;
+    final pct = (score / 5).clamp(0.0, 1.0);
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 800),
+      curve: Curves.easeInOut,
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppConstants.paddingLG,
+        vertical: AppConstants.paddingMD + AppConstants.paddingSM,
+      ),
+      decoration: BoxDecoration(
+        gradient: ext.primaryGradient,
+        borderRadius: BorderRadius.circular(AppConstants.radiusLG),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'CUENTA PROTEGIDA',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: onBrand.withValues(alpha: 0.7),
+                  letterSpacing: 1.0,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+          const SizedBox(height: AppConstants.paddingXS),
+          Text(
+            'Tu seguridad',
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  color: onBrand,
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: AppConstants.paddingMD),
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppConstants.paddingMD,
+              vertical: AppConstants.paddingSM,
+            ),
+            decoration: BoxDecoration(
+              color: onBrand.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+              border: Border.all(color: onBrand.withValues(alpha: 0.18)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.shield_outlined,
+                    size: 18, color: onBrand.withValues(alpha: 0.9)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Nivel: $label',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: onBrand,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                            ),
+                      ),
+                      const SizedBox(height: 6),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: pct,
+                          minHeight: 6,
+                          backgroundColor: onBrand.withValues(alpha: 0.18),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                              onBrand.withValues(alpha: 0.95)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  '$score/5',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: onBrand,
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusGrid(ColorScheme cs, BCThemeExtension ext,
+      SecurityState sec, bool hasPhone, bool phoneVerified) {
+    return _buildCard(cs, ext, children: [
+      Padding(
+        padding: const EdgeInsets.all(AppConstants.paddingMD),
+        child: GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          mainAxisSpacing: 10,
+          crossAxisSpacing: 10,
+          physics: const NeverScrollableScrollPhysics(),
+          childAspectRatio: 2.6,
+          children: [
+            _StatusChip(
+              icon: Icons.email_outlined,
+              label: 'Email',
+              ok: sec.isEmailConfirmed,
+              warn: sec.isEmailAdded && !sec.isEmailConfirmed,
+              ext: ext,
+              cs: cs,
+            ),
+            _StatusChip(
+              icon: Icons.phone_outlined,
+              label: 'Telefono',
+              ok: phoneVerified,
+              warn: hasPhone && !phoneVerified,
+              ext: ext,
+              cs: cs,
+            ),
+            _StatusChip(
+              icon: Icons.lock_outlined,
+              label: 'Contrasena',
+              ok: sec.hasPassword,
+              ext: ext,
+              cs: cs,
+            ),
+            _StatusChip(
+              icon: Icons.fingerprint_rounded,
+              label: 'Biometrico',
+              ok: ref.watch(biometricEnabledProvider).value == true,
+              ext: ext,
+              cs: cs,
+            ),
+          ],
+        ),
+      ),
+    ]);
+  }
+
+  Widget _menuTile({
+    required IconData icon,
+    required Color iconColor,
+    required String label,
+    required String subtitle,
+    Widget? trailingBadge,
+    required VoidCallback onTap,
+    required ColorScheme cs,
+    required BCThemeExtension ext,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppConstants.paddingMD,
+          vertical: AppConstants.paddingMD,
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, size: 20, color: iconColor),
+            ),
+            const SizedBox(width: AppConstants.paddingMD),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: cs.onSurface,
+                        ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: cs.onSurface.withValues(alpha: 0.55),
+                          fontSize: 11.5,
+                          height: 1.3,
+                        ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            if (trailingBadge != null) ...[
+              trailingBadge,
+              const SizedBox(width: 6),
+            ],
+            Icon(Icons.chevron_right_rounded,
+                size: 22, color: cs.onSurface.withValues(alpha: 0.3)),
+          ],
+        ),
       ),
     );
   }
@@ -788,6 +1102,96 @@ class _BiometricForgetTileState extends ConsumerState<_BiometricForgetTile> {
           ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
           : Icon(Icons.chevron_right_outlined, size: 20, color: cs.onSurface.withValues(alpha: 0.3)),
       onTap: _running ? null : _forgetThisDevice,
+    );
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  const _StatusChip({
+    required this.icon,
+    required this.label,
+    required this.ok,
+    required this.ext,
+    required this.cs,
+    this.warn = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool ok;
+  final bool warn;
+  final BCThemeExtension ext;
+  final ColorScheme cs;
+
+  @override
+  Widget build(BuildContext context) {
+    final tone = ok ? ext.successColor : (warn ? ext.warningColor : cs.onSurface.withValues(alpha: 0.4));
+    final bg = ok
+        ? ext.successColor.withValues(alpha: 0.10)
+        : warn
+            ? ext.warningColor.withValues(alpha: 0.10)
+            : cs.onSurface.withValues(alpha: 0.05);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: tone),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 11.5,
+                        color: cs.onSurface,
+                      ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  ok ? 'Verificado' : (warn ? 'Pendiente' : 'Sin configurar'),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: tone,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NewBadge extends StatelessWidget {
+  const _NewBadge({required this.color});
+  final Color color;
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppConstants.radiusXS),
+      ),
+      child: Text(
+        'Nuevo',
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w700,
+          fontSize: 10,
+        ),
+      ),
     );
   }
 }

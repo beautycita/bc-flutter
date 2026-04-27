@@ -157,25 +157,31 @@
 <script>
 const API = 'https://beautycita.com/supabase/functions/v1/portfolio-upload';
 // Anon key is loaded from /portfolio-upload-config.json at startup. The
-// config file is provisioned on the server (not in git) so the deploy
-// guardian's secret scanner doesn't trip on a JWT-shaped string in
-// source. The key itself is public by Supabase design — Kong just
-// requires it on every functions request.
+// config file is provisioned on the server (and excluded from the
+// flutter-web rsync --delete) so the deploy guardian's secret scanner
+// doesn't trip on a JWT-shaped string in source. The key itself is
+// public by Supabase design — Kong just requires it on every functions
+// request.
 let API_HEADERS = { 'Content-Type': 'application/json' };
-async function loadApiHeaders() {
-  try {
-    const res = await fetch('/portfolio-upload-config.json', { cache: 'no-store' });
-    if (!res.ok) throw new Error('config fetch ' + res.status);
-    const cfg = await res.json();
-    if (typeof cfg.anonKey !== 'string' || !cfg.anonKey) throw new Error('config missing anonKey');
-    API_HEADERS = {
-      'Content-Type': 'application/json',
-      'apikey': cfg.anonKey,
-      'Authorization': 'Bearer ' + cfg.anonKey,
-    };
-  } catch (e) {
-    console.error('[portfolio-upload] failed to load API config:', e);
-  }
+let _apiHeadersReady = null;
+function loadApiHeaders() {
+  if (_apiHeadersReady) return _apiHeadersReady;
+  _apiHeadersReady = (async () => {
+    try {
+      const res = await fetch('/portfolio-upload-config.json', { cache: 'no-store' });
+      if (!res.ok) throw new Error('config fetch ' + res.status);
+      const cfg = await res.json();
+      if (typeof cfg.anonKey !== 'string' || !cfg.anonKey) throw new Error('config missing anonKey');
+      API_HEADERS = {
+        'Content-Type': 'application/json',
+        'apikey': cfg.anonKey,
+        'Authorization': 'Bearer ' + cfg.anonKey,
+      };
+    } catch (e) {
+      console.error('[portfolio-upload] failed to load API config:', e);
+    }
+  })();
+  return _apiHeadersReady;
 }
 const STICKER_BASE = 'https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/media/sticker_overlays/';
 const STICKERS = [
@@ -224,13 +230,14 @@ async function verifyPin() {
   errEl.classList.add('hidden');
 
   try {
+    await loadApiHeaders();
     const res = await fetch(API, {
       method: 'POST',
       headers: API_HEADERS,
       body: JSON.stringify({ action: 'verify', token, pin }),
     });
     const data = await res.json();
-    if (!res.ok) { errEl.textContent = data.error || 'Error'; errEl.classList.remove('hidden'); return; }
+    if (!res.ok) { errEl.textContent = data.error || data.message || ('Error ' + res.status); errEl.classList.remove('hidden'); return; }
 
     staffId = data.staff_id;
     const esc = s => { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; };

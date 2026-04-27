@@ -1011,8 +1011,13 @@ class _BankingSetupScreenState extends ConsumerState<BankingSetupScreen> {
     } catch (e) {
       if (kDebugMode) debugPrint('BankingSetup: submit error: $e');
       if (!mounted) return;
+      // Surface the raw exception under the friendly message so we can
+      // see the actual storage-layer rejection on-device without needing
+      // to attach a debugger. Trimmed to keep the dialog readable.
+      final raw = e.toString();
+      final detail = raw.length > 240 ? '${raw.substring(0, 240)}…' : raw;
       setState(() {
-        _submitError = ToastService.friendlyError(e);
+        _submitError = '${ToastService.friendlyError(e)}\n\n$detail';
         _submitting = false;
       });
     }

@@ -244,6 +244,7 @@ if [[ "$DO_WEB" == "true" ]]; then
     rm -f /tmp/bc-web.log
     say "[web] rsync → www-bc"
     rsync -avz --delete --exclude sativa --exclude private \
+      --exclude portfolio-upload-config.json --exclude portfolio-upload.html \
       "$WEB_DIR/build/web/" "${EDGE_REMOTE_HOST}:${WEB_REMOTE_DIR}" 2>&1 | tail -5
   fi
 fi
