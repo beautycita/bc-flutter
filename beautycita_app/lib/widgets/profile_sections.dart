@@ -110,14 +110,17 @@ class ProfileAdminTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return ref.watch(isAdminProvider).when(
           data: (isAdmin) => isAdmin
-              ? ProfileQuickLinkTile(
-                  icon: Icons.admin_panel_settings_rounded,
-                  label: 'Panel de administracion',
-                  color: const Color(0xFFD97706),
-                  onTap: () {
-                    ref.read(adminTabProvider.notifier).state = 0;
-                    context.push(AppRoutes.admin);
-                  },
+              ? _LabeledSection(
+                  label: 'ADMINISTRACION',
+                  child: ProfileQuickLinkTile(
+                    icon: Icons.admin_panel_settings_rounded,
+                    label: 'Panel de administracion',
+                    color: const Color(0xFFD97706),
+                    onTap: () {
+                      ref.read(adminTabProvider.notifier).state = 0;
+                      context.push(AppRoutes.admin);
+                    },
+                  ),
                 )
               : const SizedBox.shrink(),
           loading: () => const SizedBox.shrink(),
@@ -137,11 +140,14 @@ class ProfileRpTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return ref.watch(isRpProvider).when(
           data: (isRp) => isRp
-              ? ProfileQuickLinkTile(
-                  icon: Icons.business_center,
-                  label: 'Panel RP',
-                  color: const Color(0xFFEC4899),
-                  onTap: () => context.push(AppRoutes.rp),
+              ? _LabeledSection(
+                  label: 'RELACIONES PUBLICAS',
+                  child: ProfileQuickLinkTile(
+                    icon: Icons.business_center,
+                    label: 'Panel RP',
+                    color: const Color(0xFFEC4899),
+                    onTap: () => context.push(AppRoutes.rp),
+                  ),
                 )
               : const SizedBox.shrink(),
           loading: () => const SizedBox.shrink(),
@@ -177,34 +183,41 @@ class ProfileProfessionalsSection extends ConsumerWidget {
     const profColor = Color(0xFF10B981);
 
     if (isOwner) {
-      return ProfileQuickLinkTile(
-        icon: Icons.storefront_rounded,
-        label: 'Portal de negocio',
-        color: profColor,
-        onTap: () {
-          ref.read(businessTabProvider.notifier).state = 0;
-          context.push(AppRoutes.business);
-        },
+      return _LabeledSection(
+        label: 'PARA PROFESIONALES',
+        child: ProfileQuickLinkTile(
+          icon: Icons.storefront_rounded,
+          label: 'Portal de negocio',
+          color: profColor,
+          onTap: () {
+            ref.read(businessTabProvider.notifier).state = 0;
+            context.push(AppRoutes.business);
+          },
+        ),
       );
     }
 
     if (appStatus == 'pending') {
-      return ProfileQuickLinkTile(
-        icon: Icons.hourglass_top_rounded,
-        label: 'Solicitud en revision',
-        color: profColor,
-        trailing: _StatusPill(
-          text: 'Pendiente',
-          color: Colors.amber.shade800,
-          background: Colors.amber.shade100,
+      return _LabeledSection(
+        label: 'PARA PROFESIONALES',
+        child: ProfileQuickLinkTile(
+          icon: Icons.hourglass_top_rounded,
+          label: 'Solicitud en revision',
+          color: profColor,
+          trailing: _StatusPill(
+            text: 'Pendiente',
+            color: Colors.amber.shade800,
+            background: Colors.amber.shade100,
+          ),
+          onTap: () {},
         ),
-        onTap: () {},
       );
     }
 
     if (appStatus == 'rejected') {
       final cs = Theme.of(context).colorScheme;
-      return Column(
+      return _LabeledSection(
+        label: 'PARA PROFESIONALES',
         children: [
           ProfileQuickLinkTile(
             icon: Icons.error_outline_rounded,
@@ -240,11 +253,14 @@ class ProfileProfessionalsSection extends ConsumerWidget {
     final appOpens = ref.watch(appOpenCountProvider).valueOrNull ?? 0;
     if (appOpens >= 10) return const SizedBox.shrink();
 
-    return ProfileQuickLinkTile(
-      icon: Icons.store_rounded,
-      label: 'Registra tu salon',
-      color: profColor,
-      onTap: () => _attemptRegister(context, ref),
+    return _LabeledSection(
+      label: 'PARA PROFESIONALES',
+      child: ProfileQuickLinkTile(
+        icon: Icons.store_rounded,
+        label: 'Registra tu salon',
+        color: profColor,
+        onTap: () => _attemptRegister(context, ref),
+      ),
     );
   }
 
@@ -271,11 +287,14 @@ class ProfileLegalSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ProfileQuickLinkTile(
-      icon: Icons.gavel_rounded,
-      label: 'Terminos y politicas',
-      color: const Color(0xFF64748B),
-      onTap: () => context.push(AppRoutes.legal),
+    return _LabeledSection(
+      label: 'LEGAL',
+      child: ProfileQuickLinkTile(
+        icon: Icons.gavel_rounded,
+        label: 'Terminos y politicas',
+        color: const Color(0xFF64748B),
+        onTap: () => context.push(AppRoutes.legal),
+      ),
     );
   }
 }
@@ -411,6 +430,47 @@ class ProfileLogoutButton extends ConsumerWidget {
 // =============================================================================
 // Small private helpers
 // =============================================================================
+
+// =============================================================================
+// _LabeledSection — group label above one or more profile rows.
+// =============================================================================
+// Restored 2026-04-27 after Kriket flagged that dropping the section headers
+// (ADMINISTRACION / RELACIONES PUBLICAS / PARA PROFESIONALES / LEGAL) wasn't
+// what was asked for. The original directive was to make every row LOOK the
+// same — not to remove the dividers between sections.
+
+class _LabeledSection extends StatelessWidget {
+  final String label;
+  final Widget? child;
+  final List<Widget>? children;
+
+  const _LabeledSection({required this.label, this.child, this.children})
+      : assert(child != null || children != null);
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: AppConstants.paddingLG),
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.2,
+                  color: cs.primary,
+                ),
+          ),
+        ),
+        if (child != null) child!,
+        if (children != null) ...children!,
+      ],
+    );
+  }
+}
 
 class _StatusPill extends StatelessWidget {
   final String text;
