@@ -1,4 +1,8 @@
+import 'dart:js_interop';
+import 'dart:js_interop_unsafe';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qr/qr.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -861,7 +865,7 @@ class _LandingPageState extends State<LandingPage>
       barrierDismissible: true,
       barrierLabel: 'Feature Detail',
       barrierColor: Colors.black54,
-      transitionDuration: const Duration(milliseconds: 500),
+      transitionDuration: const Duration(milliseconds: 900),
       pageBuilder: (context, anim, secondaryAnim) {
         return _FeatureDetailPopup(
           feature: feature,
@@ -876,11 +880,36 @@ class _LandingPageState extends State<LandingPage>
         final maxRadius = (screenSize.width > screenSize.height
             ? screenSize.width
             : screenSize.height) * 1.5;
-        final radius = anim.value * maxRadius;
 
-        return ClipPath(
-          clipper: _CircleClipper(center: tapPosition, radius: radius),
-          child: child,
+        // Cinematic curve — slow ease in, slow ease out on both open and close.
+        final curved = CurvedAnimation(
+          parent: anim,
+          curve: Curves.easeInOutCubic,
+          reverseCurve: Curves.easeInOutCubic,
+        );
+        final t = curved.value;
+        final radius = t * maxRadius;
+        // Scale rests just behind the viewport (0.88) and pushes through to 1.0
+        // so the panel feels like it surges forward as the radial reveal opens.
+        final scale = 0.88 + 0.12 * t;
+        // Opacity leads slightly so the panel materializes before it lands.
+        final opacity = Curves.easeOut.transform(anim.value.clamp(0.0, 1.0));
+
+        // Anchor the scale to the tap point so the zoom emanates from the same
+        // origin as the radial reveal — both effects feel like one gesture.
+        final originX = tapPosition.dx - screenSize.width / 2;
+        final originY = tapPosition.dy - screenSize.height / 2;
+
+        return Opacity(
+          opacity: opacity,
+          child: Transform.scale(
+            scale: scale,
+            origin: Offset(originX, originY),
+            child: ClipPath(
+              clipper: _CircleClipper(center: tapPosition, radius: radius),
+              child: child,
+            ),
+          ),
         );
       },
     );
@@ -1992,16 +2021,27 @@ class _LandingPageState extends State<LandingPage>
                     ),
                   ),
                   const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.share_outlined, size: 18, color: Colors.white.withValues(alpha: 0.8)),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Reenvia este mensaje a un amigo que tenga salon',
-                        style: TextStyle(fontSize: 15, color: Colors.white.withValues(alpha: 0.8)),
+                  MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: GestureDetector(
+                      onTap: () => _shareSalonInvite(context),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.share_outlined, size: 18, color: Colors.white.withValues(alpha: 0.85)),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Reenvia este mensaje a un amigo que tenga salon',
+                            style: TextStyle(
+                              fontSize: 15,
+                              color: Colors.white.withValues(alpha: 0.85),
+                              decoration: TextDecoration.underline,
+                              decorationColor: Colors.white.withValues(alpha: 0.4),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ],
               ),
@@ -2254,6 +2294,55 @@ class _LandingPageState extends State<LandingPage>
 
   void _launchUrl(String url) {
     launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+  }
+
+  Future<void> _shareSalonInvite(BuildContext context) async {
+    const message =
+        'Conoci una plataforma para salones de belleza que es 100% gratis: '
+        'sin mensualidad, sin comision por tus propios clientes, mensajes de '
+        'WhatsApp ilimitados y SAT automatico. Echale un ojo: '
+        'https://beautycita.com';
+    const shareUrl = 'https://beautycita.com';
+    const shareTitle = 'BeautyCita — la plataforma gratis para salones';
+
+    bool shared = false;
+    try {
+      final navigator = web.window.navigator as JSObject;
+      if (navigator.has('share')) {
+        final data = {
+          'title': shareTitle,
+          'text': message,
+          'url': shareUrl,
+        }.jsify();
+        await navigator.callMethod<JSPromise>('share'.toJS, data).toDart;
+        shared = true;
+      }
+    } catch (_) {
+      // User dismissed the share sheet, or sharing was blocked. Fall through
+      // to clipboard so the message is still recoverable.
+    }
+
+    if (shared) return;
+    if (!context.mounted) return;
+
+    try {
+      await Clipboard.setData(const ClipboardData(text: message));
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Mensaje copiado — pegalo en WhatsApp para compartirlo'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se pudo compartir. Copia el enlace manualmente: https://beautycita.com'),
+          duration: Duration(seconds: 4),
+        ),
+      );
+    }
   }
 }
 
@@ -3215,7 +3304,9 @@ class _AnimatedBrandTextState extends State<_AnimatedBrandText>
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
-        final sweep = -1.0 + (_controller.value * 3.0);
+        // Sweep travels exactly one gradient-tile period (2.0 alignment-units)
+        // per cycle so the loop wraps seamlessly when the controller resets.
+        final sweep = _controller.value * 2.0;
         return ShaderMask(
           blendMode: BlendMode.srcIn,
           shaderCallback: (bounds) {
