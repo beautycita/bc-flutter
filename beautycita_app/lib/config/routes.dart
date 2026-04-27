@@ -16,7 +16,6 @@ import 'package:beautycita/screens/invite_salon_screen.dart';
 import 'package:beautycita/screens/invite/invite_experience_screen.dart';
 import 'package:beautycita/screens/invite/invite_salon_detail_screen.dart';
 import 'package:beautycita/screens/salon_onboarding_screen.dart';
-import 'package:beautycita/screens/settings_screen.dart';
 import 'package:beautycita/screens/chat_list_screen.dart';
 import 'package:beautycita/screens/chat_conversation_screen.dart';
 import 'package:beautycita/screens/chat_router_screen.dart';
@@ -66,7 +65,6 @@ class AppRoutes {
   static const String admin = '/admin';
   static const String business = '/business';
   static const String inviteSalon = '/invite';
-  static const String settings = '/settings';
   static const String salonOnboarding = '/registro';
   static const String chat = '/chat';
   static const String chatList = '/chat/list';
@@ -77,7 +75,7 @@ class AppRoutes {
   static const String discoveredSalon = '/discovered-salon';
   static const String studio = '/studio';
   static const String preferences = '/settings/preferences';
-  static const String profile = '/settings/profile';
+  static const String profile = '/profile';
   static const String security = '/settings/security';
   static const String paymentMethods = '/settings/payment-methods';
   static const String cashPayment = '/settings/cash-payment';
@@ -312,14 +310,6 @@ class AppRoutes {
         pageBuilder: (context, state) => bcSweepPage(
           key: state.pageKey,
           child: const InviteSalonDetailScreen(),
-        ),
-      ),
-      GoRoute(
-        path: settings,
-        name: 'settings',
-        pageBuilder: (context, state) => bcSweepPage(
-          key: state.pageKey,
-          child: const SettingsScreen(),
         ),
       ),
       GoRoute(

@@ -84,12 +84,12 @@ const _faqCategories = [
       _FaqItem(
         question: '¿Puedo vincular mi correo o telefono?',
         answer:
-            'Si, desde Ajustes > Seguridad puedes vincular correo, telefono o Google.',
+            'Si, desde Perfil > Seguridad puedes vincular correo, telefono o Google.',
       ),
       _FaqItem(
         question: '¿Como elimino mi cuenta?',
         answer:
-            'Desde Ajustes > Seguridad > Eliminar cuenta, o escribe a soporte@beautycita.com.',
+            'Desde Perfil > Seguridad > Eliminar cuenta, o escribe a soporte@beautycita.com.',
       ),
     ],
   ),
@@ -100,7 +100,7 @@ const _faqCategories = [
       _FaqItem(
         question: '¿Como registro mi salon?',
         answer:
-            'Desde Ajustes > Registra tu salon. Necesitas verificar tu telefono y correo primero.',
+            'Desde Perfil > Registra tu salon. Necesitas verificar tu telefono y correo primero.',
       ),
       _FaqItem(
         question: '¿Cuanto cobra BeautyCita?',

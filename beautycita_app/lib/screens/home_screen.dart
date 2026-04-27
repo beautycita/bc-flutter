@@ -405,8 +405,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 },
                               ),
                               _HeaderButton(
-                                icon: Icons.settings_outlined,
-                                onTap: () => context.push('/settings'),
+                                icon: Icons.person_outline_rounded,
+                                onTap: () => context.push('/profile'),
                               ),
                             ],
                           ),

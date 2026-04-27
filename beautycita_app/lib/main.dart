@@ -178,7 +178,6 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
     '/bookings',
     '/chat',
     '/profile',
-    '/settings',
   };
 
   bool _isAllowedRoute(String route) {

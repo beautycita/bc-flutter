@@ -17,17 +17,15 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:beautycita/services/lightx_service.dart';
 import 'package:beautycita/services/media_service.dart';
-import 'package:beautycita/providers/security_provider.dart';
 import 'package:beautycita/services/username_generator.dart';
 import 'package:beautycita/services/username_validator.dart';
 import 'package:beautycita/widgets/settings_widgets.dart';
-import 'package:beautycita/providers/admin_provider.dart';
-import 'package:beautycita/providers/business_provider.dart';
 import 'package:beautycita/providers/feature_toggle_provider.dart';
 import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita/services/supabase_client.dart';
 import 'package:beautycita/services/toast_service.dart';
 import 'package:beautycita/config/fonts.dart';
+import 'package:beautycita/widgets/profile_sections.dart';
 
 // ── Profile stat providers ──
 
@@ -190,10 +188,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           // ── Quick Links ──
           _buildQuickLinks(context, cs, ext, textTheme),
 
-          const SizedBox(height: AppConstants.paddingLG),
+          // ── Admin / RP / Para profesionales / Legal ──
+          const ProfileAdminTile(),
+          const ProfileRpTile(),
+          const ProfileProfessionalsSection(),
+          const ProfileLegalSection(),
 
-          // ── Register Salon CTA ──
-          _buildRegisterSalonCTA(context, cs, ext, textTheme),
+          const SizedBox(height: AppConstants.paddingXL),
+
+          // ── Cerrar sesion ──
+          const ProfileLogoutButton(),
 
           const SizedBox(height: AppConstants.paddingLG),
         ],
@@ -715,6 +719,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           onTap: () => context.push('/my-bookings'),
         ),
         _quickLinkTile(
+          icon: Icons.storefront_rounded,
+          label: 'Salones visitados',
+          color: const Color(0xFF0EA5E9),
+          onTap: () => context.push('/favorites'),
+        ),
+        _quickLinkTile(
           icon: Icons.credit_card_outlined,
           label: 'Metodos de pago',
           color: const Color(0xFF8B5CF6),
@@ -769,83 +779,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               child: Text(label, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500)),
             ),
             Icon(Icons.chevron_right, size: 20, color: cs.onSurface.withValues(alpha: 0.3)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ── Register Salon CTA ──
-
-  Widget _buildRegisterSalonCTA(
-    BuildContext context, ColorScheme cs, BCThemeExtension ext, TextTheme textTheme,
-  ) {
-    final toggles = ref.watch(featureTogglesProvider);
-    if (!toggles.isEnabled('enable_salon_registration')) {
-      return const SizedBox.shrink();
-    }
-
-    final role = ref.watch(userRoleProvider).valueOrNull;
-    if (role == 'admin' || role == 'superadmin' || role == 'stylist') {
-      return const SizedBox.shrink();
-    }
-
-    final isOwner = ref.watch(isBusinessOwnerProvider).valueOrNull ?? false;
-    if (isOwner) return const SizedBox.shrink();
-
-    final appOpens = ref.watch(appOpenCountProvider).valueOrNull ?? 0;
-    if (appOpens < 10) return const SizedBox.shrink();
-
-    final phoneVerified = ref.watch(profileProvider).hasVerifiedPhone;
-    final emailVerified = ref.watch(securityProvider).isEmailConfirmed;
-    final canRegister = phoneVerified && emailVerified;
-
-    return GestureDetector(
-      onTap: canRegister
-          ? () => context.push('/registro')
-          : () => ToastService.showWarning(
-              'Para registrar tu salon necesitas verificar tu numero de telefono '
-              'y confirmar tu email. Ve a Ajustes > Seguridad para completar la verificacion.',
-            ),
-      child: Container(
-        padding: const EdgeInsets.all(AppConstants.paddingMD),
-        decoration: BoxDecoration(
-          gradient: ext.primaryGradient,
-          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-          boxShadow: [
-            BoxShadow(
-              color: cs.primary.withValues(alpha: 0.2),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(AppConstants.radiusSM),
-              ),
-              child: Icon(Icons.home_outlined, color: Theme.of(context).colorScheme.onPrimary, size: 22),
-            ),
-            const SizedBox(width: AppConstants.paddingSM + 4),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Registra tu salon', style: textTheme.titleSmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onPrimary, fontWeight: FontWeight.w700)),
-                  Text('Lleva tu negocio al siguiente nivel',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.8))),
-                ],
-              ),
-            ),
-            Icon(Icons.chevron_right_outlined,
-                color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.8)),
           ],
         ),
       ),

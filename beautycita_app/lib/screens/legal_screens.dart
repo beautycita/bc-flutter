@@ -1179,7 +1179,7 @@ const _privacySections = [
         '6. Los plazos pueden ampliarse una sola vez por un periodo igual, '
         'previa notificacion justificada.\n\n'
         'Alternativamente, puede ejercer su derecho de cancelacion '
-        'directamente desde Ajustes > Eliminar cuenta dentro de la app.',
+        'directamente desde Perfil > Eliminar cuenta dentro de la app.',
   ),
 
   // ── 8. Revocacion de consentimiento ──
@@ -1204,7 +1204,7 @@ const _privacySections = [
     body:
         'Ademas de los derechos ARCO, usted puede:\n\n'
         '• Desactivar notificaciones push desde la configuracion de su '
-        'dispositivo o desde Ajustes dentro de la app.\n'
+        'dispositivo o desde Perfil dentro de la app.\n'
         '• Revocar el permiso de ubicacion en cualquier momento desde la '
         'configuracion de su dispositivo.\n'
         '• Solicitar la exclusion de comunicaciones promocionales enviando '
