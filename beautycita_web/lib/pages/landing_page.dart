@@ -1,6 +1,7 @@
 import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
 
+import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -857,64 +858,6 @@ class _LandingPageState extends State<LandingPage>
   // shit"). Replaced by the real _comparisonTable() wrapped in a horizontal
   // scroll on mobile so the chart structure is preserved at every viewport.
 
-  // ── Feature Detail Popup ───────────────────────────────────────────────────
-
-  void _showFeatureDetail(BuildContext context, _Feature feature, Offset tapPosition) {
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: 'Feature Detail',
-      barrierColor: Colors.black54,
-      transitionDuration: const Duration(milliseconds: 900),
-      pageBuilder: (context, anim, secondaryAnim) {
-        return _FeatureDetailPopup(
-          feature: feature,
-          onDemo: () {
-            Navigator.of(context).pop();
-            _scrollToSection(_demoKey);
-          },
-        );
-      },
-      transitionBuilder: (context, anim, secondaryAnim, child) {
-        final screenSize = MediaQuery.of(context).size;
-        final maxRadius = (screenSize.width > screenSize.height
-            ? screenSize.width
-            : screenSize.height) * 1.5;
-
-        // Cinematic curve — slow ease in, slow ease out on both open and close.
-        final curved = CurvedAnimation(
-          parent: anim,
-          curve: Curves.easeInOutCubic,
-          reverseCurve: Curves.easeInOutCubic,
-        );
-        final t = curved.value;
-        final radius = t * maxRadius;
-        // Scale rests just behind the viewport (0.88) and pushes through to 1.0
-        // so the panel feels like it surges forward as the radial reveal opens.
-        final scale = 0.88 + 0.12 * t;
-        // Opacity leads slightly so the panel materializes before it lands.
-        final opacity = Curves.easeOut.transform(anim.value.clamp(0.0, 1.0));
-
-        // Anchor the scale to the tap point so the zoom emanates from the same
-        // origin as the radial reveal — both effects feel like one gesture.
-        final originX = tapPosition.dx - screenSize.width / 2;
-        final originY = tapPosition.dy - screenSize.height / 2;
-
-        return Opacity(
-          opacity: opacity,
-          child: Transform.scale(
-            scale: scale,
-            origin: Offset(originX, originY),
-            child: ClipPath(
-              clipper: _CircleClipper(center: tapPosition, radius: radius),
-              child: child,
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   // ── For Salons (Feature Grid) ──────────────────────────────────────────────
 
   Widget _buildForSalons(bool isDesktop, bool isMobile, bool isTablet) {
@@ -1124,7 +1067,7 @@ class _LandingPageState extends State<LandingPage>
                               height: 230,
                               child: _FeatureCard(
                                 feature: f,
-                                onTapUp: (pos) => _showFeatureDetail(context, f, pos),
+                                onDemo: () => _scrollToSection(_demoKey),
                               ),
                             );
                           }).toList(),
@@ -2652,8 +2595,8 @@ class _Feature {
 
 class _FeatureCard extends StatefulWidget {
   final _Feature feature;
-  final void Function(Offset globalPosition)? onTapUp;
-  const _FeatureCard({required this.feature, this.onTapUp});
+  final VoidCallback? onDemo;
+  const _FeatureCard({required this.feature, this.onDemo});
   @override
   State<_FeatureCard> createState() => _FeatureCardState();
 }
@@ -2663,77 +2606,105 @@ class _FeatureCardState extends State<_FeatureCard> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapUp: (details) => widget.onTapUp?.call(details.globalPosition),
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: _cardBorder),
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [_hovered ? _cardShadowHover : _cardShadow],
-          ),
-          transform: _hovered ? (Matrix4.translationValues(0.0, -4.0, 0.0)) : Matrix4.identity(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [_brandPink.withValues(alpha: 0.1), _brandPurple.withValues(alpha: 0.1)],
+    // OpenContainer morphs the card's bounding rect into the detail popup
+    // using a Material fade-through. All animation is composite-only
+    // (Material elevation + bounded-rect tween + cross-fade), so the cost
+    // is markedly lower than the old radial-clip + opacity + scale stack.
+    return OpenContainer(
+      transitionType: ContainerTransitionType.fadeThrough,
+      transitionDuration: const Duration(milliseconds: 700),
+      closedColor: Colors.white,
+      closedElevation: 0,
+      openColor: Colors.white,
+      openElevation: 0,
+      middleColor: Colors.white,
+      closedShape: RoundedRectangleBorder(
+        side: BorderSide(color: _cardBorder),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      openShape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(24)),
+      ),
+      onClosed: (_) {
+        if (mounted) setState(() => _hovered = false);
+      },
+      closedBuilder: (context, openContainer) {
+        return MouseRegion(
+          cursor: SystemMouseCursors.click,
+          onEnter: (_) => setState(() => _hovered = true),
+          onExit: (_) => setState(() => _hovered = false),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOut,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            // No background or border here — OpenContainer's Material draws
+            // those via closedColor + closedShape. The hover lift is a pure
+            // matrix translate so it stays composite-only.
+            transform: _hovered
+                ? Matrix4.translationValues(0.0, -4.0, 0.0)
+                : Matrix4.identity(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        _brandPink.withValues(alpha: 0.1),
+                        _brandPurple.withValues(alpha: 0.1),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                  borderRadius: BorderRadius.circular(14),
+                  child: Center(
+                    child: Icon(widget.feature.icon, color: _brandPurple, size: 24),
+                  ),
                 ),
-                child: Center(child: Icon(widget.feature.icon, color: _brandPurple, size: 24)),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                widget.feature.title,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _textPrimary),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 8),
-              // Expanded + maxLines keeps each card rectangle identical.
-              // Short descriptions leave bottom whitespace; long ones
-              // truncate with ellipsis. Tap opens the full detail popup.
-              Expanded(
-                child: Text(
-                  widget.feature.description,
-                  style: const TextStyle(fontSize: 14, color: _textSecondary, height: 1.6),
-                  maxLines: 4,
+                const SizedBox(height: 16),
+                Text(
+                  widget.feature.title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: _textPrimary,
+                  ),
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Expanded(
+                  child: Text(
+                    widget.feature.description,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: _textSecondary,
+                      height: 1.6,
+                    ),
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
+      openBuilder: (context, action) {
+        // Close handler: tapping the X uses OpenContainer's reverse
+        // animation; existing Navigator.pop in the popup also works (the
+        // route OpenContainer pushes responds to either path).
+        return _FeatureDetailPopup(
+          feature: widget.feature,
+          onDemo: () {
+            action();
+            widget.onDemo?.call();
+          },
+        );
+      },
     );
   }
-}
-
-// ── Circle Clipper (Radial Burst) ────────────────────────────────────────────
-
-class _CircleClipper extends CustomClipper<Path> {
-  final Offset center;
-  final double radius;
-  _CircleClipper({required this.center, required this.radius});
-
-  @override
-  Path getClip(Size size) =>
-      Path()..addOval(Rect.fromCircle(center: center, radius: radius));
-
-  @override
-  bool shouldReclip(covariant _CircleClipper old) =>
-      old.radius != radius || old.center != center;
 }
 
 // ── Feature Detail Popup ─────────────────────────────────────────────────────
