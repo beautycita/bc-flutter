@@ -40,9 +40,10 @@ class BusinessDashboardScreen extends ConsumerWidget {
           // Banking setup banner
           _BankingBanner(),
 
-          // Google Calendar sync — discoverability hook. The sync UI is
-          // web-only; without this link stylists don't know it exists.
-          const _CalendarSyncHint(),
+          // Google Calendar — two-way sync. Connect via web (OAuth lives
+          // there), then trigger inbound (Google → BC) or outbound
+          // (BC → Google) sync from here.
+          const _GoogleCalendarSyncCard(),
 
           // Stats grid
           statsAsync.when(
@@ -1778,12 +1779,110 @@ class _BankingBanner extends ConsumerWidget {
   }
 }
 
-class _CalendarSyncHint extends StatelessWidget {
-  const _CalendarSyncHint();
+/// Google Calendar two-way sync card. OAuth connect/disconnect lives on
+/// the web portal (browser handoff is cleaner than an in-app webview);
+/// once connected, the owner can trigger inbound + outbound sync from
+/// here. Mirrors the actions exposed by the web `biz_calendar_sync_page`
+/// against the same `google-calendar-connect` / `google-calendar-sync`
+/// edge functions.
+class _GoogleCalendarSyncCard extends ConsumerStatefulWidget {
+  const _GoogleCalendarSyncCard();
+
+  @override
+  ConsumerState<_GoogleCalendarSyncCard> createState() =>
+      _GoogleCalendarSyncCardState();
+}
+
+class _GoogleCalendarSyncCardState
+    extends ConsumerState<_GoogleCalendarSyncCard> {
+  bool _loadingStatus = true;
+  bool _connected = false;
+  String? _lastSync;
+  String? _syncError;
+  bool _running = false;
+  String? _runningLabel;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStatus();
+  }
+
+  Future<void> _loadStatus() async {
+    try {
+      final res = await SupabaseClientService.client.functions.invoke(
+        'google-calendar-connect',
+        body: {'action': 'status'},
+      );
+      final data = res.data;
+      if (!mounted) return;
+      setState(() {
+        _loadingStatus = false;
+        if (data is Map) {
+          _connected = data['connected'] == true;
+          _lastSync = data['last_synced_at'] as String?;
+          _syncError = data['sync_error'] as String?;
+        }
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loadingStatus = false);
+    }
+  }
+
+  Future<void> _openWebPortal() async {
+    final uri = Uri.parse('https://beautycita.com/negocio/calendar-sync');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else if (mounted) {
+      ToastService.showError('No se pudo abrir el navegador');
+    }
+  }
+
+  Future<void> _runSync({required bool outbound}) async {
+    setState(() {
+      _running = true;
+      _runningLabel = outbound ? 'Exportando' : 'Importando';
+    });
+    try {
+      final body = outbound
+          ? <String, dynamic>{'action': 'export', 'days': 30}
+          : <String, dynamic>{'days': 30};
+      final res = await SupabaseClientService.client.functions.invoke(
+        'google-calendar-sync',
+        body: body,
+      );
+      final data = res.data as Map<String, dynamic>? ?? const {};
+      final msg = outbound
+          ? 'Exportado: ${data['created'] ?? 0} nuevos, ${data['updated'] ?? 0} actualizados'
+          : 'Importado: ${data['appointments_saved'] ?? 0} eventos';
+      if (mounted) ToastService.showSuccess(msg);
+      await _loadStatus();
+    } catch (e) {
+      if (mounted) ToastService.showError('Error: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _running = false;
+          _runningLabel = null;
+        });
+      }
+    }
+  }
+
+  String _fmt(String iso) {
+    try {
+      final dt = DateTime.parse(iso).toLocal();
+      return DateFormat('d MMM HH:mm', 'es_MX').format(dt);
+    } catch (_) {
+      return iso;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: AppConstants.paddingMD),
       child: Card(
@@ -1793,60 +1892,156 @@ class _CalendarSyncHint extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppConstants.radiusMD),
           side: BorderSide(color: colors.outlineVariant),
         ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-          onTap: () async {
-            final uri = Uri.parse('https://beautycita.com/negocio/calendar-sync');
-            if (await canLaunchUrl(uri)) {
-              await launchUrl(uri, mode: LaunchMode.externalApplication);
-            } else {
-              if (!context.mounted) return;
-              ToastService.showError('No se pudo abrir el navegador');
-            }
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(AppConstants.paddingMD),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: colors.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.all(AppConstants.paddingMD),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: colors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(Icons.calendar_month_rounded,
+                        size: 20, color: colors.primary),
                   ),
-                  child: Icon(Icons.calendar_month_rounded,
-                      size: 20, color: colors.primary),
-                ),
-                const SizedBox(width: AppConstants.paddingMD),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Sincroniza Google Calendar',
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: colors.onSurface,
+                  const SizedBox(width: AppConstants.paddingMD),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Google Calendar',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: colors.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _connected
+                              ? (_lastSync != null
+                                  ? 'Conectado · ultima sync ${_fmt(_lastSync!)}'
+                                  : 'Conectado')
+                              : 'Sin conectar',
+                          style: GoogleFonts.nunito(
+                            fontSize: 11,
+                            color: colors.onSurface.withValues(alpha: 0.6),
+                            height: 1.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (_loadingStatus)
+                    const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2))
+                  else
+                    IconButton(
+                      icon: Icon(_connected
+                          ? Icons.settings_outlined
+                          : Icons.open_in_new_rounded),
+                      tooltip: _connected ? 'Configurar' : 'Conectar',
+                      onPressed: _openWebPortal,
+                    ),
+                ],
+              ),
+              if (!_loadingStatus && _connected) ...[
+                if (_syncError != null) ...[
+                  const SizedBox(height: AppConstants.paddingSM),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: colors.errorContainer.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      'Error de sync: $_syncError',
+                      style: GoogleFonts.nunito(
+                        fontSize: 11,
+                        color: colors.onErrorContainer,
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: AppConstants.paddingMD),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _running
+                            ? null
+                            : () => _runSync(outbound: false),
+                        icon: _running && _runningLabel == 'Importando'
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2))
+                            : const Icon(Icons.cloud_download_outlined,
+                                size: 18),
+                        label: Text(
+                          _running && _runningLabel == 'Importando'
+                              ? 'Importando…'
+                              : 'Entrante',
+                          style: GoogleFonts.nunito(fontSize: 12),
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Configura en el portal web — tus citas sincronizan en ambos sentidos',
-                        style: GoogleFonts.nunito(
-                          fontSize: 11,
-                          color: colors.onSurface.withValues(alpha: 0.6),
-                          height: 1.3,
+                    ),
+                    const SizedBox(width: AppConstants.paddingSM),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _running
+                            ? null
+                            : () => _runSync(outbound: true),
+                        icon: _running && _runningLabel == 'Exportando'
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2))
+                            : const Icon(Icons.cloud_upload_outlined, size: 18),
+                        label: Text(
+                          _running && _runningLabel == 'Exportando'
+                              ? 'Exportando…'
+                              : 'Saliente',
+                          style: GoogleFonts.nunito(fontSize: 12),
                         ),
                       ),
-                    ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Entrante: trae eventos de Google a BeautyCita. '
+                  'Saliente: publica tus citas en Google.',
+                  style: GoogleFonts.nunito(
+                    fontSize: 10,
+                    color: colors.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
-                Icon(Icons.open_in_new_rounded,
-                    size: 18, color: colors.onSurface.withValues(alpha: 0.5)),
+              ] else if (!_loadingStatus && !_connected) ...[
+                const SizedBox(height: AppConstants.paddingMD),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.tonalIcon(
+                    onPressed: _openWebPortal,
+                    icon: const Icon(Icons.link_rounded, size: 18),
+                    label: Text(
+                      'Conectar en el portal web',
+                      style: GoogleFonts.nunito(fontSize: 13),
+                    ),
+                  ),
+                ),
               ],
-            ),
+            ],
           ),
         ),
       ),

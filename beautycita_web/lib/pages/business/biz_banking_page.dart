@@ -282,8 +282,8 @@ class _BizBankingPageState extends ConsumerState<BizBankingPage> {
       // Upload ID images to Supabase storage
       final frontExt = _idFrontName?.split('.').last ?? 'jpg';
       final backExt = _idBackName?.split('.').last ?? 'jpg';
-      final frontPath = 'salon-ids/$bizId/id_front.$frontExt';
-      final backPath = 'salon-ids/$bizId/id_back.$backExt';
+      final frontPath = '$bizId/id_front.$frontExt';
+      final backPath = '$bizId/id_back.$backExt';
 
       await Future.wait([
         BCSupabase.client.storage.from('salon-ids').uploadBinary(

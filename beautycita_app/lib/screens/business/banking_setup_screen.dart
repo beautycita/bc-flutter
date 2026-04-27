@@ -945,7 +945,7 @@ class _BankingSetupScreenState extends ConsumerState<BankingSetupScreen> {
       }
 
       // 1. Upload ID front
-      final frontPath = 'salon-ids/$businessId/id_front.jpg';
+      final frontPath = '$businessId/id_front.jpg';
       await client.storage.from('salon-ids').uploadBinary(
             frontPath,
             _idFrontBytes!,
@@ -956,7 +956,7 @@ class _BankingSetupScreenState extends ConsumerState<BankingSetupScreen> {
           );
 
       // 2. Upload ID back
-      final backPath = 'salon-ids/$businessId/id_back.jpg';
+      final backPath = '$businessId/id_back.jpg';
       await client.storage.from('salon-ids').uploadBinary(
             backPath,
             _idBackBytes!,

@@ -661,7 +661,7 @@ class _SalonOnboardingScreenState
       // Upload license image if provided
       if (_licenseBytes != null && businessId.isNotEmpty) {
         try {
-          final licensePath = 'salon-ids/$businessId/license.jpg';
+          final licensePath = '$businessId/license.jpg';
           await SupabaseClientService.client.storage
               .from('salon-ids')
               .uploadBinary(
