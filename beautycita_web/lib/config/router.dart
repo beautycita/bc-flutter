@@ -13,6 +13,7 @@ import '../pages/admin/admin_rp_tracking_page.dart';
 import '../pages/admin/admin_tax_reports_page.dart';
 import '../pages/admin/analytics_page.dart';
 import '../pages/admin/bookings_page.dart';
+import '../pages/admin/orders_page.dart';
 import '../pages/admin/config_page.dart';
 import '../pages/admin/dashboard_page.dart';
 import '../pages/admin/disputes_page.dart';
@@ -102,6 +103,7 @@ abstract final class WebRoutes {
   static const String adminSalons = '/admin/salons';
   static const String adminApplications = '/admin/applications';
   static const String adminBookings = '/admin/bookings';
+  static const String adminOrders = '/admin/orders';
   static const String adminServices = '/admin/services';
   static const String adminDisputes = '/admin/disputes';
   static const String adminFinance = '/admin/finance';
@@ -427,6 +429,10 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: 'bookings',
                 builder: (context, state) => const BookingsPage(),
+              ),
+              GoRoute(
+                path: 'orders',
+                builder: (context, state) => const OrdersPage(),
               ),
               GoRoute(
                 path: 'services',
