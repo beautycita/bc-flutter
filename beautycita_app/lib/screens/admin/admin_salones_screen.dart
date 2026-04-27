@@ -103,8 +103,34 @@ class _SalonesTabState extends ConsumerState<_SalonesTab> {
   String _activeFilter = '';   // '', 'true', 'false'
   String _tierFilter = '';     // '', '1', '2', '3'
 
+  // Selection state for bulk-outreach. Empty when no rows are selected.
+  // Cleared whenever the visible set changes (filter/search/orphan flip)
+  // so stale ids don't leak into the next message blast.
+  final Set<String> _selectedIds = <String>{};
+
   String get _providerKey =>
       '$_activeQuery|$_verifiedFilter|$_activeFilter|$_tierFilter';
+
+  void _clearSelection() {
+    if (_selectedIds.isEmpty) return;
+    setState(() => _selectedIds.clear());
+  }
+
+  void _toggleSelected(String id) {
+    setState(() {
+      if (!_selectedIds.add(id)) _selectedIds.remove(id);
+    });
+  }
+
+  void _selectAllVisible(List<Map<String, dynamic>> visible) {
+    final ids = visible
+        .map((s) => s['id']?.toString())
+        .whereType<String>()
+        .toList();
+    setState(() {
+      _selectedIds.addAll(ids);
+    });
+  }
 
   @override
   void dispose() {
@@ -117,7 +143,10 @@ class _SalonesTabState extends ConsumerState<_SalonesTab> {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 300), () {
       if (mounted) {
-        setState(() => _activeQuery = value.trim());
+        setState(() {
+          _activeQuery = value.trim();
+          _selectedIds.clear();
+        });
       }
     });
   }
@@ -125,7 +154,10 @@ class _SalonesTabState extends ConsumerState<_SalonesTab> {
   void _clearSearch() {
     _searchController.clear();
     _debounce?.cancel();
-    setState(() => _activeQuery = '');
+    setState(() {
+      _activeQuery = '';
+      _selectedIds.clear();
+    });
   }
 
   Future<void> _sendBulkOutreach(List<Map<String, dynamic>> salons) async {
@@ -251,22 +283,70 @@ class _SalonesTabState extends ConsumerState<_SalonesTab> {
                 tooltip: _showOrphanedOnly
                     ? 'Mostrando huerfanos'
                     : 'Filtrar huerfanos',
-                onPressed: () =>
-                    setState(() => _showOrphanedOnly = !_showOrphanedOnly),
+                onPressed: () => setState(() {
+                  _showOrphanedOnly = !_showOrphanedOnly;
+                  _selectedIds.clear();
+                }),
               ),
-              // Send message to all visible salones (max 100)
+              // Selection controls — surfaced only when there's a list to act on.
               resultsAsync.whenOrNull(
-                data: (salons) => salons.isNotEmpty
-                    ? IconButton(
+                data: (salons) {
+                  final visible = _showOrphanedOnly
+                      ? salons.where((s) => s['owner_id'] == null).toList()
+                      : salons;
+                  if (visible.isEmpty) return null;
+                  final visibleIds = visible
+                      .map((s) => s['id']?.toString())
+                      .whereType<String>()
+                      .toSet();
+                  final selectedVisible =
+                      _selectedIds.intersection(visibleIds).length;
+                  final allVisibleSelected =
+                      visibleIds.isNotEmpty && selectedVisible == visibleIds.length;
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Select all / deselect all visible
+                      IconButton(
                         icon: Icon(
-                          Icons.send_outlined,
+                          allVisibleSelected
+                              ? Icons.deselect
+                              : Icons.checklist_rounded,
                           color: colors.primary,
                           size: 22,
                         ),
-                        tooltip: 'Enviar mensaje a salones visibles',
-                        onPressed: () => _sendBulkOutreach(salons),
-                      )
-                    : null,
+                        tooltip: allVisibleSelected
+                            ? 'Deseleccionar todos'
+                            : 'Seleccionar todos',
+                        onPressed: allVisibleSelected
+                            ? _clearSelection
+                            : () => _selectAllVisible(visible),
+                      ),
+                      // Send to selected
+                      IconButton(
+                        icon: Icon(
+                          Icons.send_outlined,
+                          color: _selectedIds.isEmpty
+                              ? colors.onSurface.withValues(alpha: 0.3)
+                              : colors.primary,
+                          size: 22,
+                        ),
+                        tooltip: _selectedIds.isEmpty
+                            ? 'Selecciona salones para enviar'
+                            : 'Enviar a ${_selectedIds.length} seleccionado${_selectedIds.length == 1 ? "" : "s"}',
+                        onPressed: _selectedIds.isEmpty
+                            ? null
+                            : () {
+                                final selectedSalons = salons
+                                    .where((s) =>
+                                        _selectedIds.contains(s['id']?.toString()))
+                                    .toList();
+                                _sendBulkOutreach(selectedSalons);
+                              },
+                      ),
+                    ],
+                  );
+                },
               ) ??
                   const SizedBox.shrink(),
               // Export button
@@ -524,7 +604,17 @@ class _SalonesTabState extends ConsumerState<_SalonesTab> {
               vertical: AppConstants.paddingXS,
             ),
             itemCount: filtered.length,
-            itemBuilder: (context, i) => _SalonResultCard(salon: filtered[i]),
+            itemBuilder: (context, i) {
+              final salon = filtered[i];
+              final id = salon['id']?.toString();
+              final selected = id != null && _selectedIds.contains(id);
+              return _SalonResultCard(
+                salon: salon,
+                selected: selected,
+                onSelectionToggle: id == null ? null : () => _toggleSelected(id),
+                hasActiveSelection: _selectedIds.isNotEmpty,
+              );
+            },
           ),
         );
       },
@@ -538,8 +628,19 @@ class _SalonesTabState extends ConsumerState<_SalonesTab> {
 
 class _SalonResultCard extends StatelessWidget {
   final Map<String, dynamic> salon;
+  final bool selected;
+  final VoidCallback? onSelectionToggle;
+  /// True when at least one row in the list is currently selected. While in
+  /// this mode, tapping any row toggles selection instead of navigating —
+  /// matches the platform-standard "selection mode" interaction.
+  final bool hasActiveSelection;
 
-  const _SalonResultCard({required this.salon});
+  const _SalonResultCard({
+    required this.salon,
+    this.selected = false,
+    this.onSelectionToggle,
+    this.hasActiveSelection = false,
+  });
 
   Color _tierColor(int? tier, ColorScheme colors) {
     switch (tier) {
@@ -580,6 +681,11 @@ class _SalonResultCard extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(AppConstants.radiusSM),
           onTap: () {
+            // Selection-mode tap toggles instead of navigating.
+            if (hasActiveSelection && onSelectionToggle != null) {
+              onSelectionToggle!();
+              return;
+            }
             final id = salon['id'] as String?;
             if (id == null) return;
             Navigator.push(
@@ -589,17 +695,46 @@ class _SalonResultCard extends StatelessWidget {
               ),
             );
           },
+          onLongPress: onSelectionToggle,
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(AppConstants.radiusSM),
               border: Border.all(
-                color: colors.onSurface.withValues(alpha: 0.1),
+                color: selected
+                    ? colors.primary
+                    : colors.onSurface.withValues(alpha: 0.1),
+                width: selected ? 1.5 : 1,
               ),
+              color: selected
+                  ? colors.primary.withValues(alpha: 0.04)
+                  : null,
             ),
             child: IntrinsicHeight(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // Selection checkbox — only present when the list supports
+                  // selection (admin Salones tab does; sub-tabs may not).
+                  if (onSelectionToggle != null)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 6),
+                      child: Center(
+                        child: SizedBox(
+                          width: 28,
+                          height: 28,
+                          child: Checkbox(
+                            value: selected,
+                            onChanged: (_) => onSelectionToggle!(),
+                            visualDensity: VisualDensity.compact,
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   // Active status indicator bar
                   Container(
                     width: 6,
