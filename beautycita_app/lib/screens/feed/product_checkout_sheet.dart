@@ -119,7 +119,8 @@ class _ProductCheckoutSheetState extends State<ProductCheckoutSheet> {
   // Step 1 → Step 2: validate shipping, call edge function, present Stripe
   // ---------------------------------------------------------------------------
   Future<void> _proceedToPayment() async {
-    if (!_formKey.currentState!.validate()) return;
+    // Pickup orders have no address form to validate.
+    if (_fulfillmentMethod == 'ship' && !_formKey.currentState!.validate()) return;
 
     setState(() => _processing = true);
 
@@ -401,13 +402,14 @@ class _ProductCheckoutSheetState extends State<ProductCheckoutSheet> {
   // Step 0 — Shipping Address
   // ---------------------------------------------------------------------------
   Widget _buildShippingStep(ColorScheme palette) {
+    final isShip = _fulfillmentMethod == 'ship';
     return Form(
       key: _formKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Direccion de envio',
+            isShip ? 'Direccion de envio' : 'Recoger en el salon',
             style: GoogleFonts.poppins(
               fontSize: 20,
               fontWeight: FontWeight.w700,
@@ -422,37 +424,98 @@ class _ProductCheckoutSheetState extends State<ProductCheckoutSheet> {
               color: palette.onSurface.withValues(alpha: 0.6),
             ),
           ),
+          const SizedBox(height: AppConstants.paddingMD),
+
+          // Fulfillment method selector
+          Row(
+            children: [
+              Expanded(
+                child: _fulfillmentTile(
+                  palette,
+                  'ship',
+                  'Envio',
+                  Icons.local_shipping_outlined,
+                ),
+              ),
+              const SizedBox(width: AppConstants.paddingSM),
+              Expanded(
+                child: _fulfillmentTile(
+                  palette,
+                  'pickup',
+                  'Recoleccion',
+                  Icons.storefront_outlined,
+                ),
+              ),
+            ],
+          ),
+
           const SizedBox(height: AppConstants.paddingLG),
 
-          _field(_nameCtrl, 'Nombre completo', Icons.person_outline),
-          _field(_streetCtrl, 'Calle y numero', Icons.home_outlined),
-          Row(
-            children: [
-              Expanded(
-                flex: 3,
-                child: _field(_cityCtrl, 'Ciudad', Icons.location_city_outlined),
+          if (isShip) ...[
+            _field(_nameCtrl, 'Nombre completo', Icons.person_outline),
+            _field(_streetCtrl, 'Calle y numero', Icons.home_outlined),
+            Row(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: _field(_cityCtrl, 'Ciudad', Icons.location_city_outlined),
+                ),
+                const SizedBox(width: AppConstants.paddingSM),
+                Expanded(
+                  flex: 2,
+                  child: _field(_stateCtrl, 'Estado', Icons.map_outlined),
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: _field(_zipCtrl, 'C.P.', Icons.markunread_mailbox_outlined,
+                      keyboard: TextInputType.number),
+                ),
+                const SizedBox(width: AppConstants.paddingSM),
+                Expanded(
+                  flex: 2,
+                  child: _field(_phoneCtrl, 'Telefono', Icons.phone_outlined,
+                      keyboard: TextInputType.phone),
+                ),
+              ],
+            ),
+          ] else ...[
+            // Pickup: skip address fields, show salon pickup info card.
+            Container(
+              padding: const EdgeInsets.all(AppConstants.paddingMD),
+              decoration: BoxDecoration(
+                color: palette.primary.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+                border: Border.all(color: palette.primary.withValues(alpha: 0.2)),
               ),
-              const SizedBox(width: AppConstants.paddingSM),
-              Expanded(
-                flex: 2,
-                child: _field(_stateCtrl, 'Estado', Icons.map_outlined),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.qr_code_2, color: palette.primary, size: 20),
+                      const SizedBox(width: 8),
+                      Text('Recoleccion en el salon',
+                          style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w600, color: palette.primary)),
+                    ],
+                  ),
+                  const SizedBox(height: AppConstants.paddingXS),
+                  Text(
+                    'Despues de pagar veras un codigo QR en tu tab "Pedidos". '
+                    'Muestraselo al salon al recoger. El QR es valido por 7 dias.',
+                    style: GoogleFonts.nunito(
+                      fontSize: 12,
+                      color: palette.onSurface.withValues(alpha: 0.7),
+                      height: 1.4,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-          Row(
-            children: [
-              Expanded(
-                child: _field(_zipCtrl, 'C.P.', Icons.markunread_mailbox_outlined,
-                    keyboard: TextInputType.number),
-              ),
-              const SizedBox(width: AppConstants.paddingSM),
-              Expanded(
-                flex: 2,
-                child: _field(_phoneCtrl, 'Telefono', Icons.phone_outlined,
-                    keyboard: TextInputType.phone),
-              ),
-            ],
-          ),
+            ),
+          ],
 
           const SizedBox(height: AppConstants.paddingMD),
 
@@ -544,6 +607,43 @@ class _ProductCheckoutSheetState extends State<ProductCheckoutSheet> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _fulfillmentTile(
+    ColorScheme palette,
+    String value,
+    String label,
+    IconData icon,
+  ) {
+    final selected = _fulfillmentMethod == value;
+    return GestureDetector(
+      onTap: () => setState(() => _fulfillmentMethod = value),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+          border: Border.all(
+            color: selected ? palette.primary : palette.outline.withValues(alpha: 0.3),
+            width: selected ? 2 : 1,
+          ),
+          color: selected ? palette.primary.withValues(alpha: 0.06) : null,
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: selected ? palette.primary : palette.onSurface.withValues(alpha: 0.5), size: 24),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: selected ? palette.primary : palette.onSurface,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
