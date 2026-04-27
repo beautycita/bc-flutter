@@ -297,15 +297,10 @@ async function sendOneRecipient(
   const { data: row } = await db.from(tbl).select("*").eq("id", recipient.recipient_id).single();
   if (!row) return { status: "failed", error: "row not found" };
 
-  // Re-check opt-out at send time (canonical). For businesses, email lives on owner profile.
+  // Re-check opt-out at send time (canonical). The salon's contact email
+  // lives on businesses.email (profiles has no email column).
   const phone = normalizePhone(row.whatsapp || row.phone);
-  let email: string | null = null;
-  if (tbl === "discovered_salons") {
-    email = normalizeEmail(row.email);
-  } else if (tbl === "businesses" && row.owner_id) {
-    const { data: owner } = await db.from("profiles").select("email").eq("id", row.owner_id).single();
-    email = normalizeEmail(owner?.email ?? null);
-  }
+  const email = normalizeEmail(row.email ?? null);
   const { data: optedOut } = await db.rpc("is_marketing_opted_out", {
     p_phone: phone, p_email: email, p_channel: job.channel,
   });
@@ -586,24 +581,14 @@ serve(async (req: Request) => {
       }).select("id").single();
       if (jobErr || !job) return json({ error: jobErr?.message ?? "job create failed" }, 500, req);
 
-      // Insert recipient rows. Owner email lives on profiles for businesses.
-      let ownerEmailById: Record<string, string | null> = {};
-      if (recipient_table === "businesses") {
-        const ownerIds = (rows as any[]).map((r) => r.owner_id).filter(Boolean);
-        if (ownerIds.length > 0) {
-          const { data: owners } = await db.from("profiles")
-            .select("id, email").in("id", ownerIds);
-          for (const o of owners ?? []) ownerEmailById[(o as any).id] = (o as any).email;
-        }
-      }
+      // Insert recipient rows. Both businesses and discovered_salons carry
+      // their contact email directly — no profiles lookup needed.
       const recipientRows = rows.map((r: any) => ({
         job_id: job.id,
         recipient_table,
         recipient_id: r.id,
         recipient_phone: normalizePhone(r.whatsapp || r.phone),
-        recipient_email: recipient_table === "businesses"
-          ? normalizeEmail(ownerEmailById[r.owner_id] ?? null)
-          : normalizeEmail(r.email),
+        recipient_email: normalizeEmail(r.email ?? null),
       }));
       const { error: recErr } = await db.from("bulk_outreach_recipients").insert(recipientRows);
       if (recErr) return json({ error: recErr.message }, 500, req);
@@ -656,20 +641,13 @@ serve(async (req: Request) => {
       if (!row) return json({ error: "recipient not found" }, 404, req);
 
       let extraVars: Record<string, any> = {};
-      let ownerEmail: string | null = null;
       if (recipient_table === "businesses") {
         const { data: extras } = await db.rpc("get_business_outreach_vars", { p_business_id: recipient_id });
         extraVars = (Array.isArray(extras) ? extras[0] : extras) ?? {};
-        if (row.owner_id) {
-          const { data: owner } = await db.from("profiles").select("email").eq("id", row.owner_id).single();
-          ownerEmail = owner?.email ?? null;
-        }
       }
       const vars = buildVars(recipient_table as any, { ...row, ...extraVars }, manual_vars);
       const phone = normalizePhone(row.whatsapp || row.phone);
-      const email = recipient_table === "businesses"
-        ? normalizeEmail(ownerEmail)
-        : normalizeEmail(row.email);
+      const email = normalizeEmail(row.email ?? null);
       const unsub = await buildUnsubLink({ phone, email }, channel);
       const allVars = { ...vars, unsubscribe_link: unsub };
       const bodyText = substituteVars(template.body_template, allVars);
