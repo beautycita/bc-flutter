@@ -80,18 +80,45 @@ class AphroditeService {
   /// The edge function handles thread creation, message saving, and AI response.
   /// Returns the AI response message.
   Future<ChatMessage> sendMessage(String? threadId, String text) async {
+    return _sendMessageInternal(threadId: threadId, text: text);
+  }
+
+  /// Sends a photo (with optional caption) to Aphrodite. The model is
+  /// multimodal — it can describe / critique / suggest based on the image.
+  /// User-side message is saved with `content_type='image'`.
+  Future<ChatMessage> sendPhotoMessage(
+    String? threadId,
+    Uint8List imageBytes, {
+    String? caption,
+  }) async {
+    _validateImage(imageBytes);
+    final imageBase64 = base64Encode(imageBytes);
+    return _sendMessageInternal(
+      threadId: threadId,
+      text: caption ?? '',
+      imageBase64: imageBase64,
+    );
+  }
+
+  Future<ChatMessage> _sendMessageInternal({
+    String? threadId,
+    required String text,
+    String? imageBase64,
+  }) async {
     final client = SupabaseClientService.client;
+    final body = <String, dynamic>{
+      'action': 'send_message',
+      'thread_id': threadId,
+      'message': text,
+      'language': 'es',
+    };
+    if (imageBase64 != null) body['image_base64'] = imageBase64;
 
     // Call edge function - it handles everything
     final response = await client.functions.invoke(
       'aphrodite-chat',
-      body: {
-        'action': 'send_message',
-        'thread_id': threadId,
-        'message': text,
-        'language': 'es',
-      },
-    ).timeout(const Duration(seconds: 30));
+      body: body,
+    ).timeout(Duration(seconds: imageBase64 != null ? 60 : 30));
 
     if (response.status != 200) {
       final error = response.data is Map ? response.data['error'] : 'Unknown error';

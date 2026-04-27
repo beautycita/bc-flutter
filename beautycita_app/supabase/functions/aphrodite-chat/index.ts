@@ -104,12 +104,22 @@ async function callResponsesAPI(
   instructions: string,
   conversationHistory: ConversationMessage[],
   newMessage: string,
+  imageDataUrl?: string,
 ): Promise<{ response: string; response_id: string }> {
-  // Build input array with history + new message
-  const input: ConversationMessage[] = [
-    ...conversationHistory,
-    { role: "user", content: newMessage },
-  ];
+  // Build input array with history + new message. When the user attached
+  // a photo, the latest turn is multimodal: text + image. GPT-4o's
+  // Responses API accepts an array of { type, ... } content parts.
+  const lastTurn: unknown = imageDataUrl
+    ? {
+        role: "user",
+        content: [
+          { type: "input_text", text: newMessage || "Analiza esta foto." },
+          { type: "input_image", image_url: imageDataUrl },
+        ],
+      }
+    : { role: "user", content: newMessage };
+
+  const input: unknown[] = [...conversationHistory, lastTurn];
 
   const res = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
@@ -186,12 +196,13 @@ async function saveMessage(
   senderType: "user" | "aphrodite",
   content: string,
   responseId?: string,
+  contentType: "text" | "image" = "text",
 ): Promise<void> {
   const { error } = await supabase.from("chat_messages").insert({
     thread_id: threadId,
     sender_type: senderType,
     sender_id: senderType === "aphrodite" ? "aphrodite" : null,
-    content_type: "text",
+    content_type: contentType,
     text_content: content,
     metadata: responseId ? { openai_response_id: responseId } : null,
     created_at: new Date().toISOString(),
@@ -431,10 +442,14 @@ serve(async (req) => {
     // ----- send_message -----
     if (action === "send_message") {
       const { message, thread_id, language } = body;
+      const imageBase64 = (body as Record<string, unknown>).image_base64 as string | undefined;
+      const hasImage = typeof imageBase64 === "string" && imageBase64.length > 0;
 
-      if (!message) {
+      // When the user attaches a photo, the message text is optional —
+      // they can let Aphrodita comment on the photo without typing.
+      if (!message && !hasImage) {
         return new Response(
-          JSON.stringify({ error: "message required" }),
+          JSON.stringify({ error: "message or image_base64 required" }),
           { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
         );
       }
@@ -442,8 +457,19 @@ serve(async (req) => {
       // Get or create thread
       const threadId = thread_id || await getOrCreateThread(supabase, userId);
 
-      // Save user message
-      await saveMessage(supabase, threadId, "user", message);
+      // Save user message. content_type='image' marks the photo turn so
+      // chat history rendering can show "[Foto]" or a thumbnail. We don't
+      // persist the base64 (storage cost + privacy) — the model only
+      // needs it for THIS turn.
+      const userPlaceholder = hasImage ? (message?.trim() || "[Foto]") : (message ?? "");
+      await saveMessage(
+        supabase,
+        threadId,
+        "user",
+        userPlaceholder,
+        undefined,
+        hasImage ? "image" : "text",
+      );
 
       // Get conversation history
       const history = await getConversationHistory(supabase, threadId);
@@ -453,10 +479,15 @@ serve(async (req) => {
         ? APHRODITE_INSTRUCTIONS_ES
         : APHRODITE_INSTRUCTIONS_EN;
 
+      const imageDataUrl = hasImage
+        ? `data:image/jpeg;base64,${imageBase64}`
+        : undefined;
+
       const { response, response_id } = await callResponsesAPI(
         instructions,
         history.slice(0, -1), // Exclude the message we just saved (it's in newMessage)
-        message,
+        message ?? "",
+        imageDataUrl,
       );
 
       // Save assistant response

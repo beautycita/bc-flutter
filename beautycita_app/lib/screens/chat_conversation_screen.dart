@@ -13,6 +13,7 @@ import '../providers/feature_toggle_provider.dart';
 import 'package:beautycita_core/supabase.dart';
 import '../services/supabase_client.dart';
 import 'package:beautycita/services/toast_service.dart';
+import 'package:beautycita/widgets/bc_image_picker_sheet.dart';
 import 'package:beautycita/widgets/media_viewer.dart';
 import 'package:beautycita/services/media_service.dart';
 import 'package:beautycita/widgets/chat_animations.dart';
@@ -399,6 +400,49 @@ class _ChatConversationScreenState
     );
   }
 
+  Future<void> _sendPhotoToAphrodite() async {
+    if (_isSending) return;
+    final picked = await showBCImagePicker(
+      context: context,
+      ref: ref,
+      preferFrontCamera: true,
+    );
+    if (!mounted || picked == null) return;
+
+    // Optimistic placeholder bubble so the user sees their photo went through.
+    final optimisticMsg = ChatMessage(
+      id: const Uuid().v4(),
+      threadId: widget.threadId,
+      senderType: 'user',
+      contentType: 'image',
+      textContent: '[Foto]',
+      createdAt: DateTime.now().toUtc(),
+    );
+    setState(() {
+      _optimisticMessages.add(optimisticMsg);
+      _isSending = true;
+    });
+    _scrollToBottom();
+
+    try {
+      await ref
+          .read(sendMessageProvider.notifier)
+          .sendPhoto(widget.threadId, picked.bytes);
+    } catch (e) {
+      if (mounted) {
+        ToastService.showError('No se pudo enviar la foto');
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _optimisticMessages.clear();
+        _isSending = false;
+      });
+      _scrollToBottom();
+    }
+  }
+
   void _handleCamera() {
     showBurstBottomSheet(
       context: context,
@@ -443,6 +487,54 @@ class _ChatConversationScreenState
               ),
             ),
             const SizedBox(height: 16),
+            // Direct path: send a photo to Afrodita inside this thread.
+            // Aphrodite often asks for a selfie ("mandame una foto y te
+            // digo que color va con tu tono"); without this row the user
+            // has nowhere to attach one.
+            ListTile(
+              leading: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.image_outlined,
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                ),
+              ),
+              title: Text(
+                'Enviar foto a Afrodita',
+                style: GoogleFonts.poppins(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: Text(
+                'Usa la galeria o la camara — ella la analiza',
+                style: GoogleFonts.nunito(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55),
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(ctx);
+                _sendPhotoToAphrodite();
+              },
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Divider(color: Theme.of(context).dividerColor),
+            ),
+            Text(
+              'O prueba un look con IA',
+              style: GoogleFonts.nunito(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55),
+              ),
+            ),
+            const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [

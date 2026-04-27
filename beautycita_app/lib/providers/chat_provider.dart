@@ -123,6 +123,28 @@ class SendMessageNotifier extends StateNotifier<AsyncValue<ChatMessage?>> {
       return null;
     }
   }
+
+  /// Send a photo (with optional caption) to Aphrodite. Used when she
+  /// asks the user for a selfie inside the conversation.
+  Future<ChatMessage?> sendPhoto(
+    String threadId,
+    Uint8List imageBytes, {
+    String? caption,
+  }) async {
+    state = const AsyncValue.loading();
+    try {
+      final msg = await _service.sendPhotoMessage(
+        threadId,
+        imageBytes,
+        caption: caption == null ? null : _sanitizeMessage(caption),
+      );
+      state = AsyncValue.data(msg);
+      return msg;
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      return null;
+    }
+  }
 }
 
 final sendMessageProvider =
