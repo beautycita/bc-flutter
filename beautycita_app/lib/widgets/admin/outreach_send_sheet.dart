@@ -58,7 +58,10 @@ class OutreachSendSheet extends StatefulWidget {
 enum _Channel { wa, email }
 
 class _OutreachSendSheetState extends State<OutreachSendSheet> {
-  _Channel _channel = _Channel.wa;
+  // Default to email until Treble (or another approved BSP) replaces the
+  // whatsapp-web.js path. WA delivery has been blocked multiple times
+  // and admins fall into a broken-looking flow if WA is the default.
+  _Channel _channel = _Channel.email;
   List<OutreachTemplate> _allTemplates = [];
   OutreachTemplate? _selectedTemplate;
   EligibilityCounts? _counts;
@@ -107,7 +110,7 @@ class _OutreachSendSheetState extends State<OutreachSendSheet> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'No se pudo cargar plantillas: $e';
+        _error = 'No se pudieron cargar las plantillas. ${_humanizeError(e)}';
         _loadingTemplates = false;
       });
     }
@@ -179,7 +182,7 @@ class _OutreachSendSheetState extends State<OutreachSendSheet> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'No se pudo generar la vista previa: $e';
+        _error = 'No se pudo generar la vista previa. ${_humanizeError(e)}';
         _loadingPreview = false;
       });
     }
@@ -335,9 +338,18 @@ class _OutreachSendSheetState extends State<OutreachSendSheet> {
           _buildChannelToggle(theme),
           const SizedBox(height: 16),
           if (_loadingTemplates)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 32),
-              child: Center(child: CircularProgressIndicator()),
+            _buildSkeleton(theme)
+          else if (_error != null && _allTemplates.isEmpty)
+            _buildErrorCard(
+              theme,
+              _error!,
+              () {
+                setState(() {
+                  _loadingTemplates = true;
+                  _error = null;
+                });
+                _loadTemplates();
+              },
             )
           else if (_channelTemplates.isEmpty)
             _buildEmptyTemplates(theme)
@@ -353,11 +365,10 @@ class _OutreachSendSheetState extends State<OutreachSendSheet> {
               const SizedBox(height: 12),
               _buildFooterNote(theme),
               const SizedBox(height: 20),
-              if (_error != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Text(_error!, style: const TextStyle(color: Colors.red)),
-                ),
+              if (_error != null) ...[
+                _buildErrorCard(theme, _error!, _refreshCountsAndPreview),
+                const SizedBox(height: 12),
+              ],
               _buildSendButton(theme),
               const SizedBox(height: 24),
             ],
@@ -401,37 +412,170 @@ class _OutreachSendSheetState extends State<OutreachSendSheet> {
   }
 
   Widget _buildChannelToggle(ThemeData theme) {
-    return SegmentedButton<_Channel>(
-      segments: const [
-        ButtonSegment(
-          value: _Channel.wa,
-          label: Text('WhatsApp'),
-          icon: Icon(Icons.chat),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SegmentedButton<_Channel>(
+          segments: const [
+            ButtonSegment(
+              value: _Channel.email,
+              label: Text('Email'),
+              icon: Icon(Icons.mail_outline),
+            ),
+            ButtonSegment(
+              value: _Channel.wa,
+              label: Text('WhatsApp'),
+              icon: Icon(Icons.chat),
+            ),
+          ],
+          selected: {_channel},
+          onSelectionChanged: (s) {
+            setState(() => _channel = s.first);
+            _refreshFromChannelOrTemplate();
+          },
         ),
-        ButtonSegment(
-          value: _Channel.email,
-          label: Text('Email'),
-          icon: Icon(Icons.mail_outline),
-        ),
+        if (_channel == _Channel.wa) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.amber.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.amber.withValues(alpha: 0.5)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline,
+                    size: 18, color: Color(0xFFB45309)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'WhatsApp puede fallar mientras migramos al BSP oficial. '
+                    'Si el envío rebota, reintenta por email.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
-      selected: {_channel},
-      onSelectionChanged: (s) {
-        setState(() => _channel = s.first);
-        _refreshFromChannelOrTemplate();
-      },
+    );
+  }
+
+  Widget _buildSkeleton(ThemeData theme) {
+    final base = theme.colorScheme.surfaceContainerHighest;
+    Widget bar(double height, {double widthFraction = 1}) => FractionallySizedBox(
+          widthFactor: widthFraction,
+          alignment: Alignment.centerLeft,
+          child: Container(
+            height: height,
+            margin: const EdgeInsets.only(bottom: 10),
+            decoration: BoxDecoration(
+              color: base,
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        );
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          bar(12, widthFraction: 0.3),
+          bar(48),
+          const SizedBox(height: 6),
+          bar(12, widthFraction: 0.4),
+          bar(72),
+          bar(12, widthFraction: 0.25),
+          bar(110),
+        ],
+      ),
     );
   }
 
   Widget _buildEmptyTemplates(ThemeData theme) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: const Text(
-        'No hay plantillas disponibles para este canal.',
-        textAlign: TextAlign.center,
+      child: Column(
+        children: [
+          Icon(
+            _channel == _Channel.wa ? Icons.chat_bubble_outline : Icons.mark_email_unread_outlined,
+            size: 36,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            _channel == _Channel.wa
+                ? 'No hay plantillas de WhatsApp configuradas para este destinatario.'
+                : 'No hay plantillas de email configuradas para este destinatario.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Cambia de canal arriba o agrega plantillas en Sistema → Plantillas.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorCard(ThemeData theme, String message, VoidCallback onRetry) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.errorContainer.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: theme.colorScheme.error.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.error_outline, color: theme.colorScheme.error, size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  message,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: theme.colorScheme.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                TextButton(
+                  onPressed: onRetry,
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(0, 28),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text('Reintentar'),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -467,6 +611,20 @@ class _OutreachSendSheetState extends State<OutreachSendSheet> {
         ),
       ],
     );
+  }
+
+  /// Strip noisy framework prefixes (PostgrestException, FunctionsException)
+  /// so the error card stays readable. Keeps the underlying message tail
+  /// for diagnosability, capped at 140 chars.
+  String _humanizeError(Object e) {
+    var text = e.toString();
+    final colon = text.indexOf(':');
+    if (colon >= 0 && colon < text.length - 1) {
+      text = text.substring(colon + 1).trim();
+    }
+    if (text.length > 140) text = '${text.substring(0, 137)}…';
+    if (text.isEmpty) return 'Error desconocido.';
+    return text.endsWith('.') ? text : '$text.';
   }
 
   String _humanTemplateName(OutreachTemplate t) {
