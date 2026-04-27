@@ -144,14 +144,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.3.1"
-  data_table_2:
-    dependency: "direct main"
-    description:
-      name: data_table_2
-      sha256: cb31d465dcf1e1598a662d06d3d2c16c73700ae9e837a3d91588f1dda7519abc
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.7.2"
   ed25519_edwards:
     dependency: transitive
     description:
@@ -645,7 +637,7 @@ packages:
     source: hosted
     version: "9.16.0"
   shared_preferences:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: shared_preferences
       sha256: "2939ae520c9024cb197fc20dee269cd8cdbf564c8b5746374ec6cacdc5169e64"

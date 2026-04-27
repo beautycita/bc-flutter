@@ -48,7 +48,6 @@ dependencies:
   package_info_plus: ^9.0.0
   webview_flutter: ^4.13.1
   flutter_contacts: ^2.0.2
-  vector_math: any
   cached_network_image: ^3.4.1
   sentry_flutter: ^9.16.0
   image_cropper: ^12.1.1

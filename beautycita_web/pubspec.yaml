@@ -39,7 +39,6 @@ dependencies:
   flutter_animate: ^4.5.2
   animations: ^2.0.11
   fl_chart: ^0.70.0
-  data_table_2: ^2.5.0
 
   # Web interop
   web: ^1.1.0
@@ -50,7 +49,6 @@ dependencies:
   # Utilities
   intl: ^0.20.2
   url_launcher: ^6.3.1
-  shared_preferences: ^2.5.3
 
 dev_dependencies:
   flutter_test:
