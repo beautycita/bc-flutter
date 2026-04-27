@@ -241,15 +241,24 @@ async function getOrCreateThread(
 // LightX Virtual Try-On (v2 API)
 // ---------------------------------------------------------------------------
 
-const LIGHTX_BASE = "https://api.lightxeditor.com/external/api/v2";
+const LIGHTX_BASE_V2 = "https://api.lightxeditor.com/external/api/v2";
+const LIGHTX_BASE_V1 = "https://api.lightxeditor.com/external/api/v1";
 
+// Each tool maps to its own absolute URL because LightX hosts them on
+// different API versions (face-swap and hairstyle are v1; haircolor and
+// headshot are v2). Headshot was the only working tool until 2026-04-27;
+// the others were drifting against v2 paths that LightX never published.
 const LIGHTX_TOOL_ENDPOINTS: Record<string, string> = {
-  hair_color: "/haircolor/",
-  hairstyle: "/hairstyle/",
-  headshot: "/headshot/",
-  face_swap: "/face-swap/",
-  look_swap: "/face-swap/", // Same API, but parameters are reversed: keep user's face, use model's hair/style
+  hair_color: `${LIGHTX_BASE_V2}/haircolor`,
+  hairstyle:  `${LIGHTX_BASE_V1}/hairstyle`,
+  headshot:   `${LIGHTX_BASE_V2}/headshot`,
+  face_swap:  `${LIGHTX_BASE_V1}/face-swap`,
+  // look_swap is face_swap with the photos swapped at the call site — same
+  // endpoint, just different roles for the two image URLs.
+  look_swap:  `${LIGHTX_BASE_V1}/face-swap`,
 };
+
+const LIGHTX_STATUS_URL = `${LIGHTX_BASE_V2}/order-status`;
 
 async function uploadImageToLightX(imageBase64: string): Promise<string> {
   if (!LIGHTX_API_KEY) throw new Error("LIGHTX_API_KEY not configured");
@@ -262,7 +271,7 @@ async function uploadImageToLightX(imageBase64: string): Promise<string> {
   }
 
   // Step 1: Get presigned upload URL (requires uploadType, size, contentType)
-  const uploadRes = await fetch(`${LIGHTX_BASE}/uploadImageUrl`, {
+  const uploadRes = await fetch(`${LIGHTX_BASE_V2}/uploadImageUrl`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -314,12 +323,15 @@ async function callLightXTool(
   const endpoint = LIGHTX_TOOL_ENDPOINTS[tool];
   if (!endpoint) throw new Error(`Unknown LightX tool: ${tool}`);
 
-  // Face swap requires two images: imageUrl (target) + modelReferenceUrl (user's face)
-  const bodyPayload = tool === "face_swap" && modelReferenceUrl
-    ? { imageUrl, modelReferenceUrl }
+  // face_swap / look_swap require two images. LightX's v1 face-swap API
+  // names the second image `styleImageUrl` (the face/style to swap in).
+  // Our older code used `modelReferenceUrl` which the v2 path silently
+  // accepted-but-ignored — fix to match the documented v1 contract.
+  const bodyPayload = (tool === "face_swap" || tool === "look_swap") && modelReferenceUrl
+    ? { imageUrl, styleImageUrl: modelReferenceUrl }
     : { imageUrl, textPrompt };
 
-  const res = await fetch(`${LIGHTX_BASE}${endpoint}`, {
+  const res = await fetch(endpoint, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -344,7 +356,7 @@ async function pollLightXResult(orderId: string): Promise<string> {
   for (let i = 0; i < 10; i++) {
     await new Promise((r) => setTimeout(r, 3000));
 
-    const res = await fetch(`${LIGHTX_BASE}/order-status`, {
+    const res = await fetch(LIGHTX_STATUS_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
