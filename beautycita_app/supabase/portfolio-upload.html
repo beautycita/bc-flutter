@@ -156,6 +156,27 @@
 
 <script>
 const API = 'https://beautycita.com/supabase/functions/v1/portfolio-upload';
+// Anon key is loaded from /portfolio-upload-config.json at startup. The
+// config file is provisioned on the server (not in git) so the deploy
+// guardian's secret scanner doesn't trip on a JWT-shaped string in
+// source. The key itself is public by Supabase design — Kong just
+// requires it on every functions request.
+let API_HEADERS = { 'Content-Type': 'application/json' };
+async function loadApiHeaders() {
+  try {
+    const res = await fetch('/portfolio-upload-config.json', { cache: 'no-store' });
+    if (!res.ok) throw new Error('config fetch ' + res.status);
+    const cfg = await res.json();
+    if (typeof cfg.anonKey !== 'string' || !cfg.anonKey) throw new Error('config missing anonKey');
+    API_HEADERS = {
+      'Content-Type': 'application/json',
+      'apikey': cfg.anonKey,
+      'Authorization': 'Bearer ' + cfg.anonKey,
+    };
+  } catch (e) {
+    console.error('[portfolio-upload] failed to load API config:', e);
+  }
+}
 const STICKER_BASE = 'https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/media/sticker_overlays/';
 const STICKERS = [
   { id: 'sticker_01_watermark', label: '@bc' },
@@ -181,6 +202,11 @@ let editorActiveOverlay = null;
 let editorCanvasEl = null;
 
 // PIN auto-advance
+// Kick off config load before the user can submit the PIN. The verify
+// button is disabled until 4 digits are entered, so by the time the
+// stylist clicks "Entrar" this fetch has almost always resolved.
+loadApiHeaders();
+
 document.querySelectorAll('.pin-input input').forEach((inp, i, all) => {
   inp.addEventListener('input', () => {
     if (inp.value.length === 1 && i < 3) all[i + 1].focus();
@@ -200,7 +226,7 @@ async function verifyPin() {
   try {
     const res = await fetch(API, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: API_HEADERS,
       body: JSON.stringify({ action: 'verify', token, pin }),
     });
     const data = await res.json();
@@ -305,13 +331,13 @@ async function hidePhoto(photoId) {
   try {
     await fetch(API, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: API_HEADERS,
       body: JSON.stringify({ action: 'hide', photo_id: photoId }),
     });
     const pin = ['p1','p2','p3','p4'].map(id => document.getElementById(id).value).join('');
     const refresh = await fetch(API, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: API_HEADERS,
       body: JSON.stringify({ action: 'verify', token, pin }),
     });
     const rData = await refresh.json();
@@ -327,7 +353,7 @@ async function uploadMediaFile(file, overlays = []) {
       try {
         const res = await fetch(API, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: API_HEADERS,
           body: JSON.stringify({
             action: 'upload',
             staff_id: staffId,
@@ -346,7 +372,7 @@ async function uploadMediaFile(file, overlays = []) {
         const pin = ['p1','p2','p3','p4'].map(id => document.getElementById(id).value).join('');
         const refresh = await fetch(API, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: API_HEADERS,
           body: JSON.stringify({ action: 'verify', token, pin }),
         });
         const rData = await refresh.json();
@@ -605,7 +631,7 @@ async function toggleFeed(photoId, publish) {
   try {
     await fetch(API, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: API_HEADERS,
       body: JSON.stringify({ action: 'toggle_feed', photo_id: photoId, publish }),
     });
     // Toggle visually

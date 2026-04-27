@@ -1163,6 +1163,12 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
   bool _scheduleModified = false;
   bool _savingSchedule = false;
 
+  // Local override for the staff's upload PIN. The widget.staff prop is
+  // captured at sheet open and never updates from a parent provider
+  // invalidation, so refreshing the PIN must update local state to be
+  // visible without closing & reopening the sheet.
+  String? _pinOverride;
+
   String get _expLabel {
     final v = int.tryParse(_expCtrl.text) ?? 0;
     if (v == 0) return 'Principiante';
@@ -1716,7 +1722,8 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
   Widget _buildPortfolioQrSection(BuildContext context, String staffId) {
     final colors = Theme.of(context).colorScheme;
     final qrToken = widget.staff['upload_qr_token'] as String? ?? '';
-    final pin = widget.staff['upload_pin'] as String? ?? '----';
+    final dbPin = widget.staff['upload_pin'] as String?;
+    final pin = _pinOverride ?? (dbPin?.isNotEmpty == true ? dbPin! : '----');
     final firstName = widget.staff['first_name'] as String? ?? '';
     final lastName = widget.staff['last_name'] as String? ?? '';
     final staffName = '$firstName $lastName'.trim();
@@ -1801,9 +1808,26 @@ class _StaffDetailSheetState extends ConsumerState<_StaffDetailSheet> {
                     onTap: () async {
                       final rng = Random.secure();
                       final newPin = (1000 + rng.nextInt(9000)).toString();
-                      await SupabaseClientService.client.from(BCTables.staff).update({'upload_pin': newPin}).eq('id', staffId);
-                      ref.invalidate(businessStaffProvider);
-                      ToastService.showSuccess('PIN actualizado: $newPin');
+                      try {
+                        await SupabaseClientService.client
+                            .from(BCTables.staff)
+                            .update({'upload_pin': newPin})
+                            .eq('id', staffId);
+                        if (!mounted) return;
+                        // Update local override so the PIN box reflects the
+                        // new value immediately, then refresh the list provider
+                        // so other consumers (printable QR cards, etc.) pick
+                        // up the new PIN on their next read.
+                        setState(() {
+                          _pinOverride = newPin;
+                          widget.staff['upload_pin'] = newPin;
+                        });
+                        ref.invalidate(businessStaffProvider);
+                        ToastService.showSuccess('PIN actualizado: $newPin');
+                      } catch (e) {
+                        if (!mounted) return;
+                        ToastService.showError('No se pudo actualizar el PIN: $e');
+                      }
                     },
                     child: const Icon(Icons.refresh, size: 18, color: Color(0xFF7C3AED)),
                   ),
