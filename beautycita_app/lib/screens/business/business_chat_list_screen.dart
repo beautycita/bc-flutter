@@ -36,13 +36,34 @@ class BusinessChatListScreen extends ConsumerWidget {
       ),
       body: threadsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(
+        error: (e, st) => Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Text(
-              'No se pudo cargar la bandeja: $e',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.nunito(color: colors.error),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.warning_amber_rounded,
+                    size: 40, color: colors.error),
+                const SizedBox(height: 12),
+                Text(
+                  'No se pudo cargar la bandeja',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: colors.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  e.toString(),
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.nunito(
+                    fontSize: 12,
+                    color: colors.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+              ],
             ),
           ),
         ),

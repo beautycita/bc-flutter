@@ -38,26 +38,42 @@ final businessChatThreadsProvider =
 
   final client = SupabaseClientService.client;
 
-  // Stream the threads themselves. RLS guarantees we only see threads
-  // whose contact_id is one of our businesses. No extra filter needed.
+  // Stream every chat_threads row the caller can see. RLS already scopes
+  // a business owner to threads whose contact_id is one of their shops
+  // (chat_threads_business_read). We deliberately do NOT add a server-side
+  // .eq('contact_type','salon') filter here: Supabase Realtime's filter
+  // syntax on a non-key string column has bitten this exact screen before.
+  // We filter client-side instead — RLS guarantees no leakage either way.
   return client
       .from(BCTables.chatThreads)
       .stream(primaryKey: ['id'])
-      .eq('contact_type', 'salon')
-      .asyncMap((rows) async {
+      .asyncMap((allRows) async {
+    final rows = allRows
+        .where((r) => r['contact_type'] == 'salon')
+        .toList();
     if (rows.isEmpty) return const <BusinessThread>[];
 
     // Hydrate customer profiles in one round-trip so the list can show
-    // the customer's name + avatar rather than just a UUID.
+    // the customer's name + avatar rather than just a UUID. Profiles RLS
+    // may strip rows we can't see — that's fine; BusinessThread.fromRow
+    // falls back to "Cliente" when the profile isn't accessible.
     final userIds = rows.map((r) => r['user_id'] as String).toSet().toList();
-    final profiles = await client
-        .from(BCTables.profiles)
-        .select('id, username, full_name, avatar_url')
-        .inFilter('id', userIds);
-
-    final byId = <String, Map<String, dynamic>>{
-      for (final p in profiles as List) (p['id'] as String): p as Map<String, dynamic>,
-    };
+    Map<String, Map<String, dynamic>> byId = const {};
+    if (userIds.isNotEmpty) {
+      try {
+        final profiles = await client
+            .from(BCTables.profiles)
+            .select('id, username, full_name, avatar_url')
+            .inFilter('id', userIds);
+        byId = {
+          for (final p in profiles as List)
+            (p['id'] as String): p as Map<String, dynamic>,
+        };
+      } catch (_) {
+        // Profiles fetch is best-effort; the inbox still renders without
+        // names. Keep going rather than failing the whole stream.
+      }
+    }
 
     final result = rows
         .where((r) => r['archived_at'] == null)
@@ -79,12 +95,14 @@ final businessChatThreadsProvider =
 /// tab badge in business_shell_screen.
 final businessTotalUnreadProvider = StreamProvider<int>((ref) {
   if (!SupabaseClientService.isInitialized) return Stream.value(0);
+  // Same Realtime-filter caveat as businessChatThreadsProvider: filter
+  // contact_type client-side, let RLS scope the rest server-side.
   return SupabaseClientService.client
       .from(BCTables.chatThreads)
       .stream(primaryKey: ['id'])
-      .eq('contact_type', 'salon')
       .map((rows) => rows
-          .where((r) => r['archived_at'] == null)
+          .where((r) =>
+              r['contact_type'] == 'salon' && r['archived_at'] == null)
           .fold<int>(0, (sum, r) => sum + ((r['unread_count'] as int?) ?? 0)));
 });
 
