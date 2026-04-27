@@ -28,6 +28,7 @@ class MainActivity : FlutterFragmentActivity() {
         private const val SCREENSHOT_METHOD_CHANNEL = "com.beautycita/screenshot_detector"
         private const val SCREENSHOT_EVENT_CHANNEL = "com.beautycita/screenshot_events"
         private const val CONTACT_SYNC_CHANNEL = "com.beautycita/contact_sync"
+        private const val SAVE_CONTACT_CHANNEL = "com.beautycita.app/contacts"
         private const val PERMISSION_REQUEST_CODE = 1001
     }
 
@@ -240,6 +241,34 @@ class MainActivity : FlutterFragmentActivity() {
                                 runOnUiThread { result.error("SYNC_ERROR", e.message, null) }
                             }
                         }.start()
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+
+        // ── Save BeautyCita contact via system intent (no permission needed) ──
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SAVE_CONTACT_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "saveContact" -> {
+                        try {
+                            val name = call.argument<String>("name") ?: "BeautyCita"
+                            val phone = call.argument<String>("phone") ?: "+527206777800"
+                            val org = call.argument<String>("organization") ?: ""
+
+                            val intent = android.content.Intent(android.content.Intent.ACTION_INSERT_OR_EDIT).apply {
+                                type = android.provider.ContactsContract.Contacts.CONTENT_ITEM_TYPE
+                                putExtra(android.provider.ContactsContract.Intents.Insert.NAME, name)
+                                putExtra(android.provider.ContactsContract.Intents.Insert.PHONE, phone)
+                                putExtra(android.provider.ContactsContract.Intents.Insert.PHONE_TYPE, android.provider.ContactsContract.CommonDataKinds.Phone.TYPE_WORK)
+                                putExtra(android.provider.ContactsContract.Intents.Insert.COMPANY, org)
+                            }
+                            startActivity(intent)
+                            result.success(true)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "[SaveContact] Failed: ${e.message}")
+                            result.error("SAVE_CONTACT_ERROR", e.message, null)
+                        }
                     }
                     else -> result.notImplemented()
                 }

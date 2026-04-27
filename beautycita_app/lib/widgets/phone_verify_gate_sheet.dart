@@ -5,6 +5,7 @@ import 'package:beautycita/config/fonts.dart';
 import '../config/constants.dart';
 import '../config/theme_extension.dart';
 import '../providers/profile_provider.dart';
+import 'save_contact_prompt.dart';
 
 Future<bool> showPhoneVerifyGate(BuildContext context) async {
   final result = await showModalBottomSheet<bool>(
@@ -101,7 +102,11 @@ class _PhoneVerifyGateSheetState extends ConsumerState<PhoneVerifyGateSheet> {
     final success = await notifier.verifyPhoneOtp(otp);
     if (!mounted) return;
     if (success) {
-      Navigator.of(context).pop(true);
+      if (mounted) {
+        // Show save-contact prompt after successful verification
+        await SaveContactPrompt.showIfNeeded(context);
+      }
+      if (mounted) Navigator.of(context).pop(true);
     } else {
       setState(() {
         _errorMessage = 'Codigo incorrecto. Intenta de nuevo.';
