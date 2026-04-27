@@ -28,6 +28,25 @@ function getClientIp(req: Request): string {
   return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
 }
 
+/// Decode the `session_id` claim out of a Supabase access_token JWT without
+/// verifying the signature (we minted it server-side a moment ago, the
+/// signature was already validated by Supabase Auth). Returns null if the
+/// token shape is unexpected.
+function decodeJwtSessionId(jwt: string): string | null {
+  try {
+    const parts = jwt.split(".");
+    if (parts.length !== 3) return null;
+    const padded = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const pad = padded.length % 4 === 0 ? "" : "=".repeat(4 - (padded.length % 4));
+    const json = atob(padded + pad);
+    const claims = JSON.parse(json);
+    const sid = claims?.session_id;
+    return typeof sid === "string" && sid.length > 0 ? sid : null;
+  } catch (_) {
+    return null;
+  }
+}
+
 serve(async (req) => {
   const _pre = handleCorsPreflightIfOptions(req);
   if (_pre) return _pre;
@@ -281,18 +300,8 @@ serve(async (req) => {
         return json({ error: "Session expired" }, 410);
       }
 
-      // Mark consumed and clear OTP from DB
-      await supabase
-        .from("qr_auth_sessions")
-        .update({
-          status: "consumed",
-          consumed_at: new Date().toISOString(),
-          email_otp: null,
-          verify_token: null,
-        })
-        .eq("id", session.id);
-
-      // Verify OTP server-side and return session tokens (never expose email_otp)
+      // Verify OTP server-side first (must succeed before we mark consumed,
+      // so a verifyOtp failure doesn't leave the row in a half-state).
       const { data: verifyData, error: verifyError } =
         await supabase.auth.verifyOtp({
           email: session.email,
@@ -303,6 +312,22 @@ serve(async (req) => {
       if (verifyError || !verifyData?.session) {
         return json({ error: "OTP verification failed" }, 500);
       }
+
+      // Capture the canonical auth.sessions.id from the access_token's
+      // session_id claim so a future revoke can authoritatively kill it.
+      const authSessionId = decodeJwtSessionId(verifyData.session.access_token);
+
+      // Mark consumed, store the auth_session_id, clear OTP / verify_token
+      await supabase
+        .from("qr_auth_sessions")
+        .update({
+          status: "consumed",
+          consumed_at: new Date().toISOString(),
+          email_otp: null,
+          verify_token: null,
+          auth_session_id: authSessionId,
+        })
+        .eq("id", session.id);
 
       return json({
         access_token: verifyData.session.access_token,
@@ -357,26 +382,46 @@ serve(async (req) => {
       } = await supabase.auth.getUser(token);
       if (authError || !user) return json({ error: "Invalid token" }, 401);
 
-      // Mark session as revoked (only if owned by this user)
-      const { error: upError } = await supabase
-        .from("qr_auth_sessions")
-        .update({ status: "revoked" })
-        .eq("id", session_id)
-        .eq("user_id", user.id)
-        .eq("status", "consumed");
+      // Authoritative revoke: deletes the captured auth.sessions row, which
+      // cascades to auth.refresh_tokens — the web client can no longer mint
+      // new access tokens. The RPC also enforces ownership against auth.uid()
+      // and flips qr_auth_sessions.status to 'revoked'.
+      //
+      // We use a userClient here (not the service-role supabase) so that
+      // auth.uid() resolves to the caller inside the SECURITY DEFINER fn.
+      const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY") ?? "", {
+        global: { headers: { Authorization: `Bearer ${token}` } },
+      });
+      const { data: rpcData, error: rpcError } = await userClient.rpc(
+        "revoke_auth_session",
+        { p_qr_session_id: session_id },
+      );
+      if (rpcError) {
+        console.error("revoke_auth_session RPC failed:", rpcError);
+        return json({ error: "Revoke failed" }, 500);
+      }
+      const ok = (rpcData as { ok?: boolean } | null)?.ok === true;
+      if (!ok) {
+        const reason = (rpcData as { reason?: string } | null)?.reason ?? "unknown";
+        return json({ error: `Revoke failed: ${reason}` }, 404);
+      }
 
-      if (upError) throw upError;
-
-      // Broadcast revocation so connected web client signs out
+      // Realtime kick: broadcast on a stable user-scoped channel so the
+      // web client (subscribed at boot) gets immediate sign-out without
+      // needing to know the per-session channel name. The DB row is the
+      // source of truth; the broadcast is best-effort instant-feedback.
       try {
-        const ch = supabase.channel(`qr_revoke_${session_id}`);
+        const ch = supabase.channel(`auth_revoke:${user.id}`);
         await new Promise<void>((resolve) => {
           ch.subscribe((status: string) => {
             if (status === "SUBSCRIBED") {
               ch.send({
                 type: "broadcast",
                 event: "session_revoked",
-                payload: { session_id },
+                payload: {
+                  qr_session_id: session_id,
+                  auth_session_id: (rpcData as { auth_session_id?: string } | null)?.auth_session_id ?? null,
+                },
               });
               resolve();
             }
@@ -385,7 +430,7 @@ serve(async (req) => {
         await new Promise((r) => setTimeout(r, 300));
         supabase.removeChannel(ch);
       } catch (_) {
-        // Broadcast is best-effort; DB update is the source of truth
+        // Broadcast is best-effort; DB cascade is the source of truth.
       }
 
       return json({ success: true });

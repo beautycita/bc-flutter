@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -46,6 +47,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
       if (currentUser != null) {
         state = state.copyWith(user: currentUser);
         _startSessionPing();
+        // Pre-existing authenticated session (e.g. tab reopen): subscribe
+        // to user-scoped revocation broadcasts so a mobile-issued kick
+        // arrives even though we didn't go through the registerWebSession
+        // path on this load.
+        _subscribeToRevocations();
       }
     }
   }
@@ -213,6 +219,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
     _cachedRole = null;
     _cachedRoleAt = null;
     _stopSessionPing();
+    if (_revokeChannel != null) {
+      try {
+        BCSupabase.client.removeChannel(_revokeChannel!);
+      } catch (_) {/* best effort */}
+      _revokeChannel = null;
+    }
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       await BCSupabase.client.auth.signOut();
@@ -269,26 +281,81 @@ class AuthNotifier extends StateNotifier<AuthState> {
         body: {'action': 'register_session'},
       );
       final sessionId = response.data?['session_id'] as String?;
-      if (sessionId != null) {
-        _listenForRevocation(sessionId);
-      }
+      _subscribeToRevocations();
       return sessionId;
     } catch (e) {
       debugPrint('registerWebSession error: $e');
+      // Even if register_session failed, still subscribe — a revoke can
+      // arrive on this user's channel from any path that captured the
+      // auth_session_id (e.g. a prior QR consumption).
+      _subscribeToRevocations();
       return null;
     }
   }
 
-  /// Listen for session revocation from mobile device manager.
-  void _listenForRevocation(String sessionId) {
+  RealtimeChannel? _revokeChannel;
+
+  /// Subscribe to the user-scoped revocation channel and sign out only when
+  /// the broadcast targets this client's specific auth.sessions.id.
+  ///
+  /// The mobile device manager publishes on `auth_revoke:<user_id>` with a
+  /// payload of `{ qr_session_id, auth_session_id }`. We compare the
+  /// payload's auth_session_id against this client's own access_token
+  /// session_id claim — if they match, this is the device being revoked.
+  /// If they don't match, the revocation was for a different web session
+  /// belonging to the same user (e.g. a different browser).
+  void _subscribeToRevocations() {
     if (!BCSupabase.isInitialized) return;
-    BCSupabase.client.channel('qr_revoke_$sessionId').onBroadcast(
+    final userId = state.user?.id;
+    if (userId == null) return;
+
+    // Re-subscribing? Tear down the old channel first.
+    if (_revokeChannel != null) {
+      try {
+        BCSupabase.client.removeChannel(_revokeChannel!);
+      } catch (_) {/* best effort */}
+      _revokeChannel = null;
+    }
+
+    _revokeChannel = BCSupabase.client.channel('auth_revoke:$userId').onBroadcast(
       event: 'session_revoked',
       callback: (payload) {
-        debugPrint('Session revoked by mobile device');
+        final targetAuthSessionId = payload['auth_session_id'] as String?;
+        final selfAuthSessionId = _selfAuthSessionId();
+        // If the broadcast carries a specific target and it doesn't match
+        // this client, ignore — a different device on the same account.
+        if (targetAuthSessionId != null &&
+            selfAuthSessionId != null &&
+            targetAuthSessionId != selfAuthSessionId) {
+          debugPrint('auth_revoke broadcast targeted another session — ignoring');
+          return;
+        }
+        debugPrint('Session revoked by mobile device — signing out');
         signOut();
       },
     ).subscribe();
+  }
+
+  /// Decode the `session_id` claim from this client's current access_token
+  /// JWT. Returns null if no session or token shape is unexpected.
+  String? _selfAuthSessionId() {
+    final accessToken = BCSupabase.client.auth.currentSession?.accessToken;
+    if (accessToken == null) return null;
+    try {
+      final parts = accessToken.split('.');
+      if (parts.length != 3) return null;
+      var b64 = parts[1].replaceAll('-', '+').replaceAll('_', '/');
+      // base64 padding
+      while (b64.length % 4 != 0) {
+        b64 += '=';
+      }
+      final decoded = utf8.decode(base64.decode(b64));
+      final claims = jsonDecode(decoded) as Map<String, dynamic>;
+      final sid = claims['session_id'];
+      return sid is String && sid.isNotEmpty ? sid : null;
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Login with a passkey (WebAuthn assertion).
