@@ -14,10 +14,19 @@ import 'package:beautycita/services/user_session.dart';
 import 'package:beautycita/widgets/phone_verify_gate_sheet.dart';
 import 'package:beautycita/services/updater_service.dart';
 import 'package:beautycita/widgets/settings_widgets.dart';
+import 'package:beautycita/widgets/profile_sections.dart';
+import 'package:beautycita/config/routes.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+/// Section selector for SecurityScreen. When null, the screen renders the
+/// 5-tile nav menu. When set, only that section's card is rendered with
+/// its own AppBar — used so the menu links each go to a focused page
+/// (linked accounts, biometric, about).
+enum SecuritySection { linkedAccounts, biometric, about }
+
 class SecurityScreen extends ConsumerStatefulWidget {
-  const SecurityScreen({super.key});
+  final SecuritySection? section;
+  const SecurityScreen({super.key, this.section});
 
   @override
   ConsumerState<SecurityScreen> createState() => _SecurityScreenState();
@@ -100,9 +109,64 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen>
     final cs = Theme.of(context).colorScheme;
     final ext = Theme.of(context).extension<BCThemeExtension>()!;
 
+    // Menu mode — render the 5-tile nav, no inline sections.
+    if (widget.section == null) {
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        appBar: AppBar(title: const Text('Seguridad')),
+        body: ListView(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppConstants.screenPaddingHorizontal,
+            vertical: AppConstants.paddingMD,
+          ),
+          children: [
+            ProfileQuickLinkTile(
+              icon: Icons.account_tree_outlined,
+              label: 'Cuentas vinculadas',
+              color: const Color(0xFF8B5CF6),
+              onTap: () => context.push('/cuenta/security/linked-accounts'),
+            ),
+            ProfileQuickLinkTile(
+              icon: Icons.fingerprint_rounded,
+              label: 'Biometrico',
+              color: const Color(0xFF0EA5E9),
+              onTap: () => context.push('/cuenta/security/biometric'),
+            ),
+            ProfileQuickLinkTile(
+              icon: Icons.devices_outlined,
+              label: 'Dispositivos enlazados',
+              color: const Color(0xFFEC4899),
+              onTap: () => context.push('/devices'),
+            ),
+            ProfileQuickLinkTile(
+              icon: Icons.credit_card_outlined,
+              label: 'Metodos de pago',
+              color: const Color(0xFFEF4444),
+              onTap: () => context.push(AppRoutes.paymentMethods),
+            ),
+            ProfileQuickLinkTile(
+              icon: Icons.info_outline_rounded,
+              label: 'Acerca de la app',
+              color: const Color(0xFF6B7280),
+              onTap: () => context.push('/cuenta/security/about'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final showLinked = widget.section == SecuritySection.linkedAccounts;
+    final showBiometric = widget.section == SecuritySection.biometric;
+    final showAbout = widget.section == SecuritySection.about;
+    final title = showLinked
+        ? 'Cuentas vinculadas'
+        : showBiometric
+            ? 'Biometrico'
+            : 'Acerca de la app';
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(title: const Text('Seguridad')),
+      appBar: AppBar(title: Text(title)),
       body: ListView(
         padding: const EdgeInsets.symmetric(
           horizontal: AppConstants.screenPaddingHorizontal,
@@ -110,7 +174,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen>
         ),
         children: [
           // ── Cuentas vinculadas ──
-          _animated(0, Column(
+          if (showLinked) _animated(0, Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SectionHeader(label: 'Cuentas vinculadas'),
@@ -248,7 +312,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen>
           const SizedBox(height: AppConstants.paddingLG),
 
           // ── Biometrico ──
-          _animated(1, Column(
+          if (showBiometric) _animated(1, Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SectionHeader(label: 'Biometrico'),
@@ -262,34 +326,13 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen>
             ],
           )),
 
-          const SizedBox(height: AppConstants.paddingLG),
+          if (showBiometric) const SizedBox(height: AppConstants.paddingLG),
 
-          // ── Dispositivos ──
-          _animated(2, Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SectionHeader(label: 'Dispositivos'),
-
-              _buildCard(cs, ext, children: [
-                SettingsTile(
-                  icon: Icons.devices_outlined,
-                  label: 'Dispositivos conectados',
-                  onTap: () => context.push('/devices'),
-                ),
-                Divider(height: 1, color: ext.cardBorderColor),
-                SettingsTile(
-                  icon: Icons.qr_code_scanner_outlined,
-                  label: 'Vincular sesion web',
-                  onTap: () => context.push('/qr-scan'),
-                ),
-              ]),
-            ],
-          )),
-
-          const SizedBox(height: AppConstants.paddingLG),
+          // Dispositivos section moved out — the Seguridad menu links
+          // directly to /devices (the existing devices screen).
 
           // ── Acerca de ──
-          _animated(3, Column(
+          if (showAbout) _animated(3, Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SectionHeader(label: 'Acerca de'),

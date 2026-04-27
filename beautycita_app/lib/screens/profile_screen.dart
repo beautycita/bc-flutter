@@ -724,12 +724,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           color: const Color(0xFF0EA5E9),
           onTap: () => context.push('/favorites'),
         ),
-        ProfileQuickLinkTile(
-          icon: Icons.credit_card_outlined,
-          label: 'Metodos de pago',
-          color: const Color(0xFF8B5CF6),
-          onTap: () => context.push('/settings/payment-methods'),
-        ),
+        // Metodos de pago moved into Seguridad — security screen surfaces it
+        // alongside biometric, devices, and account settings (BC directive
+        // 2026-04-27).
         ProfileQuickLinkTile(
           icon: Icons.shield_outlined,
           label: 'Seguridad',

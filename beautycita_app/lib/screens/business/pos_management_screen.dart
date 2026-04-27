@@ -497,11 +497,14 @@ class _ProductList extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
+    final statusHeader = _PosStatusHeader(onSuspend: onDeactivate);
+
     if (products.isEmpty) {
       return ListView(
         padding: const EdgeInsets.all(AppConstants.paddingMD),
         children: [
-          const SizedBox(height: AppConstants.paddingXL),
+          statusHeader,
+          const SizedBox(height: AppConstants.paddingLG),
           Center(
             child: Column(
               children: [
@@ -540,6 +543,8 @@ class _ProductList extends StatelessWidget {
         120, // room for FAB
       ),
       children: [
+        statusHeader,
+        const SizedBox(height: AppConstants.paddingMD),
         // Showcase section header
         Row(
           children: [
@@ -606,6 +611,86 @@ class _ProductList extends StatelessWidget {
         ),
         const SizedBox(height: AppConstants.paddingMD),
       ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// POS status header — inline activate/suspend switch
+// ---------------------------------------------------------------------------
+//
+// Surfaces a clear, top-of-screen toggle for the POS activation state. Salons
+// who turn POS on but want to pause for a season (vacation, slow month) can
+// flip the switch and their products go invisible to clients without losing
+// the catalog. The deactivate flow underneath this is the existing dialog +
+// disablePos() — the switch is just a more discoverable entry point than the
+// "Desactivar Punto de Venta" button hidden at the very bottom of the list.
+
+class _PosStatusHeader extends StatelessWidget {
+  final VoidCallback onSuspend;
+  const _PosStatusHeader({required this.onSuspend});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppConstants.paddingMD,
+        vertical: AppConstants.paddingSM + 2,
+      ),
+      decoration: BoxDecoration(
+        color: const Color(0xFF10B981).withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        border: Border.all(
+          color: const Color(0xFF10B981).withValues(alpha: 0.35),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: const BoxDecoration(
+              color: Color(0xFF10B981),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.storefront_rounded,
+                color: Colors.white, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'POS activo',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF065F46),
+                  ),
+                ),
+                Text(
+                  'Tus productos son visibles para clientas',
+                  style: GoogleFonts.nunito(
+                    fontSize: 12,
+                    color: colors.onSurface.withValues(alpha: 0.65),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: true,
+            activeThumbColor: const Color(0xFF10B981),
+            // Switch flips visually but the actual disable goes through the
+            // confirm dialog (and stays "on" until the user confirms). On
+            // confirm the parent invalidates posEnabledProvider and the
+            // screen rerenders to the opt-in view.
+            onChanged: (_) => onSuspend(),
+          ),
+        ],
+      ),
     );
   }
 }

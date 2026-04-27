@@ -442,6 +442,30 @@ class AppRoutes {
         ),
       ),
       GoRoute(
+        path: '/cuenta/security/linked-accounts',
+        name: 'security-linked-accounts',
+        pageBuilder: (context, state) => bcSweepPage(
+          key: state.pageKey,
+          child: const SecurityScreen(section: SecuritySection.linkedAccounts),
+        ),
+      ),
+      GoRoute(
+        path: '/cuenta/security/biometric',
+        name: 'security-biometric',
+        pageBuilder: (context, state) => bcSweepPage(
+          key: state.pageKey,
+          child: const SecurityScreen(section: SecuritySection.biometric),
+        ),
+      ),
+      GoRoute(
+        path: '/cuenta/security/about',
+        name: 'security-about',
+        pageBuilder: (context, state) => bcSweepPage(
+          key: state.pageKey,
+          child: const SecurityScreen(section: SecuritySection.about),
+        ),
+      ),
+      GoRoute(
         path: cashPayment,
         name: 'cash-payment',
         pageBuilder: (context, state) {
