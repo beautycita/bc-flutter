@@ -712,76 +712,37 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   ) {
     return Column(
       children: [
-        _quickLinkTile(
+        ProfileQuickLinkTile(
           icon: Icons.receipt_long_outlined,
           label: 'Mis citas',
           color: cs.primary,
           onTap: () => context.push('/my-bookings'),
         ),
-        _quickLinkTile(
+        ProfileQuickLinkTile(
           icon: Icons.storefront_rounded,
           label: 'Salones visitados',
           color: const Color(0xFF0EA5E9),
           onTap: () => context.push('/favorites'),
         ),
-        _quickLinkTile(
+        ProfileQuickLinkTile(
           icon: Icons.credit_card_outlined,
           label: 'Metodos de pago',
           color: const Color(0xFF8B5CF6),
           onTap: () => context.push('/settings/payment-methods'),
         ),
-        _quickLinkTile(
+        ProfileQuickLinkTile(
           icon: Icons.shield_outlined,
           label: 'Seguridad',
           color: const Color(0xFFEF4444),
           onTap: () => context.push('/settings/security'),
         ),
-        _quickLinkTile(
+        ProfileQuickLinkTile(
           icon: Icons.settings_outlined,
           label: 'Preferencias',
           color: const Color(0xFF6B7280),
           onTap: () => context.push('/settings/preferences'),
         ),
       ],
-    );
-  }
-
-  Widget _quickLinkTile({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    final cs = Theme.of(context).colorScheme;
-    final ext = Theme.of(context).extension<BCThemeExtension>()!;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: cs.surface,
-          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-          border: Border.all(color: ext.cardBorderColor),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, size: 20, color: color),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(label, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500)),
-            ),
-            Icon(Icons.chevron_right, size: 20, color: cs.onSurface.withValues(alpha: 0.3)),
-          ],
-        ),
-      ),
     );
   }
 

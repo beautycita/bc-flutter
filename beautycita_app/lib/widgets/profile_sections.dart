@@ -12,7 +12,9 @@ import 'package:go_router/go_router.dart';
 
 import 'package:beautycita/config/app_transitions.dart';
 import 'package:beautycita/config/constants.dart';
+import 'package:beautycita/config/fonts.dart';
 import 'package:beautycita/config/routes.dart';
+import 'package:beautycita/config/theme_extension.dart';
 import 'package:beautycita/providers/admin_provider.dart';
 import 'package:beautycita/providers/auth_provider.dart';
 import 'package:beautycita/providers/business_provider.dart';
@@ -22,7 +24,80 @@ import 'package:beautycita/providers/security_provider.dart';
 import 'package:beautycita/screens/admin/admin_shell_screen.dart' show adminTabProvider;
 import 'package:beautycita/screens/business/business_shell_screen.dart' show businessTabProvider;
 import 'package:beautycita/services/toast_service.dart';
-import 'package:beautycita/widgets/settings_widgets.dart';
+
+// =============================================================================
+// ProfileQuickLinkTile — uniform row used by every option on profile_screen.
+// =============================================================================
+// Single source of truth for profile-tile visuals. All tiles below the avatar
+// hero (Mis citas, Salones visitados, Metodos de pago, Seguridad, Preferencias,
+// Admin panel, RP, Para profesionales, Legal) render through this so they
+// stay visually identical (BC directive 2026-04-27).
+// =============================================================================
+
+class ProfileQuickLinkTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback? onTap;
+  final Widget? trailing;
+
+  const ProfileQuickLinkTile({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+    this.trailing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: cs.surface,
+          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+          border: Border.all(color: ext.cardBorderColor),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, size: 20, color: color),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            if (trailing != null)
+              trailing!
+            else if (onTap != null)
+              Icon(
+                Icons.chevron_right,
+                size: 20,
+                color: cs.onSurface.withValues(alpha: 0.3),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 // =============================================================================
 // Admin tile (only renders for admin/superadmin)
@@ -35,16 +110,14 @@ class ProfileAdminTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return ref.watch(isAdminProvider).when(
           data: (isAdmin) => isAdmin
-              ? _LabeledSection(
-                  label: 'ADMINISTRACION',
-                  child: SettingsTile(
-                    icon: Icons.admin_panel_settings_rounded,
-                    label: 'Panel de administracion',
-                    onTap: () {
-                      ref.read(adminTabProvider.notifier).state = 0;
-                      context.push(AppRoutes.admin);
-                    },
-                  ),
+              ? ProfileQuickLinkTile(
+                  icon: Icons.admin_panel_settings_rounded,
+                  label: 'Panel de administracion',
+                  color: const Color(0xFFD97706),
+                  onTap: () {
+                    ref.read(adminTabProvider.notifier).state = 0;
+                    context.push(AppRoutes.admin);
+                  },
                 )
               : const SizedBox.shrink(),
           loading: () => const SizedBox.shrink(),
@@ -64,13 +137,11 @@ class ProfileRpTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return ref.watch(isRpProvider).when(
           data: (isRp) => isRp
-              ? _LabeledSection(
-                  label: 'RELACIONES PUBLICAS',
-                  child: SettingsTile(
-                    icon: Icons.business_center,
-                    label: 'Panel RP',
-                    onTap: () => context.push(AppRoutes.rp),
-                  ),
+              ? ProfileQuickLinkTile(
+                  icon: Icons.business_center,
+                  label: 'Panel RP',
+                  color: const Color(0xFFEC4899),
+                  onTap: () => context.push(AppRoutes.rp),
                 )
               : const SizedBox.shrink(),
           loading: () => const SizedBox.shrink(),
@@ -103,44 +174,42 @@ class ProfileProfessionalsSection extends ConsumerWidget {
     final appStatus = ref.watch(applicationStatusProvider).valueOrNull;
     final isOwner = ref.watch(isBusinessOwnerProvider).valueOrNull ?? false;
 
+    const profColor = Color(0xFF10B981);
+
     if (isOwner) {
-      return _LabeledSection(
-        label: 'PARA PROFESIONALES',
-        child: SettingsTile(
-          icon: Icons.storefront_rounded,
-          label: 'Portal de negocio',
-          onTap: () {
-            ref.read(businessTabProvider.notifier).state = 0;
-            context.push(AppRoutes.business);
-          },
-        ),
+      return ProfileQuickLinkTile(
+        icon: Icons.storefront_rounded,
+        label: 'Portal de negocio',
+        color: profColor,
+        onTap: () {
+          ref.read(businessTabProvider.notifier).state = 0;
+          context.push(AppRoutes.business);
+        },
       );
     }
 
     if (appStatus == 'pending') {
-      return _LabeledSection(
-        label: 'PARA PROFESIONALES',
-        child: SettingsTile(
-          icon: Icons.hourglass_top_rounded,
-          label: 'Solicitud en revision',
-          trailing: _StatusPill(
-            text: 'Pendiente',
-            color: Colors.amber.shade800,
-            background: Colors.amber.shade100,
-          ),
-          onTap: () {},
+      return ProfileQuickLinkTile(
+        icon: Icons.hourglass_top_rounded,
+        label: 'Solicitud en revision',
+        color: profColor,
+        trailing: _StatusPill(
+          text: 'Pendiente',
+          color: Colors.amber.shade800,
+          background: Colors.amber.shade100,
         ),
+        onTap: () {},
       );
     }
 
     if (appStatus == 'rejected') {
       final cs = Theme.of(context).colorScheme;
-      return _LabeledSection(
-        label: 'PARA PROFESIONALES',
+      return Column(
         children: [
-          SettingsTile(
+          ProfileQuickLinkTile(
             icon: Icons.error_outline_rounded,
             label: 'Solicitud rechazada',
+            color: profColor,
             trailing: _StatusPill(
               text: 'Rechazada',
               color: cs.error,
@@ -148,9 +217,10 @@ class ProfileProfessionalsSection extends ConsumerWidget {
             ),
             onTap: () {},
           ),
-          SettingsTile(
+          ProfileQuickLinkTile(
             icon: Icons.refresh_rounded,
             label: 'Intentar de nuevo',
+            color: profColor,
             onTap: () => _attemptRegister(context, ref),
           ),
         ],
@@ -170,13 +240,11 @@ class ProfileProfessionalsSection extends ConsumerWidget {
     final appOpens = ref.watch(appOpenCountProvider).valueOrNull ?? 0;
     if (appOpens >= 10) return const SizedBox.shrink();
 
-    return _LabeledSection(
-      label: 'PARA PROFESIONALES',
-      child: SettingsTile(
-        icon: Icons.store_rounded,
-        label: 'Registra tu salon',
-        onTap: () => _attemptRegister(context, ref),
-      ),
+    return ProfileQuickLinkTile(
+      icon: Icons.store_rounded,
+      label: 'Registra tu salon',
+      color: profColor,
+      onTap: () => _attemptRegister(context, ref),
     );
   }
 
@@ -203,13 +271,11 @@ class ProfileLegalSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _LabeledSection(
-      label: 'LEGAL',
-      child: SettingsTile(
-        icon: Icons.gavel_rounded,
-        label: 'Terminos y politicas',
-        onTap: () => context.push(AppRoutes.legal),
-      ),
+    return ProfileQuickLinkTile(
+      icon: Icons.gavel_rounded,
+      label: 'Terminos y politicas',
+      color: const Color(0xFF64748B),
+      onTap: () => context.push(AppRoutes.legal),
     );
   }
 }
@@ -345,39 +411,6 @@ class ProfileLogoutButton extends ConsumerWidget {
 // =============================================================================
 // Small private helpers
 // =============================================================================
-
-class _LabeledSection extends StatelessWidget {
-  final String label;
-  final Widget? child;
-  final List<Widget>? children;
-
-  const _LabeledSection({required this.label, this.child, this.children})
-      : assert(child != null || children != null);
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: AppConstants.paddingLG),
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.2,
-                  color: cs.primary,
-                ),
-          ),
-        ),
-        if (child != null) child!,
-        if (children != null) ...children!,
-      ],
-    );
-  }
-}
 
 class _StatusPill extends StatelessWidget {
   final String text;
