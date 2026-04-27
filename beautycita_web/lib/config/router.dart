@@ -49,7 +49,6 @@ import '../pages/business/biz_pos_page.dart';
 import '../pages/business/biz_settings_page.dart';
 import '../pages/business/biz_staff_page.dart';
 import '../pages/client/cuenta_page.dart';
-import '../pages/client/configuracion_page.dart';
 import '../pages/client/feed_page.dart';
 import '../pages/client/tiktok_feed_page.dart';
 import '../pages/client/invite_page.dart';
@@ -150,7 +149,6 @@ abstract final class WebRoutes {
   static const String invitar = '/client/invitar';
   static const String misCitas = '/mis-citas';
   static const String cuenta = '/cuenta';
-  static const String configuracion = '/configuracion';
 
   // Public invite
   static const String invitarPublic = '/invitar';
@@ -717,10 +715,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: WebRoutes.cuenta,
             builder: (context, state) => const CuentaPage(),
-          ),
-          GoRoute(
-            path: WebRoutes.configuracion,
-            builder: (context, state) => const ConfiguracionPage(),
           ),
         ],
       ),

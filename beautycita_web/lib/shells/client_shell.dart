@@ -315,9 +315,6 @@ class _AvatarCircleState extends ConsumerState<_AvatarCircle> {
           case 'mis_citas':
             context.go(WebRoutes.misCitas);
             break;
-          case 'config':
-            context.go(WebRoutes.configuracion);
-            break;
           case 'soporte':
             context.go(WebRoutes.soporte);
             break;
@@ -365,8 +362,7 @@ class _AvatarCircleState extends ConsumerState<_AvatarCircle> {
         _menuItem('mis_citas', Icons.event_note_outlined, 'Mis Citas'),
         const PopupMenuDivider(),
 
-        // ── Settings section ──
-        _menuItem('config', Icons.settings_outlined, 'Configuracion'),
+        // ── Help section ──
         _menuItem('soporte', Icons.help_outline_rounded, 'Ayuda'),
         const PopupMenuDivider(),
 
