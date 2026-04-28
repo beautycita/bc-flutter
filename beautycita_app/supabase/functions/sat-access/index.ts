@@ -49,23 +49,42 @@ function isOwnerIp(ip: string | null): boolean {
   return ip.startsWith("177.248.");
 }
 
-async function maybeAlertBC(reason: string, details: string, ip: string | null) {
+async function maybeAlertBC(
+  reason: string,
+  details: string,
+  ip: string | null,
+  tone: "success" | "internal_failure" = "internal_failure",
+) {
   if (isOwnerIp(ip)) {
     console.log(`[SAT-ALERT] suppressed (owner IP ${ip}): ${reason}`);
     return;
   }
-  const last = lastAlertByReason.get(reason) ?? 0;
+  const cooldownKey = `${tone}:${reason}`;
+  const last = lastAlertByReason.get(cooldownKey) ?? 0;
   if (Date.now() - last < ALERT_SUPPRESSION_MS) {
     console.log(`[SAT-ALERT] suppressed (cooldown): ${reason}`);
     return;
   }
-  lastAlertByReason.set(reason, Date.now());
-  await alertBC(reason, details);
+  lastAlertByReason.set(cooldownKey, Date.now());
+  await alertBC(reason, details, tone);
 }
 
-// ── Alert BC immediately on any SAT failure ─────────────────────────────────
-async function alertBC(reason: string, details: string) {
-  const msg = `🚨 *SAT API ALERT* 🚨\n\n*Reason:* ${reason}\n*Details:* ${details}\n*Time:* ${new Date().toISOString()}\n\n_This is a critical alert. The SAT API experienced a failure. Investigate immediately._`;
+// ── Alert BC ─ success or internal-failure only. Caller-side failures
+//    (invalid key, bad signature, expired timestamp, rate limited) are
+//    user-input noise and intentionally NOT alerted; they're still logged
+//    via logAccess() so a real attack pattern is auditable on demand.
+async function alertBC(
+  reason: string,
+  details: string,
+  tone: "success" | "internal_failure" = "internal_failure",
+) {
+  const header = tone === "success"
+    ? `✅ *SAT API access* ✅`
+    : `🚨 *SAT API ALERT* 🚨`;
+  const footer = tone === "success"
+    ? `_SAT successfully pulled data from the API._`
+    : `_This is a critical alert. The SAT API experienced an internal failure. Investigate immediately._`;
+  const msg = `${header}\n\n*Reason:* ${reason}\n*Details:* ${details}\n*Time:* ${new Date().toISOString()}\n\n${footer}`;
 
   // Try WA alert. Skip cleanly if BC_ALERT_PHONE is unset — never send to a
   // fabricated / hardcoded recipient again.
@@ -126,7 +145,7 @@ Deno.serve(async (req) => {
   try {
     supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
   } catch (e) {
-    await alertBC("Supabase client init failed", String(e));
+    await maybeAlertBC("Supabase client init failed", String(e), null, "internal_failure");
     return json(SAT_RETRY_MESSAGE, 503);
   }
 
@@ -149,23 +168,16 @@ Deno.serve(async (req) => {
     const signature = req.headers.get("x-sat-signature") ?? "";
 
     if (!SAT_API_KEY || !SAT_API_SECRET || apiKey !== SAT_API_KEY) {
+      // Caller-side noise. Log only — do NOT alert. A real intrusion
+      // pattern is detectable from sat_access_log without spamming WA.
       logAccess(supabase, endpoint, null, 401, ipAddress, apiKey, "invalid_key").catch((e) => console.error("[SAT-ACCESS] logAccess failed:", e));
-      maybeAlertBC(
-        "SAT invalid_key",
-        `IP ${ipAddress ?? "?"} endpoint ${endpoint} — a caller hit the SAT API with an invalid or missing X-SAT-Key. If this is SAT, rotate the credentials with them immediately.`,
-        ipAddress,
-      ).catch((e) => console.error("[SAT-ALERT] maybeAlertBC failed:", e));
       return json({ error: "Invalid or missing API key" }, 401);
     }
 
     const ts = parseInt(timestamp);
     if (!ts || Math.abs(Date.now() - ts) > TIMESTAMP_TOLERANCE_MS) {
+      // Caller-side noise — clock drift / replay. Log only.
       logAccess(supabase, endpoint, null, 401, ipAddress, apiKey, "expired_timestamp").catch((e) => console.error("[SAT-ACCESS] logAccess failed:", e));
-      maybeAlertBC(
-        "SAT expired_timestamp",
-        `IP ${ipAddress ?? "?"} endpoint ${endpoint} — timestamp drift >5 min. Check server clock sync (ntpd) and caller clock.`,
-        ipAddress,
-      ).catch((e) => console.error("[SAT-ALERT] maybeAlertBC failed:", e));
       return json({ error: "Timestamp expired or invalid. Must be within 5 minutes." }, 401);
     }
 
@@ -192,12 +204,9 @@ Deno.serve(async (req) => {
       .join("");
 
     if (signature !== expectedSignature) {
+      // Caller-side noise. Valid key + bad signature is either a probe or
+      // a misconfigured caller — auditable via sat_access_log. No WA alert.
       logAccess(supabase, endpoint, null, 403, ipAddress, apiKey, "invalid_signature").catch((e) => console.error("[SAT-ACCESS] logAccess failed:", e));
-      maybeAlertBC(
-        "SAT invalid_signature",
-        `IP ${ipAddress ?? "?"} endpoint ${endpoint} — valid key but HMAC signature mismatch. If the SAT caller's secret drifted we are locked out of our own reporting obligation. Rotate immediately.`,
-        ipAddress,
-      ).catch((e) => console.error("[SAT-ALERT] maybeAlertBC failed:", e));
       return json({ error: "Invalid signature" }, 403);
     }
 
@@ -207,12 +216,10 @@ Deno.serve(async (req) => {
       rateLimitWindow.shift();
     }
     if (rateLimitWindow.length >= RATE_LIMIT_MAX) {
+      // Caller-side noise — log only. If SAT actually exceeds the rate
+      // limit during a real audit, the access log will show the burst
+      // and we can raise RATE_LIMIT_MAX without WA spam.
       logAccess(supabase, endpoint, null, 429, ipAddress, apiKey, "rate_limited").catch((e) => console.error("[SAT-ACCESS] logAccess failed:", e));
-      maybeAlertBC(
-        "SAT rate_limited",
-        `IP ${ipAddress ?? "?"} endpoint ${endpoint} — per-hour rate limit exceeded. If SAT is legitimately pulling heavily, raise RATE_LIMIT_MAX.`,
-        ipAddress,
-      ).catch((e) => console.error("[SAT-ALERT] maybeAlertBC failed:", e));
       return json(SAT_RETRY_MESSAGE, 429);
     }
     rateLimitWindow.push(now);
@@ -256,6 +263,14 @@ Deno.serve(async (req) => {
     }
 
     logAccess(supabase, endpoint, params, 200, ipAddress, apiKey, "success").catch((e) => console.error("[SAT-ACCESS] logAccess failed:", e));
+    // Notify BC on a real successful pull — once per 15 min per route so a
+    // multi-endpoint SAT audit doesn't generate five WAs in 30 seconds.
+    maybeAlertBC(
+      `SAT pulled ${routePath || "index"}`,
+      `IP ${ipAddress ?? "?"} endpoint ${endpoint}`,
+      ipAddress,
+      "success",
+    ).catch((e) => console.error("[SAT-ALERT] maybeAlertBC failed:", e));
     return json(result);
 
   } catch (err) {
@@ -263,8 +278,15 @@ Deno.serve(async (req) => {
     const errMsg = (err as Error).message ?? String(err);
     console.error("[SAT-ACCESS] CRITICAL FAILURE:", errMsg);
 
-    // Alert BC immediately via every channel
-    await alertBC("Query/processing failure", errMsg);
+    // Alert BC on real internal failure (post-auth crash). Route through
+    // maybeAlertBC so a hammered failure mode (e.g. DB outage during a
+    // SAT pull) doesn't spam — one alert per 15 min per error string.
+    await maybeAlertBC(
+      "Query/processing failure",
+      errMsg,
+      ipAddress,
+      "internal_failure",
+    );
 
     // Log the failure
     logAccess(supabase, endpoint, null, 503, ipAddress, "", `critical_error: ${errMsg}`).catch((e) => console.error("[SAT-ACCESS] logAccess failed:", e));
