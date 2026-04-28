@@ -37,10 +37,13 @@ const SAT_RETRY_MESSAGE = {
   retry_after_seconds: 30,
 };
 
-// Suppression window per-reason so a real SAT hammering us doesn't spam
-// hundreds of WA messages. 15-minute cooldown per distinct reason string.
-const ALERT_SUPPRESSION_MS = 15 * 60 * 1000;
-const lastAlertByReason = new Map<string, number>();
+// Suppression keyed by `tone:ip`. Once an IP has triggered an alert in
+// a given tone (success / caller_failure / internal_failure), no more
+// alerts of the same tone fire for that IP until the cooldown elapses.
+// Six failed-PIN-style retries from the same probe → exactly ONE WA.
+// 24-hour cooldown so a probe that returns the next day re-alerts.
+const ALERT_SUPPRESSION_MS = 24 * 60 * 60 * 1000;
+const lastAlertByKey = new Map<string, number>();
 
 // Owner whitelist — IPs whose alerts get suppressed (probes from BC's
 // own networks). Configurable via `SAT_OWNER_IP_PREFIXES` env var,
@@ -57,41 +60,61 @@ function isOwnerIp(ip: string | null): boolean {
   return _ownerIpPrefixes.some((p) => ip.startsWith(p));
 }
 
+type AlertTone = "success" | "caller_failure" | "internal_failure";
+
 async function maybeAlertBC(
   reason: string,
   details: string,
   ip: string | null,
-  tone: "success" | "internal_failure" = "internal_failure",
+  tone: AlertTone = "internal_failure",
 ) {
   if (isOwnerIp(ip)) {
     console.log(`[SAT-ALERT] suppressed (owner IP ${ip}): ${reason}`);
     return;
   }
-  const cooldownKey = `${tone}:${reason}`;
-  const last = lastAlertByReason.get(cooldownKey) ?? 0;
+  // Cooldown key is `tone:ip` — first alert of each tone per IP gets
+  // through, the next 24h of same-tone events from that IP go silent
+  // (logAccess still runs every time, so the audit trail is intact).
+  // Fallback to `tone:reason` when ip is unknown (e.g. Supabase init
+  // failure before we extract the header).
+  const ipKey = ip ?? `noip:${reason}`;
+  const cooldownKey = `${tone}:${ipKey}`;
+  const last = lastAlertByKey.get(cooldownKey) ?? 0;
   if (Date.now() - last < ALERT_SUPPRESSION_MS) {
-    console.log(`[SAT-ALERT] suppressed (cooldown): ${reason}`);
+    console.log(`[SAT-ALERT] suppressed (cooldown ${tone}:${ipKey}): ${reason}`);
     return;
   }
-  lastAlertByReason.set(cooldownKey, Date.now());
+  lastAlertByKey.set(cooldownKey, Date.now());
   await alertBC(reason, details, tone);
 }
 
-// ── Alert BC ─ success or internal-failure only. Caller-side failures
-//    (invalid key, bad signature, expired timestamp, rate limited) are
-//    user-input noise and intentionally NOT alerted; they're still logged
-//    via logAccess() so a real attack pattern is auditable on demand.
+// ── Alert BC ─ three tones:
+//    success         — SAT (or anyone authed) successfully pulled data.
+//    caller_failure  — auth check failed before our code ran (probe, mistype,
+//                      key drift). One alert per IP per 24h; rest stays in log.
+//    internal_failure— platform crashed AFTER passing auth. Worth a wake-up.
 async function alertBC(
   reason: string,
   details: string,
-  tone: "success" | "internal_failure" = "internal_failure",
+  tone: AlertTone = "internal_failure",
 ) {
-  const header = tone === "success"
-    ? `✅ *SAT API access* ✅`
-    : `🚨 *SAT API ALERT* 🚨`;
-  const footer = tone === "success"
-    ? `_SAT successfully pulled data from the API._`
-    : `_This is a critical alert. The SAT API experienced an internal failure. Investigate immediately._`;
+  let header: string;
+  let footer: string;
+  switch (tone) {
+    case "success":
+      header = `✅ *SAT API access* ✅`;
+      footer = `_SAT successfully pulled data from the API._`;
+      break;
+    case "caller_failure":
+      header = `⚠️ *SAT API caller failure* ⚠️`;
+      footer = `_First failed access from this IP in 24h. Subsequent failures from the same IP will only be logged. Investigate if it persists._`;
+      break;
+    case "internal_failure":
+    default:
+      header = `🚨 *SAT API ALERT* 🚨`;
+      footer = `_This is a critical alert. The SAT API experienced an internal failure. Investigate immediately._`;
+      break;
+  }
   const msg = `${header}\n\n*Reason:* ${reason}\n*Details:* ${details}\n*Time:* ${new Date().toISOString()}\n\n${footer}`;
 
   // Try WA alert. Skip cleanly if BC_ALERT_PHONE is unset — never send to a
@@ -176,16 +199,25 @@ Deno.serve(async (req) => {
     const signature = req.headers.get("x-sat-signature") ?? "";
 
     if (!SAT_API_KEY || !SAT_API_SECRET || apiKey !== SAT_API_KEY) {
-      // Caller-side noise. Log only — do NOT alert. A real intrusion
-      // pattern is detectable from sat_access_log without spamming WA.
       logAccess(supabase, endpoint, null, 401, ipAddress, apiKey, "invalid_key").catch((e) => console.error("[SAT-ACCESS] logAccess failed:", e));
+      maybeAlertBC(
+        "Caller-side failure (invalid_key)",
+        `IP ${ipAddress ?? "?"} endpoint ${endpoint} — invalid or missing X-SAT-Key. Further failures from this IP in 24h will be logged silently.`,
+        ipAddress,
+        "caller_failure",
+      ).catch((e) => console.error("[SAT-ALERT] maybeAlertBC failed:", e));
       return json({ error: "Invalid or missing API key" }, 401);
     }
 
     const ts = parseInt(timestamp);
     if (!ts || Math.abs(Date.now() - ts) > TIMESTAMP_TOLERANCE_MS) {
-      // Caller-side noise — clock drift / replay. Log only.
       logAccess(supabase, endpoint, null, 401, ipAddress, apiKey, "expired_timestamp").catch((e) => console.error("[SAT-ACCESS] logAccess failed:", e));
+      maybeAlertBC(
+        "Caller-side failure (expired_timestamp)",
+        `IP ${ipAddress ?? "?"} endpoint ${endpoint} — timestamp drift >5 min.`,
+        ipAddress,
+        "caller_failure",
+      ).catch((e) => console.error("[SAT-ALERT] maybeAlertBC failed:", e));
       return json({ error: "Timestamp expired or invalid. Must be within 5 minutes." }, 401);
     }
 
@@ -212,9 +244,13 @@ Deno.serve(async (req) => {
       .join("");
 
     if (signature !== expectedSignature) {
-      // Caller-side noise. Valid key + bad signature is either a probe or
-      // a misconfigured caller — auditable via sat_access_log. No WA alert.
       logAccess(supabase, endpoint, null, 403, ipAddress, apiKey, "invalid_signature").catch((e) => console.error("[SAT-ACCESS] logAccess failed:", e));
+      maybeAlertBC(
+        "Caller-side failure (invalid_signature)",
+        `IP ${ipAddress ?? "?"} endpoint ${endpoint} — valid X-SAT-Key but HMAC mismatch. If a real SAT caller's secret drifted, rotate immediately.`,
+        ipAddress,
+        "caller_failure",
+      ).catch((e) => console.error("[SAT-ALERT] maybeAlertBC failed:", e));
       return json({ error: "Invalid signature" }, 403);
     }
 
@@ -224,10 +260,13 @@ Deno.serve(async (req) => {
       rateLimitWindow.shift();
     }
     if (rateLimitWindow.length >= RATE_LIMIT_MAX) {
-      // Caller-side noise — log only. If SAT actually exceeds the rate
-      // limit during a real audit, the access log will show the burst
-      // and we can raise RATE_LIMIT_MAX without WA spam.
       logAccess(supabase, endpoint, null, 429, ipAddress, apiKey, "rate_limited").catch((e) => console.error("[SAT-ACCESS] logAccess failed:", e));
+      maybeAlertBC(
+        "Caller-side failure (rate_limited)",
+        `IP ${ipAddress ?? "?"} endpoint ${endpoint} — per-hour rate limit exceeded.`,
+        ipAddress,
+        "caller_failure",
+      ).catch((e) => console.error("[SAT-ALERT] maybeAlertBC failed:", e));
       return json(SAT_RETRY_MESSAGE, 429);
     }
     rateLimitWindow.push(now);
