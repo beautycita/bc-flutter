@@ -72,12 +72,21 @@ const CLABE_BANKS: Record<string, string> = {
 };
 
 // ── Google Cloud Vision auth ─────────────────────────────────────────────────
+function _b64url(s: string): string {
+  // JWT requires base64url, not standard base64. The previous code used
+  // bare btoa() which leaks `+` `/` `=` and Google has tightened on that.
+  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+}
+
 async function getAccessToken(): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
-  const header = btoa(JSON.stringify({ alg: "RS256", typ: "JWT" }));
-  const claim = btoa(JSON.stringify({
+  const header = _b64url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
+  // Use the modern `cloud-platform` scope. The deprecated `cloud-vision`
+  // scope returns 401 against current Vision API endpoints even when the
+  // service account has the Cloud Vision API User role granted.
+  const claim = _b64url(JSON.stringify({
     iss: GCLOUD_VISION_KEY.client_email,
-    scope: "https://www.googleapis.com/auth/cloud-vision",
+    scope: "https://www.googleapis.com/auth/cloud-platform",
     aud: "https://oauth2.googleapis.com/token",
     iat: now,
     exp: now + 3600,
@@ -99,7 +108,8 @@ async function getAccessToken(): Promise<string> {
   );
 
   const signature = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, signInput);
-  const sig64 = btoa(String.fromCharCode(...new Uint8Array(signature)));
+  const sig64 = btoa(String.fromCharCode(...new Uint8Array(signature)))
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
   const jwt = `${header}.${claim}.${sig64}`;
 
   const resp = await fetch("https://oauth2.googleapis.com/token", {
@@ -109,6 +119,10 @@ async function getAccessToken(): Promise<string> {
   });
 
   const data = await resp.json();
+  if (!data.access_token) {
+    console.error(`[VERIFY-ID] OAuth token exchange failed: status=${resp.status} body=${JSON.stringify(data).slice(0, 300)}`);
+    throw new Error(`OAuth token exchange failed (${resp.status}): ${data.error_description || data.error || "no access_token"}`);
+  }
   return data.access_token;
 }
 
@@ -138,6 +152,7 @@ function bytesToBase64(bytes: Uint8Array): string {
 
 async function analyzeImage(imageBytes: Uint8Array, accessToken: string): Promise<VisionResult> {
   const base64 = bytesToBase64(imageBytes);
+  console.log(`[VERIFY-ID] image bytes=${imageBytes.length}, base64 len=${base64.length}`);
 
   const resp = await fetch("https://vision.googleapis.com/v1/images:annotate", {
     method: "POST",
@@ -157,7 +172,18 @@ async function analyzeImage(imageBytes: Uint8Array, accessToken: string): Promis
     }),
   });
 
+  if (!resp.ok) {
+    const errBody = await resp.text();
+    console.error(`[VERIFY-ID] Vision API ${resp.status}: ${errBody.slice(0, 400)}`);
+    throw new Error(`Vision API ${resp.status}: ${errBody.slice(0, 200)}`);
+  }
   const data = await resp.json();
+  if (data.responses?.[0]?.error) {
+    console.error(`[VERIFY-ID] Vision per-request error: ${JSON.stringify(data.responses[0].error).slice(0, 400)}`);
+  } else if (!data.responses?.[0]?.fullTextAnnotation && !data.responses?.[0]?.localizedObjectAnnotations) {
+    // Empty response — log enough of the body to diagnose without leaking PII
+    console.warn(`[VERIFY-ID] Vision returned no annotations. keys=${Object.keys(data.responses?.[0] ?? {}).join(',')} bodyHead=${JSON.stringify(data).slice(0, 300)}`);
+  }
   const result = data.responses?.[0] ?? {};
 
   // OCR text
