@@ -12,6 +12,7 @@ import 'package:beautycita/services/supabase_client.dart';
 import 'package:beautycita/services/toast_service.dart';
 import 'package:beautycita/services/user_session.dart';
 import 'package:beautycita/widgets/phone_verify_gate_sheet.dart';
+import 'package:beautycita/widgets/save_contact_prompt.dart';
 import 'package:beautycita/services/updater_service.dart';
 import 'package:beautycita/widgets/settings_widgets.dart';
 import 'package:beautycita/config/routes.dart';
@@ -34,6 +35,7 @@ class SecurityScreen extends ConsumerStatefulWidget {
 class _SecurityScreenState extends ConsumerState<SecurityScreen>
     with SingleTickerProviderStateMixin {
   bool _checkingUpdate = false;
+  bool _contactPromptTried = false;
 
   late final AnimationController _entryController;
   late final List<Animation<double>> _fadeAnims;
@@ -345,6 +347,16 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen>
     final phoneVerified = profile.hasVerifiedPhone;
     final hasPhone = profile.phone != null;
     final identityScore = _identityScore(sec, phoneVerified);
+    if (identityScore >= 5 && !_contactPromptTried) {
+      _contactPromptTried = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        // Silent if already a contact, already added, or dismissed in
+        // the last 30 days. Skipped silently when read-permission isn't
+        // already held — we don't pop a permission prompt from here.
+        SaveContactPrompt.showPopupIfMissing(context);
+      });
+    }
     final scoreLabel = identityScore >= 4
         ? 'Excelente'
         : identityScore >= 3

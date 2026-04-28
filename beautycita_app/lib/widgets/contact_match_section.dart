@@ -5,6 +5,7 @@ import '../config/theme_extension.dart';
 import '../providers/contact_match_provider.dart';
 import '../providers/feature_toggle_provider.dart';
 import 'contact_salon_card.dart';
+import 'save_contact_prompt.dart';
 
 /// Home screen section that shows salons found in the user's contacts.
 /// Gated by the `enable_contact_match` feature toggle.
@@ -40,6 +41,25 @@ class _ContactMatchSectionState extends ConsumerState<ContactMatchSection> {
     }
 
     final state = ref.watch(contactMatchProvider);
+
+    // We're already holding READ_CONTACTS at this point — same window the
+    // user asked us to also check whether BC is in their address book.
+    // Helper is silent if BC is already a contact / already added /
+    // dismissed in the last 30 days, so this is safe to fire each time
+    // the state transitions to a permission-granted step.
+    ref.listen<ContactMatchState>(contactMatchProvider, (prev, next) {
+      final wasGranted = prev != null &&
+          (prev.step == ContactMatchStep.loaded ||
+              prev.step == ContactMatchStep.scanning);
+      final isGranted = next.step == ContactMatchStep.loaded ||
+          next.step == ContactMatchStep.scanning;
+      if (!wasGranted && isGranted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          SaveContactPrompt.showPopupIfMissing(context);
+        });
+      }
+    });
 
     return switch (state.step) {
       ContactMatchStep.idle => _buildCta(loading: false),
