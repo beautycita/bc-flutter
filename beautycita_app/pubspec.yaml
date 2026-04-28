@@ -1,7 +1,7 @@
 name: beautycita
 description: "BeautyCita — Intelligent Beauty Booking Agent"
 publish_to: 'none'
-version: 1.2.1+60143
+version: 1.2.1+60144
 
 environment:
   sdk: ^3.10.8
@@ -52,6 +52,7 @@ dependencies:
   cached_network_image: ^3.4.1
   sentry_flutter: ^9.16.0
   image_cropper: ^12.1.1
+  image: ^4.1.2
   printing: ^5.14.3
   video_player: ^2.9.6
 
