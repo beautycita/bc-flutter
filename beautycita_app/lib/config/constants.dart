@@ -151,6 +151,11 @@ class AppConstants {
   static const String privacyPolicyUrl = 'https://beautycita.com/privacidad';
   static const String termsOfServiceUrl = 'https://beautycita.com/terminos';
   static const String supportEmail = 'soporte@beautycita.com';
+  // Contact card we offer to add to the user's address book so push/SMS/WA
+  // alerts from us aren't filtered as spam by the carrier or system.
+  static const String bcContactName = 'BeautyCita';
+  static const String bcContactPhone = '+527206777800';
+  static const String bcContactOrganization = 'BeautyCita S.A. de C.V.';
 
   // Regex Patterns
   static final RegExp emailRegex = RegExp(
