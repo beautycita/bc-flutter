@@ -40,6 +40,12 @@ class BusinessDashboardScreen extends ConsumerWidget {
           // Banking setup banner
           _BankingBanner(),
 
+          // Stripe Connect banner — fires once banking is complete but
+          // Stripe Connect / Express isn't onboarded yet (no charges or
+          // payouts). The Pagos tab also exposes this; we promote it
+          // here so the next step is one tap from the dashboard.
+          const _StripeConnectBanner(),
+
           // Google Calendar — two-way sync. Connect via web (OAuth lives
           // there), then trigger inbound (Google → BC) or outbound
           // (BC → Google) sync from here.
@@ -1686,6 +1692,159 @@ class _CfdiDetailRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Stripe Connect Banner — fires once banking is complete but Stripe
+// charges + payouts aren't both enabled. Tapping it launches the same
+// stripe-connect-onboard edge fn the Pagos tab uses, returning a hosted
+// onboarding URL that we open in the system browser.
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _StripeConnectBanner extends ConsumerStatefulWidget {
+  const _StripeConnectBanner();
+
+  @override
+  ConsumerState<_StripeConnectBanner> createState() =>
+      _StripeConnectBannerState();
+}
+
+class _StripeConnectBannerState extends ConsumerState<_StripeConnectBanner> {
+  bool _launching = false;
+
+  Future<void> _launchStripeOnboarding(String businessId) async {
+    setState(() => _launching = true);
+    try {
+      final res = await SupabaseClientService.client.functions.invoke(
+        'stripe-connect-onboard',
+        body: {
+          'action': 'get-onboard-link',
+          'business_id': businessId,
+        },
+      );
+      final data = res.data as Map<String, dynamic>? ?? const {};
+      final url = data['onboarding_url'] as String?;
+      if (url != null && url.isNotEmpty) {
+        final uri = Uri.parse(url);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } else if (mounted) {
+          ToastService.showError('No se pudo abrir el navegador');
+        }
+      } else {
+        final err = data['error'] as String?;
+        if (mounted) {
+          ToastService.showError(err ?? 'No pudimos generar el enlace de Stripe');
+        }
+      }
+    } catch (e) {
+      if (mounted) ToastService.showError('Error: $e');
+    } finally {
+      if (mounted) setState(() => _launching = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bizAsync = ref.watch(currentBusinessProvider);
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
+
+    return bizAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (biz) {
+        if (biz == null) return const SizedBox.shrink();
+        // Hide until banking is verified — we don't want to push Stripe
+        // onboarding before the salon has a CLABE + a verified ID on file.
+        final bankingComplete = biz['banking_complete'] == true;
+        if (!bankingComplete) return const SizedBox.shrink();
+
+        final charges = biz['stripe_charges_enabled'] == true;
+        final payouts = biz['stripe_payouts_enabled'] == true;
+        if (charges && payouts) return const SizedBox.shrink();
+
+        final status = biz['stripe_onboarding_status'] as String? ?? 'not_started';
+        final pending = status == 'pending' || status == 'pending_verification';
+        final label = pending
+            ? 'Stripe esta verificando tu cuenta. Termina los pasos pendientes.'
+            : 'Conecta Stripe para aceptar tarjetas y recibir pagos';
+        final cta = pending ? 'Continuar con Stripe' : 'Conectar Stripe';
+        final color = ext.infoColor;
+        final businessId = biz['id'] as String;
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: AppConstants.paddingMD),
+          child: Container(
+            padding: const EdgeInsets.all(AppConstants.paddingMD),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+              border: Border.all(color: color.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(AppConstants.paddingSM),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+                  ),
+                  child: Icon(Icons.payment_rounded, color: color, size: 22),
+                ),
+                const SizedBox(width: AppConstants.paddingSM),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        label,
+                        style: GoogleFonts.nunito(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: color,
+                          height: 1.3,
+                        ),
+                      ),
+                      const SizedBox(height: AppConstants.paddingSM),
+                      GestureDetector(
+                        onTap: _launching
+                            ? null
+                            : () => _launchStripeOnboarding(businessId),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (_launching)
+                              const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            else
+                              Text(
+                                cta,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: color,
+                                ),
+                              ),
+                            const SizedBox(width: 4),
+                            if (!_launching)
+                              Icon(Icons.arrow_forward_rounded,
+                                  size: 16, color: color),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

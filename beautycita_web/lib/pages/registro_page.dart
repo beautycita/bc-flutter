@@ -51,18 +51,20 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
   // Brand colors (lila — matching mobile app palette)
   static const _deepRose = Color(0xFFAA7EAA);
   static const _lightRose = Color(0xFFC8A2C8);
-  static const _serviceCategories = [
-    ('Corte', Icons.content_cut),
-    ('Color', Icons.palette_outlined),
-    ('Manicure', Icons.back_hand_outlined),
-    ('Pedicure', Icons.spa_outlined),
-    ('Pestanas', Icons.visibility_outlined),
-    ('Cejas', Icons.face_retouching_natural),
-    ('Maquillaje', Icons.brush_outlined),
-    ('Facial', Icons.face_outlined),
-    ('Masaje', Icons.self_improvement_outlined),
-    ('Depilacion', Icons.auto_fix_high_outlined),
-    ('Barberia', Icons.face_2_outlined),
+  // Canonical category IDs matching beautycita_app/lib/data/categories.dart
+  // (top-level ServiceCategory.id values). Stored as `service_categories` on
+  // businesses; both `nearby_businesses` and `search_businesses` RPCs filter
+  // on this column, so the values must match what the search-tile UI passes
+  // as `p_category` (canonical IDs, not display labels).
+  static const _serviceCategories = <(String id, String label, IconData icon)>[
+    ('nails', 'Uñas', Icons.back_hand_outlined),
+    ('hair', 'Cabello', Icons.content_cut),
+    ('lashes_brows', 'Pestañas y cejas', Icons.visibility_outlined),
+    ('makeup', 'Maquillaje', Icons.brush_outlined),
+    ('facial', 'Facial', Icons.face_outlined),
+    ('body_spa', 'Cuerpo y spa', Icons.spa_outlined),
+    ('specialized', 'Especializado', Icons.auto_fix_high_outlined),
+    ('barberia', 'Barberia', Icons.face_2_outlined),
   ];
 
   @override
@@ -630,8 +632,8 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
             spacing: 10,
             runSpacing: 10,
             children: _serviceCategories.map((entry) {
-              final (label, icon) = entry;
-              final selected = _selectedServices.contains(label);
+              final (id, label, icon) = entry;
+              final selected = _selectedServices.contains(id);
               return FilterChip(
                 label: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -647,9 +649,9 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
                 onSelected: (v) {
                   setState(() {
                     if (v) {
-                      _selectedServices.add(label);
+                      _selectedServices.add(id);
                     } else {
-                      _selectedServices.remove(label);
+                      _selectedServices.remove(id);
                     }
                   });
                 },
@@ -662,11 +664,22 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
           ),
           const SizedBox(height: 24),
           ElevatedButton(
-            onPressed: _handleFinishRegistration,
-            child: Text(_selectedServices.isEmpty
-                ? 'Agregar mas despues'
-                : 'Finalizar registro'),
+            onPressed: _selectedServices.isEmpty
+                ? null
+                : _handleFinishRegistration,
+            child: const Text('Finalizar registro'),
           ),
+          if (_selectedServices.isEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Selecciona al menos una para que tu salon aparezca en busquedas.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.error,
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
           const SizedBox(height: 12),
           TextButton(
             onPressed: () => setState(() => _currentStep = 1),

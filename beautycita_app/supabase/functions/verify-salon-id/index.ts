@@ -71,6 +71,21 @@ const CLABE_BANKS: Record<string, string> = {
   "901": "CLS", "902": "INDEVAL",
 };
 
+// ── Typed errors so the catch handler can map them to actionable
+//    user-facing messages instead of 500s.
+class VisionAuthError extends Error {
+  constructor(public status: number, public body: string) {
+    super(`Vision auth ${status}`);
+    this.name = "VisionAuthError";
+  }
+}
+class VisionRequestError extends Error {
+  constructor(public code: number, message: string) {
+    super(message);
+    this.name = "VisionRequestError";
+  }
+}
+
 // ── Google Cloud Vision auth ─────────────────────────────────────────────────
 function _b64url(s: string): string {
   // JWT requires base64url, not standard base64. The previous code used
@@ -131,7 +146,6 @@ interface VisionResult {
   isDocument: boolean;
   textContent: string;
   confidence: number;
-  isCropped: boolean;
 }
 
 // btoa(String.fromCharCode(...big-uint8array)) blows the V8 call stack
@@ -166,7 +180,6 @@ async function analyzeImage(imageBytes: Uint8Array, accessToken: string): Promis
         features: [
           { type: "DOCUMENT_TEXT_DETECTION" },
           { type: "OBJECT_LOCALIZATION", maxResults: 5 },
-          { type: "CROP_HINTS" },
         ],
       }],
     }),
@@ -175,12 +188,23 @@ async function analyzeImage(imageBytes: Uint8Array, accessToken: string): Promis
   if (!resp.ok) {
     const errBody = await resp.text();
     console.error(`[VERIFY-ID] Vision API ${resp.status}: ${errBody.slice(0, 400)}`);
-    throw new Error(`Vision API ${resp.status}: ${errBody.slice(0, 200)}`);
+    // Throw a typed error the outer try/catch maps to a user-facing
+    // "no se pudo procesar la imagen" instead of a 500 stack.
+    throw new VisionAuthError(resp.status, errBody.slice(0, 200));
   }
   const data = await resp.json();
+
+  // Per-request error: Vision can return 200 with `responses[0].error`
+  // for individual image problems (Bad image data, format unsupported,
+  // size too large, etc.). Treat those as a soft rejection rather than
+  // a generic verification failure so the user sees something actionable.
   if (data.responses?.[0]?.error) {
-    console.error(`[VERIFY-ID] Vision per-request error: ${JSON.stringify(data.responses[0].error).slice(0, 400)}`);
-  } else if (!data.responses?.[0]?.fullTextAnnotation && !data.responses?.[0]?.localizedObjectAnnotations) {
+    const e = data.responses[0].error;
+    console.error(`[VERIFY-ID] Vision per-request error: ${JSON.stringify(e).slice(0, 400)}`);
+    throw new VisionRequestError(e.code ?? 0, e.message ?? "vision rejected the image");
+  }
+
+  if (!data.responses?.[0]?.fullTextAnnotation && !data.responses?.[0]?.localizedObjectAnnotations) {
     // Empty response — log enough of the body to diagnose without leaking PII
     console.warn(`[VERIFY-ID] Vision returned no annotations. keys=${Object.keys(data.responses?.[0] ?? {}).join(',')} bodyHead=${JSON.stringify(data).slice(0, 300)}`);
   }
@@ -197,12 +221,13 @@ async function analyzeImage(imageBytes: Uint8Array, accessToken: string): Promis
     docLabels.some((l) => o.name.toLowerCase().includes(l))
   ) || fullText.length > 50; // If OCR found substantial text, it's likely a document
 
-  // Crop hints — check if document fills the frame
-  const cropHints = result.cropHintsAnnotation?.cropHints ?? [];
-  const isCropped = cropHints.length > 0 &&
-    cropHints[0].confidence < 0.5; // Low confidence = image may be poorly framed
+  // Note: cropHintsAnnotation.confidence reports the *recommendation*
+  // reliability, not whether the input was poorly framed. We used to
+  // reject on `confidence < 0.5` and false-rejected good photos. The
+  // capture screen now crops to the ID frame on the client; if the
+  // image still has framing issues, OCR confidence below catches it.
 
-  return { isDocument, textContent: fullText, confidence: ocrConfidence, isCropped };
+  return { isDocument, textContent: fullText, confidence: ocrConfidence };
 }
 
 // ── Fuzzy name matching ──────────────────────────────────────────────────────
@@ -341,8 +366,8 @@ serve(async (req) => {
       analyzeImage(backBytes, accessToken),
     ]);
 
-    console.log(`[VERIFY-ID] Front: doc=${frontResult.isDocument}, conf=${frontResult.confidence}, cropped=${frontResult.isCropped}, text=${frontResult.textContent.length}chars`);
-    console.log(`[VERIFY-ID] Back: doc=${backResult.isDocument}, conf=${backResult.confidence}, cropped=${backResult.isCropped}, text=${backResult.textContent.length}chars`);
+    console.log(`[VERIFY-ID] Front: doc=${frontResult.isDocument}, conf=${frontResult.confidence}, text=${frontResult.textContent.length}chars`);
+    console.log(`[VERIFY-ID] Back: doc=${backResult.isDocument}, conf=${backResult.confidence}, text=${backResult.textContent.length}chars`);
 
     // Validation checks
     if (!frontResult.isDocument) {
@@ -350,14 +375,6 @@ serve(async (req) => {
       return json({
         verified: false,
         rejection_reason: "La imagen del frente no parece ser una identificacion oficial",
-      });
-    }
-
-    if (frontResult.isCropped) {
-      await supabase.from("businesses").update({ id_verification_status: "rejected" }).eq("id", business_id);
-      return json({
-        verified: false,
-        rejection_reason: "La imagen esta cortada — asegurate que se vean las 4 esquinas",
       });
     }
 
@@ -417,6 +434,35 @@ serve(async (req) => {
         console.error("[VERIFY-ID] Failed to reset pending status:", resetErr);
       }
     }
+
+    // Map specific failures to actionable user messages with HTTP 200 +
+    // {verified:false, rejection_reason:...} so the mobile/web banking
+    // screen surfaces the cause instead of a generic "intenta de nuevo".
+    // Internal failures (token exchange, infra) stay 500 so monitoring
+    // distinguishes "user-fixable" from "platform-broken".
+    if (err instanceof VisionRequestError) {
+      // Per-image rejection from Vision (Bad image data, unsupported
+      // format, size, etc.). User can retake the photo to fix it.
+      let reason = "No pudimos procesar la imagen. Toma una foto mas clara y recortada.";
+      if (err.message.toLowerCase().includes("size")) {
+        reason = "La imagen es muy grande. Toma una foto a menor calidad o reduce el tamano.";
+      } else if (err.message.toLowerCase().includes("bad image")) {
+        reason = "La imagen no se pudo leer. Vuelve a tomar la foto con buena luz, sin reflejos y sin recortar las esquinas.";
+      } else if (err.message.toLowerCase().includes("format")) {
+        reason = "Formato de imagen no soportado. Usa JPG o PNG.";
+      }
+      return json({ verified: false, rejection_reason: reason }, 200);
+    }
+    if (err instanceof VisionAuthError) {
+      // Platform-side auth failure — should be invisible to the user.
+      // Surface a retryable message but keep this loud in logs so we
+      // notice if it ever happens in prod again.
+      return json({
+        error: "Servicio de verificacion temporalmente no disponible. Intenta en unos minutos.",
+        retryable: true,
+      }, 503);
+    }
+    // Anything else: generic platform error.
     return json({
       error: "Error interno al verificar identificacion. Intenta de nuevo.",
       retryable: true,

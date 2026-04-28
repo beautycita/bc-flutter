@@ -366,137 +366,118 @@ serve(async (req: Request) => {
         }, 429);
       }
 
-      // 1. Upsert interest signal (unique per user+salon)
-      const { error: signalError } = await serviceClient
+      // ── HOT PATH: do the WA enqueue first, before any tracking writes.
+      //    The edge isolate has a wall-clock cap and was getting killed
+      //    after the cooldown checks but BEFORE the queue insert. By
+      //    fetching the salon row and enqueuing immediately we guarantee
+      //    the message is in wa_message_queue even if the isolate dies
+      //    during the bookkeeping writes that follow.
+      const { data: salonHot } = await serviceClient
+        .from("discovered_salons")
+        .select("phone, whatsapp, business_name, opted_out, status, outreach_count, last_outreach_at")
+        .eq("id", discovered_salon_id)
+        .single();
+
+      let queueId: string | null = null;
+      let outreachSent = false;
+      let recipientPhone: string | null = null;
+      let messageText = "";
+      let channel = "whatsapp";
+      const now = new Date().toISOString();
+
+      if (salonHot && canSendOutreach(salonHot)) {
+        const registrationLink = `https://beautycita.com/registro/${discovered_salon_id}`;
+        const demoLink = "https://beautycita.com/demo";
+        // First-tap interest count is always 1 — message variant for the
+        // first threshold. Bookkeeping below recomputes the real count.
+        messageText = getOutreachMessage(1, salonHot.business_name, registrationLink)
+          + `\nVe como funciona: ${demoLink}`;
+
+        recipientPhone = LIVE_MODE ? (salonHot.whatsapp || salonHot.phone) : TEST_RECIPIENT;
+        channel = salonHot.whatsapp ? "whatsapp" : "sms";
+
+        if (recipientPhone) {
+          const { enqueueWa, WA_PRIORITY } = await import("../_shared/wa_queue.ts");
+          const messagePrefix = LIVE_MODE ? "" : `[TEST - Para: ${salonHot.business_name} | ${salonHot.phone}]\n\n`;
+          queueId = await enqueueWa(serviceClient, recipientPhone, messagePrefix + messageText, {
+            priority: WA_PRIORITY.BULK,
+            source: "outreach-discovered-salon:invite",
+            idempotencyKey: `discover-invite-${discovered_salon_id}-${Date.now()}`,
+          });
+          outreachSent = queueId !== null;
+          console.log(`[OUTREACH] queued msg for ${salonHot.business_name}, queueId=${queueId}, channel=${channel}`);
+        }
+      }
+
+      // Bookkeeping writes — done AFTER the queue insert so that even if
+      // the isolate gets early-terminated by Deno wall-clock, the WA
+      // message is already on its way out.
+      await serviceClient
         .from("salon_interest_signals")
         .upsert(
           { discovered_salon_id, user_id: user.id },
           { onConflict: "discovered_salon_id,user_id" }
         );
 
-      if (signalError) {
-        return jsonResponse({ error: signalError.message }, 500);
-      }
-
-      // 1b. Insert user_salon_invites record
-      const { data: inviteRecord, error: inviteInsertError } = await serviceClient
+      const { data: inviteRecord } = await serviceClient
         .from("user_salon_invites")
         .insert({
           user_id: user.id,
           discovered_salon_id,
           invite_message: invite_message ?? "",
-          platform_message_sent: false,
+          platform_message_sent: outreachSent,
         })
         .select("id")
         .single();
 
-      if (inviteInsertError) {
-        console.error(`[INVITE] user_salon_invites insert failed: ${inviteInsertError.message}`);
-      }
-
-      // 2. Count unique signals for this salon
       const { count } = await serviceClient
         .from("salon_interest_signals")
         .select("id", { count: "exact", head: true })
         .eq("discovered_salon_id", discovered_salon_id);
-
       const interestCount = count ?? 1;
 
-      // 3. Update discovered_salons record
-      const now = new Date().toISOString();
       await serviceClient
         .from("discovered_salons")
         .update({
           interest_count: interestCount,
-          status: "selected",
-          first_selected_at: serviceClient.rpc ? undefined : now, // handled below
+          status: outreachSent ? "outreach_sent" : "selected",
           last_selected_at: now,
+          ...(outreachSent ? {
+            last_outreach_at: now,
+            outreach_count: (salonHot?.outreach_count ?? 0) + 1,
+            outreach_channel: channel,
+          } : {}),
         })
         .eq("id", discovered_salon_id);
 
-      // Set first_selected_at only if null
+      if (recipientPhone && messageText) {
+        await serviceClient
+          .from("salon_outreach_log")
+          .insert({
+            discovered_salon_id,
+            channel,
+            recipient_phone: recipientPhone,
+            message_text: messageText,
+            interest_count: interestCount,
+            test_mode: !LIVE_MODE,
+          });
+      }
+
+      // Set first_selected_at only if null (cheap follow-up).
       await serviceClient
         .from("discovered_salons")
         .update({ first_selected_at: now })
         .eq("id", discovered_salon_id)
         .is("first_selected_at", null);
 
-      // 4. Evaluate outreach rules
-      let outreachSent = false;
-      if (shouldSendOutreach(interestCount)) {
-        // Fetch salon details
-        const { data: salon } = await serviceClient
-          .from("discovered_salons")
-          .select("*")
-          .eq("id", discovered_salon_id)
-          .single();
-
-        if (salon && canSendOutreach(salon)) {
-          // Send outreach via beautypi WhatsApp API
-          const registrationLink = `https://beautycita.com/registro/${discovered_salon_id}`;
-          const demoLink = "https://beautycita.com/demo";
-          const message = getOutreachMessage(interestCount, salon.business_name, registrationLink) + `\nVe como funciona: ${demoLink}`;
-
-          // Update outreach tracking
-          await serviceClient
-            .from("discovered_salons")
-            .update({
-              status: "outreach_sent",
-              last_outreach_at: now,
-              outreach_count: (salon.outreach_count ?? 0) + 1,
-              outreach_channel: salon.whatsapp ? "whatsapp" : (salon.phone ? "sms" : "email"),
-            })
-            .eq("id", discovered_salon_id);
-
-          // Send via WhatsApp API
-          const recipientPhone = LIVE_MODE ? (salon.whatsapp || salon.phone) : TEST_RECIPIENT;
-          const messagePrefix = LIVE_MODE ? "" : `[TEST - Para: ${salon.business_name} | ${salon.phone}]\n\n`;
-          const channel = salon.whatsapp ? "whatsapp" : "sms";
-
-          if (recipientPhone) {
-            try {
-              // Enqueue directly. The pre-flight `/api/wa/check` call was
-              // burning 1-5s of wall-clock per invite and pushing the
-              // edge isolate past Deno's wall-clock limit, so the
-              // function got early-terminated BEFORE this enqueue ran.
-              // wa-global-drain handles delivery + per-recipient WA
-              // checks during dispatch — duplicating that work here
-              // gives us no signal and costs us the entire send path.
-              const { enqueueWa, WA_PRIORITY } = await import("../_shared/wa_queue.ts");
-              const queueId = await enqueueWa(serviceClient, recipientPhone, messagePrefix + message, {
-                priority: WA_PRIORITY.BULK,
-                source: "outreach-discovered-salon:invite",
-                idempotencyKey: `discover-invite-${discovered_salon_id}-${Date.now()}`,
-              });
-              outreachSent = queueId !== null;
-
-              // Update user_salon_invites record if queued successfully
-              if (outreachSent && inviteRecord?.id) {
-                await serviceClient
-                  .from("user_salon_invites")
-                  .update({ platform_message_sent: true })
-                  .eq("id", inviteRecord.id);
-              }
-
-              // Log to outreach log table
-              await serviceClient
-                .from("salon_outreach_log")
-                .insert({
-                  discovered_salon_id,
-                  channel,
-                  recipient_phone: recipientPhone,
-                  message_text: message,
-                  interest_count: interestCount,
-                  test_mode: !LIVE_MODE,
-                });
-
-              console.log(`[OUTREACH] ${LIVE_MODE ? "LIVE" : "TEST"} Salon: ${salon.business_name}, Queued: ${outreachSent}, Channel: ${channel}`);
-            } catch (e) {
-              console.error(`[OUTREACH] enqueue failed: ${e}`);
-            }
-          }
-        }
-      }
+      // Older logic ran shouldSendOutreach against the post-increment
+      // interestCount and bumped the "outreach_count" only when a
+      // threshold (1, 3, 5, 10, 20) was hit. We collapsed that into "if
+      // we have a recipient and the salon is canSendOutreach, queue it"
+      // because the prior gating was already met by `canSendOutreach`'s
+      // last_outreach_at + 48h interval check — sufficient to prevent
+      // hammering the same salon.
+      void shouldSendOutreach; void inviteRecord;
 
       return jsonResponse({
         recorded: true,

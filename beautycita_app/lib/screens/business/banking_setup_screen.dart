@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beautycita/config/fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:beautycita/screens/business/id_capture_screen.dart';
 
 import '../../config/constants.dart';
 import '../../config/theme_extension.dart';
@@ -92,9 +93,12 @@ class _BankingSetupScreenState extends ConsumerState<BankingSetupScreen> {
   // Step 1 fields
   final _clabeController = TextEditingController();
   final _beneficiaryController = TextEditingController();
+  final _rfcController = TextEditingController();
   String? _detectedBank;
   String? _clabeError;
   String? _beneficiaryError;
+  String? _rfcError;
+  bool _rfcLocked = false; // true once an RFC is on file (edits go through admin)
 
   // Step 2 fields
   Uint8List? _idFrontBytes;
@@ -109,10 +113,123 @@ class _BankingSetupScreenState extends ConsumerState<BankingSetupScreen> {
   final ImagePicker _picker = ImagePicker();
 
   @override
+  void initState() {
+    super.initState();
+    Future.microtask(_prefillFromBusiness);
+  }
+
+  Future<void> _prefillFromBusiness() async {
+    try {
+      final biz = await ref.read(currentBusinessProvider.future);
+      if (!mounted || biz == null) return;
+      final rfc = (biz['rfc'] as String?)?.trim() ?? '';
+      final clabe = (biz['clabe'] as String?)?.trim() ?? '';
+      final ben = (biz['beneficiary_name'] as String?)?.trim() ?? '';
+      setState(() {
+        if (rfc.isNotEmpty) {
+          _rfcController.text = rfc.toUpperCase();
+          _rfcLocked = true; // tax_regime + RFC are payout-lock fields
+        }
+        if (clabe.isNotEmpty) {
+          _clabeController.text = clabe;
+          // Mirror the onChanged detect — programmatic .text= doesn't
+          // fire the listener, so without this the confirmation card
+          // shows "No identificado" on every re-edit.
+          final digits = clabe.replaceAll(RegExp(r'\D'), '');
+          if (digits.length >= 3) _detectedBank = _detectBank(digits);
+        }
+        if (ben.isNotEmpty) _beneficiaryController.text = ben;
+      });
+    } catch (_) {/* prefill is best-effort */}
+  }
+
+  @override
   void dispose() {
     _clabeController.dispose();
     _beneficiaryController.dispose();
+    _rfcController.dispose();
     super.dispose();
+  }
+
+  /// Strip combining diacritics. "López" → "Lopez", "Núñez" → "Nunez".
+  /// Ñ is treated as a distinct letter (kept as-is) — RFCs allow it.
+  String _stripDiacritics(String s) {
+    // Manual replacement — Dart String doesn't expose Unicode normalization
+    // on all targets. Cover the common Spanish diacritics we'll see on
+    // beneficiary names: á é í ó ú ü and uppercase pairs.
+    const map = <String, String>{
+      'á': 'a', 'à': 'a', 'â': 'a', 'ä': 'a', 'ã': 'a',
+      'é': 'e', 'è': 'e', 'ê': 'e', 'ë': 'e',
+      'í': 'i', 'ì': 'i', 'î': 'i', 'ï': 'i',
+      'ó': 'o', 'ò': 'o', 'ô': 'o', 'ö': 'o', 'õ': 'o',
+      'ú': 'u', 'ù': 'u', 'û': 'u', 'ü': 'u',
+      'ç': 'c',
+      'Á': 'A', 'À': 'A', 'Â': 'A', 'Ä': 'A', 'Ã': 'A',
+      'É': 'E', 'È': 'E', 'Ê': 'E', 'Ë': 'E',
+      'Í': 'I', 'Ì': 'I', 'Î': 'I', 'Ï': 'I',
+      'Ó': 'O', 'Ò': 'O', 'Ô': 'O', 'Ö': 'O', 'Õ': 'O',
+      'Ú': 'U', 'Ù': 'U', 'Û': 'U', 'Ü': 'U',
+      'Ç': 'C',
+    };
+    var out = s;
+    map.forEach((k, v) => out = out.replaceAll(k, v));
+    return out;
+  }
+
+  /// Mexican RFC: 12 chars (PM/company) or 13 chars (PF/individual).
+  /// Format: 3-4 letters + 6 digit date (YYMMDD) + 3-char homoclave.
+  /// DB trigger does the strict format check; this is fast on-screen
+  /// feedback so the user doesn't ship a bad value to the server.
+  static final _rfcRegExp =
+      RegExp(r'^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}$');
+  bool _validRfc(String s) => _rfcRegExp.hasMatch(s);
+
+  /// Soft name↔RFC consistency check. Mexican RFC encoding pulls letters
+  /// from the holder's name in well-known positions:
+  ///   * PF (13): char[0]=first letter of paternal surname,
+  ///              char[2]=first letter of maternal surname (when given),
+  ///              char[3]=first letter of given name.
+  ///   * PM (12): char[0..2]=initials drawn from company name words.
+  /// We don't replicate the SAT generator (homoclave + vowel rules); we
+  /// only flag obvious mismatches on the leading letter. Returns null
+  /// when consistent, a human warning when probably wrong.
+  String? _nameRfcWarning(String rfc, String name) {
+    // Strip diacritics first so "López"/"Lopez" both compare cleanly
+    // against an RFC's leading letter. Latin America almost always has
+    // accent variants on names ("Pérez" vs "Perez") and OS autocorrect
+    // routinely adds them — never compare the raw input.
+    final stripped = _stripDiacritics(name);
+    final clean = stripped
+        .toUpperCase()
+        .replaceAll(RegExp(r'[^A-ZÑ\s]'), '')
+        .trim();
+    if (clean.isEmpty || rfc.length < 4) return null;
+    final words = clean.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+    if (words.isEmpty) return null;
+    final isPF = rfc.length == 13;
+    if (isPF) {
+      // Heuristic: paternal surname is typically the second-to-last word
+      // ("Maria Jose Garcia Lopez" → paternal=Garcia, maternal=Lopez).
+      // Fallback to last word when only one surname provided.
+      String paternal;
+      if (words.length >= 3) {
+        paternal = words[words.length - 2];
+      } else if (words.length == 2) {
+        paternal = words[1];
+      } else {
+        paternal = words[0];
+      }
+      if (rfc[0] != paternal[0]) {
+        return 'El RFC no parece coincidir con "${paternal.toLowerCase()}". Revisa.';
+      }
+      return null;
+    }
+    // PM: first letter of the company / first significant word
+    final first = words[0];
+    if (rfc[0] != first[0]) {
+      return 'El RFC empresarial no coincide con "${first.toLowerCase()}". Revisa.';
+    }
+    return null;
   }
 
   @override
@@ -350,6 +467,77 @@ class _BankingSetupScreenState extends ConsumerState<BankingSetupScreen> {
           onChanged: (_) => setState(() => _beneficiaryError = null),
         ),
 
+        const SizedBox(height: AppConstants.paddingLG),
+
+        // ── RFC (required for payouts) ──
+        Text(
+          'RFC',
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: colors.onSurface,
+          ),
+        ),
+        const SizedBox(height: AppConstants.paddingXS),
+        Text(
+          _rfcLocked
+              ? 'El RFC esta vinculado a tu cuenta. Para cambiarlo contacta soporte.'
+              : '13 caracteres si eres persona fisica, 12 si es empresa. SAT lo requiere para depositar.',
+          style: GoogleFonts.nunito(
+            fontSize: 12,
+            color: colors.onSurface.withValues(alpha: 0.5),
+          ),
+        ),
+        const SizedBox(height: AppConstants.paddingSM),
+        TextField(
+          controller: _rfcController,
+          enabled: !_rfcLocked,
+          textCapitalization: TextCapitalization.characters,
+          maxLength: 13,
+          style: GoogleFonts.nunito(
+            fontSize: 16,
+            letterSpacing: 1.2,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+          decoration: InputDecoration(
+            hintText: 'XAXX010101000',
+            counterText: '',
+            hintStyle: GoogleFonts.nunito(
+              fontSize: 16,
+              color: colors.onSurface.withValues(alpha: 0.2),
+            ),
+            errorText: _rfcError,
+            prefixIcon: Icon(_rfcLocked
+                ? Icons.lock_outline_rounded
+                : Icons.badge_outlined),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+              borderSide: BorderSide(
+                color: colors.onSurface.withValues(alpha: 0.15),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+              borderSide: BorderSide(color: colors.primary, width: 2),
+            ),
+          ),
+          onChanged: (v) {
+            // Force uppercase + strip whitespace as the user types so the
+            // saved value matches the DB format exactly.
+            final cleaned = v.toUpperCase().replaceAll(RegExp(r'\s'), '');
+            if (cleaned != v) {
+              _rfcController.value = TextEditingValue(
+                text: cleaned,
+                selection: TextSelection.collapsed(offset: cleaned.length),
+              );
+            }
+            if (_rfcError != null) setState(() => _rfcError = null);
+          },
+        ),
+
         const SizedBox(height: AppConstants.paddingXL),
 
         // Next button
@@ -398,6 +586,24 @@ class _BankingSetupScreenState extends ConsumerState<BankingSetupScreen> {
       setState(
           () => _beneficiaryError = 'Nombre demasiado corto');
       hasError = true;
+    }
+
+    final rfc = _rfcController.text.trim().toUpperCase();
+    if (rfc.isEmpty) {
+      setState(() => _rfcError = 'RFC requerido — SAT lo exige para depositos');
+      hasError = true;
+    } else if (rfc.length < 12 || rfc.length > 13) {
+      setState(() => _rfcError = 'RFC debe tener 12 o 13 caracteres');
+      hasError = true;
+    } else if (!_validRfc(rfc)) {
+      setState(() => _rfcError = 'Formato de RFC invalido');
+      hasError = true;
+    } else if (!_rfcLocked) {
+      final warn = _nameRfcWarning(rfc, beneficiary);
+      if (warn != null) {
+        setState(() => _rfcError = warn);
+        hasError = true;
+      }
     }
 
     if (!hasError) {
@@ -514,15 +720,32 @@ class _BankingSetupScreenState extends ConsumerState<BankingSetupScreen> {
     if (source == null) return;
 
     try {
-      final XFile? file = await _picker.pickImage(
-        source: source,
-        maxWidth: 2048,
-        maxHeight: 2048,
-        imageQuality: 90,
-      );
-      if (file == null) return;
-
-      final bytes = await file.readAsBytes();
+      final Uint8List bytes;
+      if (source == ImageSource.camera) {
+        // Use the guided ID-capture screen instead of the system camera.
+        // Frame overlay + brightness check ensures the photo is something
+        // Vision API will actually accept.
+        if (!mounted) return;
+        final result = await Navigator.of(context).push<Uint8List?>(
+          MaterialPageRoute(
+            builder: (_) => IdCaptureScreen(
+              title: front ? 'Frente de tu INE' : 'Reverso de tu INE',
+            ),
+            fullscreenDialog: true,
+          ),
+        );
+        if (result == null) return;
+        bytes = result;
+      } else {
+        final XFile? file = await _picker.pickImage(
+          source: source,
+          maxWidth: 2048,
+          maxHeight: 2048,
+          imageQuality: 90,
+        );
+        if (file == null) return;
+        bytes = await file.readAsBytes();
+      }
 
       // Validate size: > 200KB and < 10MB
       if (bytes.length < 200 * 1024) {
@@ -923,13 +1146,20 @@ class _BankingSetupScreenState extends ConsumerState<BankingSetupScreen> {
       final businessId = biz['id'] as String;
       final clabe = _clabeController.text.replaceAll(RegExp(r'\D'), '');
       final beneficiary = _beneficiaryController.text.trim();
+      final rfc = _rfcController.text.trim().toUpperCase();
       final client = SupabaseClientService.client;
 
       // Disclosure modal on edit (not on first-time setup)
       final existingBeneficiary = (biz['beneficiary_name'] as String?)?.trim();
       final existingClabe = (biz['clabe'] as String?)?.trim();
+      final existingRfc = (biz['rfc'] as String?)?.trim();
       final nameChanged = existingBeneficiary != null && existingBeneficiary.isNotEmpty && existingBeneficiary != beneficiary;
       final clabeChanged = existingClabe != null && existingClabe.isNotEmpty && existingClabe != clabe;
+      // RFC is locked once stored; we treat it as immutable from this screen,
+      // so a "change" only matters here when the field is editable AND the
+      // value actually shifted — currently never on a re-edit since
+      // _rfcLocked disables the field.
+      final rfcChanged = existingRfc != null && existingRfc.isNotEmpty && existingRfc != rfc;
       if (nameChanged || clabeChanged) {
         final parts = <String>[];
         if (nameChanged) parts.add('el Nombre del Beneficiario');
@@ -966,15 +1196,21 @@ class _BankingSetupScreenState extends ConsumerState<BankingSetupScreen> {
             ),
           );
 
-      // 3. Save CLABE + beneficiary + ID URLs to businesses table
-      await client.from(BCTables.businesses).update({
+      // 3. Save CLABE + beneficiary + RFC + ID URLs to businesses table.
+      //    Only write rfc when not locked AND it actually changed — prevents
+      //    a benign re-save from tripping the payout-lock audit on every edit.
+      final updatePayload = <String, dynamic>{
         'clabe': clabe,
         'beneficiary_name': beneficiary,
         'bank_name': _detectedBank ?? '',
         'id_front_url': frontPath,
         'id_back_url': backPath,
         'banking_complete': false, // set true by edge function on verification
-      }).eq('id', businessId);
+      };
+      if (!_rfcLocked && (existingRfc == null || existingRfc.isEmpty || rfcChanged)) {
+        updatePayload['rfc'] = rfc;
+      }
+      await client.from(BCTables.businesses).update(updatePayload).eq('id', businessId);
 
       // 4. Call verify-salon-id Edge Function
       // TODO: bank account details (CLABE routing) pending BBVA meeting
@@ -994,6 +1230,24 @@ class _BankingSetupScreenState extends ConsumerState<BankingSetupScreen> {
                 'Error de verificacion. Intenta de nuevo.';
         setState(() {
           _submitError = errorMsg;
+          _submitting = false;
+        });
+        return;
+      }
+
+      // verify-salon-id returns 200 even on rejection — the body's
+      // `verified` flag is the actual outcome. Without checking it we
+      // were marking the screen "success" while banking_complete stayed
+      // false and the dashboard banner kept asking for setup.
+      final body = response.data as Map<String, dynamic>? ?? const {};
+      final verified = body['verified'] == true;
+      if (!verified) {
+        final reason = body['rejection_reason'] as String? ??
+            'No pudimos validar tu identificacion. Revisa las fotos e intenta de nuevo.';
+        ref.invalidate(currentBusinessProvider);
+        ref.invalidate(bankingCompleteProvider);
+        setState(() {
+          _submitError = reason;
           _submitting = false;
         });
         return;

@@ -246,6 +246,18 @@ if [[ "$DO_WEB" == "true" ]]; then
     rsync -avz --delete --exclude sativa --exclude private \
       --exclude portfolio-upload-config.json --exclude portfolio-upload.html \
       "$WEB_DIR/build/web/" "${EDGE_REMOTE_HOST}:${WEB_REMOTE_DIR}" 2>&1 | tail -5
+
+    # The portfolio-upload page is excluded from --delete (it loads a
+    # server-only anonKey from /portfolio-upload-config.json that
+    # `flutter build web` doesn't know about). Push edits explicitly so
+    # source-tree changes still publish on --web deploys.
+    if [[ -f "$SCRIPT_DIR/supabase/portfolio-upload.html" ]]; then
+      scp -q "$SCRIPT_DIR/supabase/portfolio-upload.html" \
+        "${EDGE_REMOTE_HOST}:${WEB_REMOTE_DIR}portfolio-upload.html"
+      ssh "${EDGE_REMOTE_HOST}" \
+        "chown www-data:www-data ${WEB_REMOTE_DIR}portfolio-upload.html"
+      say "[web] portfolio-upload.html pushed"
+    fi
   fi
 fi
 

@@ -85,11 +85,34 @@ class _BizBankingPageState extends ConsumerState<BizBankingPage> {
   static final _rfcRegExp = RegExp(r'^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}$');
   bool _validRfc(String s) => _rfcRegExp.hasMatch(s);
 
+  /// Strip Spanish diacritics ("López" → "Lopez"). Ñ kept as-is.
+  String _stripDiacritics(String s) {
+    const map = <String, String>{
+      'á': 'a', 'à': 'a', 'â': 'a', 'ä': 'a', 'ã': 'a',
+      'é': 'e', 'è': 'e', 'ê': 'e', 'ë': 'e',
+      'í': 'i', 'ì': 'i', 'î': 'i', 'ï': 'i',
+      'ó': 'o', 'ò': 'o', 'ô': 'o', 'ö': 'o', 'õ': 'o',
+      'ú': 'u', 'ù': 'u', 'û': 'u', 'ü': 'u',
+      'ç': 'c',
+      'Á': 'A', 'À': 'A', 'Â': 'A', 'Ä': 'A', 'Ã': 'A',
+      'É': 'E', 'È': 'E', 'Ê': 'E', 'Ë': 'E',
+      'Í': 'I', 'Ì': 'I', 'Î': 'I', 'Ï': 'I',
+      'Ó': 'O', 'Ò': 'O', 'Ô': 'O', 'Ö': 'O', 'Õ': 'O',
+      'Ú': 'U', 'Ù': 'U', 'Û': 'U', 'Ü': 'U',
+      'Ç': 'C',
+    };
+    var out = s;
+    map.forEach((k, v) => out = out.replaceAll(k, v));
+    return out;
+  }
+
   /// Soft name↔RFC consistency check matching the mobile heuristic:
   /// PF (13) char[0] ≈ paternal surname's first letter; PM (12) char[0]
   /// ≈ first letter of company name's first word.
   String? _nameRfcWarning(String rfc, String name) {
-    final clean = name.toUpperCase().replaceAll(RegExp(r'[^A-ZÑ\s]'), '').trim();
+    // See banking_setup_screen.dart for rationale — strip diacritics so
+    // "López"/"Lopez" both compare cleanly against the RFC's letters.
+    final clean = _stripDiacritics(name).toUpperCase().replaceAll(RegExp(r'[^A-ZÑ\s]'), '').trim();
     if (clean.isEmpty || rfc.length < 4) return null;
     final words = clean.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
     if (words.isEmpty) return null;

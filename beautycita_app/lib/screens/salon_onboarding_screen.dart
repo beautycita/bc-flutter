@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:beautycita/widgets/cached_image.dart';
+import 'package:beautycita/data/categories.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
@@ -40,6 +41,11 @@ class _SalonOnboardingScreenState
   final _rfcCtrl = TextEditingController();
   final _addressCtrl = TextEditingController();
   final _detailsCtrl = TextEditingController();
+  // Selected service categories (canonical IDs from data/categories.dart).
+  // At least one is required so the salon shows up in category-filtered
+  // search; nearby_businesses RPC and search_businesses RPC both filter
+  // on this column when a category is provided.
+  final Set<String> _selectedCategoryIds = {};
   final _scrollCtrl = ScrollController();
   final _suggestionsKey = GlobalKey();
 
@@ -253,7 +259,8 @@ class _SalonOnboardingScreenState
       _emailCtrl.text.trim().contains('@') &&
       _isRfcValid(_rfcCtrl.text) &&
       _locationConfirmed &&
-      _pickedLat != null;
+      _pickedLat != null &&
+      _selectedCategoryIds.isNotEmpty;
 
   // ── Address autocomplete ─────────────────────────────────────────────
 
@@ -605,6 +612,7 @@ class _SalonOnboardingScreenState
         'lng': _pickedLng,
         'photo_url': ?_photoUrl,
         'discovered_salon_id': ?discoveredSalonId,
+        'service_categories': _selectedCategoryIds.toList(),
       };
 
       const maxAttempts = 3;
@@ -909,6 +917,73 @@ class _SalonOnboardingScreenState
                                   .withValues(alpha: 0.55),
                               height: 1.3,
                             ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // ── Section: Categorias de servicio ─────────────────
+                  _SectionCard(
+                    children: [
+                      _SectionHeader(
+                        icon: Icons.category_rounded,
+                        title: 'Categorias de servicio',
+                        color: const Color(0xFF8B5CF6),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Elige las que ofrece tu salon. Asi apareces cuando '
+                        'una clienta busca por categoria. Puedes ajustarlas '
+                        'despues en tu panel.',
+                        style: GoogleFonts.nunito(
+                          fontSize: 12,
+                          color: colors.onSurface.withValues(alpha: 0.6),
+                          height: 1.35,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: allCategories.map((cat) {
+                          final selected =
+                              _selectedCategoryIds.contains(cat.id);
+                          return FilterChip(
+                            avatar: Text(cat.icon,
+                                style: const TextStyle(fontSize: 16)),
+                            label: Text(cat.nameEs),
+                            selected: selected,
+                            onSelected: (v) {
+                              HapticFeedback.selectionClick();
+                              setState(() {
+                                if (v) {
+                                  _selectedCategoryIds.add(cat.id);
+                                } else {
+                                  _selectedCategoryIds.remove(cat.id);
+                                }
+                              });
+                            },
+                            selectedColor:
+                                cat.color.withValues(alpha: 0.18),
+                            checkmarkColor: cat.color,
+                            side: BorderSide(
+                              color: selected
+                                  ? cat.color
+                                  : colors.outlineVariant,
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                      if (_selectedCategoryIds.isEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'Selecciona al menos una para continuar.',
+                          style: GoogleFonts.nunito(
+                            fontSize: 11,
+                            color: colors.error.withValues(alpha: 0.85),
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],

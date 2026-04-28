@@ -46,7 +46,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen>
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-    const count = 4; // linked accounts, biometric, devices, about
+    const count = 5; // hero/status + 4 section cards (or sub-screen rows)
     _fadeAnims = List.generate(count, (i) {
       final start = i * 0.12;
       final end = (start + 0.4).clamp(0.0, 1.0);
@@ -438,7 +438,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen>
           const SizedBox(height: AppConstants.paddingLG),
 
           // ── APP ──
-          _animated(3, Column(
+          _animated(4, Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SectionHeader(label: 'Aplicacion'),
