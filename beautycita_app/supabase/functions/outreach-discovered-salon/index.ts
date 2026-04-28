@@ -455,54 +455,44 @@ serve(async (req: Request) => {
 
           if (recipientPhone) {
             try {
-              // Check if recipient is on WhatsApp (5s timeout)
-              const checkRes = await fetch(`${WA_API_URL}/api/wa/check`, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${WA_API_TOKEN}`,
-                },
-                body: JSON.stringify({ phone: recipientPhone }),
-                signal: AbortSignal.timeout(5000),
+              // Enqueue directly. The pre-flight `/api/wa/check` call was
+              // burning 1-5s of wall-clock per invite and pushing the
+              // edge isolate past Deno's wall-clock limit, so the
+              // function got early-terminated BEFORE this enqueue ran.
+              // wa-global-drain handles delivery + per-recipient WA
+              // checks during dispatch — duplicating that work here
+              // gives us no signal and costs us the entire send path.
+              const { enqueueWa, WA_PRIORITY } = await import("../_shared/wa_queue.ts");
+              const queueId = await enqueueWa(serviceClient, recipientPhone, messagePrefix + message, {
+                priority: WA_PRIORITY.BULK,
+                source: "outreach-discovered-salon:invite",
+                idempotencyKey: `discover-invite-${discovered_salon_id}-${Date.now()}`,
               });
-              const checkData = await checkRes.json();
+              outreachSent = queueId !== null;
 
-              if (checkData.onWhatsApp) {
-                // Enqueue into the global throttle queue (BULK priority, 20s pacing).
-                const { enqueueWa, WA_PRIORITY } = await import("../_shared/wa_queue.ts");
-                const queueId = await enqueueWa(serviceClient, recipientPhone, messagePrefix + message, {
-                  priority: WA_PRIORITY.BULK,
-                  source: "outreach-discovered-salon:invite",
-                  idempotencyKey: `discover-invite-${discovered_salon_id}-${Date.now()}`,
-                });
-                outreachSent = queueId !== null;
-
-                // Update user_salon_invites record if WA sent successfully
-                if (outreachSent && inviteRecord?.id) {
-                  await serviceClient
-                    .from("user_salon_invites")
-                    .update({ platform_message_sent: true })
-                    .eq("id", inviteRecord.id);
-                }
-
-                // Log to outreach log table
+              // Update user_salon_invites record if queued successfully
+              if (outreachSent && inviteRecord?.id) {
                 await serviceClient
-                  .from("salon_outreach_log")
-                  .insert({
-                    discovered_salon_id,
-                    channel,
-                    recipient_phone: recipientPhone,
-                    message_text: message,
-                    interest_count: interestCount,
-                    test_mode: !LIVE_MODE,
-                  });
-
-                console.log(`[OUTREACH] ${LIVE_MODE ? "LIVE" : "TEST"} Salon: ${salon.business_name}, Sent: ${outreachSent}, Channel: ${channel}`);
-              } else {
-                console.log(`[OUTREACH] ${recipientPhone} not on WhatsApp, skipping`);
+                  .from("user_salon_invites")
+                  .update({ platform_message_sent: true })
+                  .eq("id", inviteRecord.id);
               }
+
+              // Log to outreach log table
+              await serviceClient
+                .from("salon_outreach_log")
+                .insert({
+                  discovered_salon_id,
+                  channel,
+                  recipient_phone: recipientPhone,
+                  message_text: message,
+                  interest_count: interestCount,
+                  test_mode: !LIVE_MODE,
+                });
+
+              console.log(`[OUTREACH] ${LIVE_MODE ? "LIVE" : "TEST"} Salon: ${salon.business_name}, Queued: ${outreachSent}, Channel: ${channel}`);
             } catch (e) {
-              console.error(`[OUTREACH] WA send failed: ${e}`);
+              console.error(`[OUTREACH] enqueue failed: ${e}`);
             }
           }
         }
@@ -644,22 +634,9 @@ serve(async (req: Request) => {
       }
 
       try {
-        // Check if recipient is on WhatsApp
-        const checkRes = await fetch(`${WA_API_URL}/api/wa/check`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${WA_API_TOKEN}`,
-          },
-          body: JSON.stringify({ phone: recipientPhone }),
-        });
-        const checkData = await checkRes.json();
-
-        if (!checkData.onWhatsApp) {
-          return jsonResponse({ error: "Recipient not on WhatsApp", phone: recipientPhone }, 400);
-        }
-
-        // Enqueue into global throttle queue
+        // Skip the pre-flight `/api/wa/check` — see comment in the
+        // record_invite branch. wa-global-drain validates per-recipient
+        // during dispatch.
         const { enqueueWa, WA_PRIORITY } = await import("../_shared/wa_queue.ts");
         const queueId = await enqueueWa(serviceClient, recipientPhone, messagePrefix + message, {
           priority: WA_PRIORITY.BULK,
