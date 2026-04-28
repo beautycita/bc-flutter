@@ -149,44 +149,45 @@ Deno.serve(async (req) => {
       return json({ error: "Valid phone number required" }, 400);
     }
 
-    // Rate limit: max 3 pending (unverified) codes per phone in 15 minutes.
-    // Only count codes the user hasn't successfully consumed — otherwise a
-    // user who verifies once and needs to re-send (e.g. changed phone, then
-    // returned) would be locked out for the rest of the 15-min window.
-    const { count } = await db
-      .from("phone_verification_codes")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .eq("phone", phone)
-      .eq("verified", false)
-      .gte("created_at", new Date(Date.now() - 15 * 60 * 1000).toISOString());
-
-    console.log(`[phone-verify] Rate limit check: ${count ?? 0} codes in 15min`);
-    if ((count || 0) >= 3) {
-      return json({ error: "Demasiados intentos. Espera 15 minutos." }, 429);
-    }
-
     // Generate OTP upfront — same code for all channels, we control generation end-to-end
     const otp = generateOtp();
+    const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000).toISOString();
 
-    // Check for recent send to this phone (dedup: if we sent in last 60s, don't send again)
-    const { data: recentSend } = await db
-      .from("phone_verification_codes")
-      .select("id, channel, created_at")
-      .eq("phone", phone)
-      .eq("verified", false)
-      .gte("created_at", new Date(Date.now() - 60 * 1000).toISOString())
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    // Atomically claim a send-slot. The RPC takes a per-(user,phone) advisory
+    // lock, re-checks the 60s dedup window AND the 15-min rate limit, and
+    // INSERTs a placeholder row if it wins the race. Concurrent callers see
+    // each other's row and short-circuit instead of all enqueuing WA.
+    const { data: claim, error: claimErr } = await db.rpc("phone_verify_claim_slot", {
+      p_user_id: user.id,
+      p_phone: phone,
+      p_code_hash: await hashOtp(otp),
+      p_expires_at: expiresAt,
+    });
 
-    if (recentSend) {
-      console.log(`[phone-verify] Dedup: already sent to ${phone.slice(0, 6)}*** ${Math.round((Date.now() - new Date(recentSend.created_at).getTime()) / 1000)}s ago via ${recentSend.channel}`);
-      return json({ sent: true, channel: recentSend.channel, expires_in: OTP_EXPIRY_MINUTES * 60, deduplicated: true });
+    if (claimErr) {
+      console.error(`[phone-verify] claim_slot failed: ${claimErr.message}`);
+      return json({ error: "Internal error" }, 500);
     }
 
-    // Channel preference: Infobip WhatsApp (whitelisted phones) → bpi WhatsApp.
-    // Twilio removed platform-wide 2026-04-23; Infobip is the authoritative provider.
+    if (!claim?.claimed) {
+      if (claim?.reason === "rate_limited") {
+        return json({ error: "Demasiados intentos. Espera 15 minutos." }, 429);
+      }
+      // Lost the dedup race or 60s window already covered — return success
+      // with the existing record's channel so the client UX continues.
+      console.log(`[phone-verify] Dedup hit for ${phone.slice(0, 6)}*** (channel=${claim?.existing_channel})`);
+      return json({
+        sent: true,
+        channel: claim?.existing_channel ?? "whatsapp",
+        expires_in: OTP_EXPIRY_MINUTES * 60,
+        deduplicated: true,
+      });
+    }
+
+    const slotId = claim.id as string;
+
+    // We won the race. Send WA. Channel preference: Infobip (whitelisted)
+    // → bpi WhatsApp. Twilio removed 2026-04-23.
     let result: { sent: boolean; channel: string };
     const otpBody = `BeautyCita - Tu codigo es: ${otp}\nValido por ${OTP_EXPIRY_MINUTES} min. No lo compartas.`;
     const infobipResult = await sendInfobipWhatsApp(phone, otpBody);
@@ -202,18 +203,16 @@ Deno.serve(async (req) => {
     }
 
     if (!result.sent) {
+      // Roll back the claimed slot so the user can retry without waiting
+      // out the 60s dedup window for a code they never received.
+      await db.from("phone_verification_codes").delete().eq("id", slotId);
       return json({ error: "No se pudo enviar el codigo. Intenta de nuevo." }, 500);
     }
 
-    // Store OTP in DB
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
-    await db.from("phone_verification_codes").insert({
-      user_id: user.id,
-      phone,
-      code: await hashOtp(otp),
-      channel: result.channel,
-      expires_at: expiresAt,
-    });
+    // Promote the placeholder channel to the actual one used.
+    await db.from("phone_verification_codes")
+      .update({ channel: result.channel })
+      .eq("id", slotId);
 
     console.log(`[phone-verify] OTP sent via ${result.channel} to ${phone.slice(0, 6)}***`);
     return json({
