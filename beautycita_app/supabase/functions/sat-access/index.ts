@@ -42,11 +42,19 @@ const SAT_RETRY_MESSAGE = {
 const ALERT_SUPPRESSION_MS = 15 * 60 * 1000;
 const lastAlertByReason = new Map<string, number>();
 
-// Owner whitelist: BC's own ISP range (177.248.0.0/16 per infra.md).
-// When exploring from his own IP, don't wake him up with his own probes.
+// Owner whitelist — IPs whose alerts get suppressed (probes from BC's
+// own networks). Configurable via `SAT_OWNER_IP_PREFIXES` env var,
+// comma-separated string-prefixes (e.g. "177.248.,189.247."). The
+// matcher is intentionally a prefix-string match so adding a new range
+// is just an env edit + container restart, no code change. Default
+// covers BC's primary home ISP range.
+const _ownerIpPrefixes = (Deno.env.get("SAT_OWNER_IP_PREFIXES") ?? "177.248.")
+  .split(",")
+  .map((s) => s.trim())
+  .filter((s) => s.length > 0);
 function isOwnerIp(ip: string | null): boolean {
   if (!ip) return false;
-  return ip.startsWith("177.248.");
+  return _ownerIpPrefixes.some((p) => ip.startsWith(p));
 }
 
 async function maybeAlertBC(
