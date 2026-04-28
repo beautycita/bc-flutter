@@ -75,8 +75,45 @@ class _BizBankingPageState extends ConsumerState<BizBankingPage> {
   // Step 1
   final _clabeController = TextEditingController();
   final _beneficiaryController = TextEditingController();
+  final _rfcController = TextEditingController();
   String? _detectedBank;
   String? _clabeError;
+  String? _rfcError;
+  bool _rfcLocked = false;
+
+  // Mexican RFC format check (DB trigger is the strict authority).
+  static final _rfcRegExp = RegExp(r'^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}$');
+  bool _validRfc(String s) => _rfcRegExp.hasMatch(s);
+
+  /// Soft name↔RFC consistency check matching the mobile heuristic:
+  /// PF (13) char[0] ≈ paternal surname's first letter; PM (12) char[0]
+  /// ≈ first letter of company name's first word.
+  String? _nameRfcWarning(String rfc, String name) {
+    final clean = name.toUpperCase().replaceAll(RegExp(r'[^A-ZÑ\s]'), '').trim();
+    if (clean.isEmpty || rfc.length < 4) return null;
+    final words = clean.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+    if (words.isEmpty) return null;
+    final isPF = rfc.length == 13;
+    if (isPF) {
+      String paternal;
+      if (words.length >= 3) {
+        paternal = words[words.length - 2];
+      } else if (words.length == 2) {
+        paternal = words[1];
+      } else {
+        paternal = words[0];
+      }
+      if (rfc[0] != paternal[0]) {
+        return 'El RFC no parece coincidir con "${paternal.toLowerCase()}". Revisa.';
+      }
+      return null;
+    }
+    final first = words[0];
+    if (rfc[0] != first[0]) {
+      return 'El RFC empresarial no coincide con "${first.toLowerCase()}". Revisa.';
+    }
+    return null;
+  }
 
   // Step 2
   Uint8List? _idFrontBytes;
@@ -91,9 +128,39 @@ class _BizBankingPageState extends ConsumerState<BizBankingPage> {
   bool _resultSuccess = false;
 
   @override
+  void initState() {
+    super.initState();
+    Future.microtask(_prefillFromBusiness);
+  }
+
+  Future<void> _prefillFromBusiness() async {
+    try {
+      final biz = await ref.read(currentBusinessProvider.future);
+      if (!mounted || biz == null) return;
+      final rfc = (biz['rfc'] as String?)?.trim() ?? '';
+      final clabe = (biz['clabe'] as String?)?.trim() ?? '';
+      final ben = (biz['beneficiary_name'] as String?)?.trim() ?? '';
+      setState(() {
+        if (rfc.isNotEmpty) {
+          _rfcController.text = rfc.toUpperCase();
+          _rfcLocked = true;
+        }
+        if (clabe.isNotEmpty) {
+          _clabeController.text = clabe;
+          // onChanged listener doesn't fire on .text= so re-detect manually.
+          final digits = clabe.replaceAll(RegExp(r'\D'), '');
+          if (digits.length >= 3) _detectedBank = _bankFromClabe(digits);
+        }
+        if (ben.isNotEmpty) _beneficiaryController.text = ben;
+      });
+    } catch (_) {/* best-effort prefill */}
+  }
+
+  @override
   void dispose() {
     _clabeController.dispose();
     _beneficiaryController.dispose();
+    _rfcController.dispose();
     super.dispose();
   }
 
@@ -117,9 +184,30 @@ class _BizBankingPageState extends ConsumerState<BizBankingPage> {
       setState(() => _clabeError = 'CLABE invalida — verifica el digito verificador');
       return false;
     }
-    if (_beneficiaryController.text.trim().isEmpty) {
+    final beneficiary = _beneficiaryController.text.trim();
+    if (beneficiary.isEmpty) {
       setState(() => _clabeError = 'Ingresa el nombre del beneficiario');
       return false;
+    }
+    final rfc = _rfcController.text.trim().toUpperCase();
+    if (rfc.isEmpty) {
+      setState(() => _rfcError = 'RFC requerido — SAT lo exige para depositos');
+      return false;
+    }
+    if (rfc.length < 12 || rfc.length > 13) {
+      setState(() => _rfcError = 'RFC debe tener 12 o 13 caracteres');
+      return false;
+    }
+    if (!_validRfc(rfc)) {
+      setState(() => _rfcError = 'Formato de RFC invalido');
+      return false;
+    }
+    if (!_rfcLocked) {
+      final warn = _nameRfcWarning(rfc, beneficiary);
+      if (warn != null) {
+        setState(() => _rfcError = warn);
+        return false;
+      }
     }
     return true;
   }
@@ -257,12 +345,15 @@ class _BizBankingPageState extends ConsumerState<BizBankingPage> {
     final bizId = biz['id'] as String;
     final clabe = _clabeController.text.trim();
     final beneficiary = _beneficiaryController.text.trim();
+    final rfc = _rfcController.text.trim().toUpperCase();
 
     // Disclosure modal — fires only when EDITING existing values, not on first setup.
     final existingBeneficiary = (biz['beneficiary_name'] as String?)?.trim();
     final existingClabe = (biz['clabe'] as String?)?.trim();
+    final existingRfc = (biz['rfc'] as String?)?.trim();
     final nameChanged = existingBeneficiary != null && existingBeneficiary.isNotEmpty && existingBeneficiary != beneficiary;
     final clabeChanged = existingClabe != null && existingClabe.isNotEmpty && existingClabe != clabe;
+    final rfcChanged = existingRfc != null && existingRfc.isNotEmpty && existingRfc != rfc;
     if (nameChanged || clabeChanged) {
       final parts = <String>[];
       if (nameChanged) parts.add('el Nombre del Beneficiario');
@@ -298,15 +389,21 @@ class _BizBankingPageState extends ConsumerState<BizBankingPage> {
             ),
       ]);
 
-      // Save CLABE + beneficiary + ID URLs to businesses table
-      await BCSupabase.client.from(BCTables.businesses).update({
+      // Save CLABE + beneficiary + RFC + ID URLs to businesses table.
+      // Only write rfc when not locked AND it actually changed — prevents
+      // a benign re-save from tripping the payout-lock audit on every edit.
+      final updatePayload = <String, dynamic>{
         'clabe': clabe,
         'beneficiary_name': beneficiary,
         'bank_name': _detectedBank ?? '',
-        'banking_complete': false, // will be set true by edge function on verification
+        'banking_complete': false, // set true by edge function on verification
         'id_front_url': frontPath,
         'id_back_url': backPath,
-      }).eq('id', bizId);
+      };
+      if (!_rfcLocked && (existingRfc == null || existingRfc.isEmpty || rfcChanged)) {
+        updatePayload['rfc'] = rfc;
+      }
+      await BCSupabase.client.from(BCTables.businesses).update(updatePayload).eq('id', bizId);
 
       // Call edge function for verification
       // TODO: bank account details (CLABE routing) pending BBVA meeting
@@ -335,16 +432,23 @@ class _BizBankingPageState extends ConsumerState<BizBankingPage> {
         // Invalidate the business provider to refresh data
         ref.invalidate(currentBusinessProvider);
       } else {
-        final reason = data?['reason'] as String? ?? 'No se pudo verificar la identificacion.';
+        // Edge fn returns `rejection_reason` on a verified=false response.
+        final reason = data?['rejection_reason'] as String?
+            ?? data?['error'] as String?
+            ?? 'No se pudo verificar la identificacion. Revisa tus fotos e intentalo de nuevo.';
         setState(() {
           _resultSuccess = false;
           _resultMessage = reason;
         });
       }
     } catch (e) {
+      // Surface the raw exception under the friendly message so storage
+      // / RLS / network failures are diagnosable without a debugger.
+      final raw = e.toString();
+      final detail = raw.length > 240 ? '${raw.substring(0, 240)}…' : raw;
       setState(() {
         _resultSuccess = false;
-        _resultMessage = 'Error: $e';
+        _resultMessage = 'Error: $detail';
       });
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -513,6 +617,40 @@ class _BizBankingPageState extends ConsumerState<BizBankingPage> {
               prefixIcon: Icon(Icons.person_outline, size: 20),
             ),
             textCapitalization: TextCapitalization.words,
+          ),
+          const SizedBox(height: 20),
+
+          // RFC (required)
+          Text('RFC', style: theme.textTheme.labelLarge),
+          const SizedBox(height: 4),
+          Text(
+            _rfcLocked
+                ? 'El RFC esta vinculado a tu cuenta. Para cambiarlo contacta soporte.'
+                : '13 caracteres si eres persona fisica, 12 si es empresa. SAT lo requiere para depositar.',
+            style: theme.textTheme.bodySmall?.copyWith(color: kWebTextSecondary),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _rfcController,
+            enabled: !_rfcLocked,
+            textCapitalization: TextCapitalization.characters,
+            maxLength: 13,
+            decoration: InputDecoration(
+              hintText: 'XAXX010101000',
+              counterText: '',
+              prefixIcon: Icon(_rfcLocked ? Icons.lock_outline : Icons.badge_outlined, size: 20),
+              errorText: _rfcError,
+            ),
+            onChanged: (v) {
+              final cleaned = v.toUpperCase().replaceAll(RegExp(r'\s'), '');
+              if (cleaned != v) {
+                _rfcController.value = TextEditingValue(
+                  text: cleaned,
+                  selection: TextSelection.collapsed(offset: cleaned.length),
+                );
+              }
+              if (_rfcError != null) setState(() => _rfcError = null);
+            },
           ),
           const SizedBox(height: 32),
 
@@ -690,11 +828,16 @@ class _BizBankingPageState extends ConsumerState<BizBankingPage> {
           const SizedBox(height: 24),
 
           // Summary
-          _SummaryRow(label: 'Banco', value: _detectedBank ?? 'Desconocido'),
+          _SummaryRow(label: 'Banco', value: _detectedBank ?? 'No identificado'),
           const SizedBox(height: 12),
           _SummaryRow(label: 'CLABE', value: maskedClabe),
           const SizedBox(height: 12),
           _SummaryRow(label: 'Beneficiario', value: beneficiary),
+          const SizedBox(height: 12),
+          _SummaryRow(
+            label: 'RFC',
+            value: _rfcController.text.trim().toUpperCase(),
+          ),
           const SizedBox(height: 20),
 
           // ID previews

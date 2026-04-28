@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:web/web.dart' as web;
 import 'package:beautycita_core/supabase.dart';
 
 import '../../config/breakpoints.dart';
@@ -65,7 +66,10 @@ class _DashboardContent extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _WelcomeHeader(bizName: bizName, isMobile: isMobile),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
+              const _BankingBanner(),
+              const _StripeConnectBanner(),
+              const SizedBox(height: 8),
               _KpiSection(ref: ref, isDesktop: isDesktop, isMobile: isMobile),
               const SizedBox(height: 16),
               _QuickActions(isMobile: isMobile),
@@ -1045,6 +1049,197 @@ class _ErrorState extends StatelessWidget {
           const SizedBox(height: 16),
           Text(message, style: theme.textTheme.bodyMedium, textAlign: TextAlign.center),
         ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Banking Setup Banner — fires when banking_complete == false
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _BankingBanner extends ConsumerWidget {
+  const _BankingBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bizAsync = ref.watch(currentBusinessProvider);
+    return bizAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (biz) {
+        if (biz == null) return const SizedBox.shrink();
+        if (biz['banking_complete'] == true) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: _BannerCard(
+            color: const Color(0xFFD97706),
+            icon: Icons.account_balance_outlined,
+            label:
+                'Completa tu informacion bancaria para activar reservas y recibir pagos',
+            cta: 'Completar ahora',
+            onTap: () => context.go('/negocio/banking'),
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Stripe Connect Banner — fires once banking is complete but Stripe charges
+// + payouts aren't both enabled. Calls stripe-connect-onboard for the
+// hosted onboarding URL and opens it in a new tab.
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _StripeConnectBanner extends ConsumerStatefulWidget {
+  const _StripeConnectBanner();
+
+  @override
+  ConsumerState<_StripeConnectBanner> createState() =>
+      _StripeConnectBannerState();
+}
+
+class _StripeConnectBannerState extends ConsumerState<_StripeConnectBanner> {
+  bool _launching = false;
+
+  Future<void> _launch(String businessId) async {
+    setState(() => _launching = true);
+    try {
+      final res = await BCSupabase.client.functions.invoke(
+        'stripe-connect-onboard',
+        body: {'action': 'get-onboard-link', 'business_id': businessId},
+      );
+      final data = res.data as Map<String, dynamic>? ?? const {};
+      final url = data['onboarding_url'] as String?;
+      if (url != null && url.isNotEmpty) {
+        web.window.open(url, '_blank');
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+            (data['error'] as String?) ?? 'No pudimos generar el enlace de Stripe',
+          ),
+        ));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _launching = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bizAsync = ref.watch(currentBusinessProvider);
+    return bizAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (biz) {
+        if (biz == null) return const SizedBox.shrink();
+        if (biz['banking_complete'] != true) return const SizedBox.shrink();
+        final charges = biz['stripe_charges_enabled'] == true;
+        final payouts = biz['stripe_payouts_enabled'] == true;
+        if (charges && payouts) return const SizedBox.shrink();
+        final status = biz['stripe_onboarding_status'] as String? ?? 'not_started';
+        final pending = status == 'pending' || status == 'pending_verification';
+        final label = pending
+            ? 'Stripe esta verificando tu cuenta. Termina los pasos pendientes.'
+            : 'Conecta Stripe para aceptar tarjetas y recibir pagos';
+        final cta = pending ? 'Continuar con Stripe' : 'Conectar Stripe';
+        final businessId = biz['id'] as String;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: _BannerCard(
+            color: kWebPrimary,
+            icon: Icons.payment_rounded,
+            label: label,
+            cta: cta,
+            launching: _launching,
+            onTap: _launching ? null : () => _launch(businessId),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _BannerCard extends StatelessWidget {
+  const _BannerCard({
+    required this.color,
+    required this.icon,
+    required this.label,
+    required this.cta,
+    required this.onTap,
+    this.launching = false,
+  });
+
+  final Color color;
+  final IconData icon;
+  final String label;
+  final String cta;
+  final VoidCallback? onTap;
+  final bool launching;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            if (launching)
+              const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            else
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    cta,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: color,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(Icons.arrow_forward_rounded, color: color, size: 16),
+                ],
+              ),
+          ],
+        ),
       ),
     );
   }
