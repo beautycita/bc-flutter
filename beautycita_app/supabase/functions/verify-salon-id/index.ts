@@ -120,8 +120,24 @@ interface VisionResult {
   isCropped: boolean;
 }
 
+// btoa(String.fromCharCode(...big-uint8array)) blows the V8 call stack
+// (~64k arg limit on Deno, JPEGs are larger than that). Chunk-encode in
+// 8KB slices instead — small enough to be safe everywhere, large enough
+// to keep the loop count reasonable for a multi-MB image.
+function bytesToBase64(bytes: Uint8Array): string {
+  const CHUNK = 0x8000; // 32k
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    bin += String.fromCharCode.apply(
+      null,
+      bytes.subarray(i, i + CHUNK) as unknown as number[],
+    );
+  }
+  return btoa(bin);
+}
+
 async function analyzeImage(imageBytes: Uint8Array, accessToken: string): Promise<VisionResult> {
-  const base64 = btoa(String.fromCharCode(...imageBytes));
+  const base64 = bytesToBase64(imageBytes);
 
   const resp = await fetch("https://vision.googleapis.com/v1/images:annotate", {
     method: "POST",
