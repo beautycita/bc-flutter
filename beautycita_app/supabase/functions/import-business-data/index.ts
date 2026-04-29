@@ -304,8 +304,12 @@ function fingerprintSource(headers: string[]): string {
 }
 
 // ─── Row → BC client transform ──────────────────────────────────────────────
+// `client_name` matches the business_clients column name on prod.
+// We still recognise both `full_name` and `name` synonyms in the parser
+// dictionary above (mapped to bc field "full_name" internally), then
+// translate to client_name in the DB payload.
 interface MappedClient {
-  full_name: string;
+  client_name: string;
   email: string | null;
   phone: string | null;
   birthday: string | null;
@@ -386,7 +390,7 @@ function buildClient(
   }
 
   const client: MappedClient = {
-    full_name: fullName,
+    client_name: fullName,
     email,
     phone,
     birthday,
@@ -510,7 +514,7 @@ serve(async (req) => {
 
       const payload: Record<string, unknown> = {
         business_id: businessId,
-        full_name: m.full_name,
+        client_name: m.client_name,
         email: m.email,
         phone: m.phone,
         birthday: m.birthday,

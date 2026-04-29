@@ -417,8 +417,9 @@ class _AgreementSheetState extends State<_AgreementSheet> {
   bool _tos = false;
   bool _privacy = false;
   bool _cookies = false;
+  bool _satResponsible = false;
 
-  bool get _canSubmit => _tos && _privacy && _cookies;
+  bool get _canSubmit => _tos && _privacy && _cookies && _satResponsible;
 
   @override
   Widget build(BuildContext context) {
@@ -473,6 +474,17 @@ class _AgreementSheetState extends State<_AgreementSheet> {
                 controlAffinity: ListTileControlAffinity.leading,
                 dense: true,
                 title: Text('Acepto la Politica de Cookies', style: GoogleFonts.nunito(fontSize: 13)),
+              ),
+              CheckboxListTile(
+                value: _satResponsible,
+                onChanged: (v) => setState(() => _satResponsible = v ?? false),
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                dense: true,
+                title: Text(
+                  'Entiendo que soy responsable de los pagos al SAT por todas las transacciones del tier gratuito',
+                  style: GoogleFonts.nunito(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
               ),
               const SizedBox(height: 12),
               Row(

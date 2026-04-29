@@ -310,7 +310,7 @@ class _BusinessImportScreenState extends ConsumerState<BusinessImportScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(m['full_name']?.toString() ?? '(sin nombre)',
+                    Text(m['client_name']?.toString() ?? '(sin nombre)',
                         style: GoogleFonts.poppins(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,

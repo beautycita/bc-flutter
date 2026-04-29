@@ -43,7 +43,7 @@ import '../pages/business/biz_marketing_page.dart';
 import '../pages/business/biz_orders_page.dart';
 import '../pages/business/biz_payments_page.dart';
 import '../pages/business/biz_services_page.dart';
-import '../pages/business/biz_qr_page.dart';
+import '../pages/business/biz_qr_program_page.dart';
 import '../pages/business/biz_reviews_page.dart';
 import '../pages/business/biz_pos_page.dart';
 import '../pages/business/biz_settings_page.dart';
@@ -559,7 +559,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
               GoRoute(
                 path: 'qr',
-                builder: (context, state) => const BizQrPage(),
+                builder: (context, state) => const BizQrProgramPage(),
               ),
               GoRoute(
                 path: 'reviews',
@@ -640,7 +640,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
               GoRoute(
                 path: 'qr',
-                builder: (context, state) => const BizQrPage(),
+                builder: (context, state) => const BizQrProgramPage(),
               ),
               GoRoute(
                 path: 'reviews',
