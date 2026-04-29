@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:beautycita/config/app_transitions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:beautycita/config/constants.dart';
+import 'package:beautycita/config/routes.dart';
 import 'package:beautycita/services/supabase_client.dart';
 import 'package:beautycita/services/toast_service.dart';
 
@@ -105,6 +107,11 @@ class DeviceManagerScreen extends ConsumerWidget {
         title: const Text('Dispositivos conectados'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.qr_code_scanner_rounded),
+            onPressed: () => context.push(AppRoutes.qrScan),
+            tooltip: 'Escanear QR para enlazar',
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh_rounded),
             onPressed: () {
               ref.read(deviceSessionsProvider.notifier).refresh();
@@ -139,6 +146,13 @@ class DeviceManagerScreen extends ConsumerWidget {
               vertical: AppConstants.paddingMD,
             ),
             children: [
+              // Primary CTA: scan a QR code shown by the web app to link
+              // this phone as the trusted device for that browser.
+              _LinkWithQrCard(
+                onTap: () => context.push(AppRoutes.qrScan),
+              ),
+              const SizedBox(height: AppConstants.paddingMD),
+
               // Current device (always shown)
               _CurrentDeviceCard(),
               const SizedBox(height: AppConstants.paddingMD),
@@ -413,5 +427,82 @@ class _WebSessionCard extends StatelessWidget {
     if (difference.inDays < 7) return '${difference.inDays}d';
     if (difference.inDays < 30) return '${(difference.inDays / 7).floor()} sem';
     return '${(difference.inDays / 30).floor()} mes${(difference.inDays / 30).floor() > 1 ? 'es' : ''}';
+  }
+}
+
+/// Primary CTA at the top of the device list — opens the QR scanner so
+/// the user can authorize a web-app session by pointing their phone at
+/// the QR code displayed in the browser.
+class _LinkWithQrCard extends StatelessWidget {
+  final VoidCallback onTap;
+  const _LinkWithQrCard({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppConstants.radiusLG),
+        child: Ink(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFEC4899), Color(0xFF9333EA)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(AppConstants.radiusLG),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFEC4899).withValues(alpha: 0.22),
+                blurRadius: 14,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(AppConstants.paddingMD),
+          child: Row(
+            children: [
+              Container(
+                width: 48, height: 48,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.qr_code_scanner_rounded,
+                    color: Color(0xFFFFFFFF), size: 26),
+              ),
+              const SizedBox(width: AppConstants.paddingMD),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Escanear QR para enlazar',
+                      style: TextStyle(
+                        color: Color(0xFFFFFFFF),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Vincula este telefono a una sesion del navegador',
+                      style: TextStyle(
+                        color: Color(0xFFFFFFFF),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded,
+                  color: Color(0xFFFFFFFF)),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
