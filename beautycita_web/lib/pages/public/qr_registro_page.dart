@@ -9,7 +9,7 @@
 // =============================================================================
 
 import 'dart:math';
-import 'dart:html' as html;
+import 'package:web/web.dart' as web;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -66,8 +66,8 @@ class _QrRegistroPageState extends State<QrRegistroPage> {
   }
 
   String _getOrCreateDeviceUuid() {
-    final storage = html.window.localStorage;
-    var existing = storage[_deviceUuidKey];
+    final storage = web.window.localStorage;
+    final existing = storage.getItem(_deviceUuidKey);
     if (existing != null && existing.isNotEmpty) return existing;
     final rand = Random.secure();
     final bytes = List<int>.generate(16, (_) => rand.nextInt(256));
@@ -80,7 +80,7 @@ class _QrRegistroPageState extends State<QrRegistroPage> {
         '${bytes.sublist(6, 8).map(hex2).join()}-'
         '${bytes.sublist(8, 10).map(hex2).join()}-'
         '${bytes.sublist(10, 16).map(hex2).join()}';
-    storage[_deviceUuidKey] = uuid;
+    storage.setItem(_deviceUuidKey, uuid);
     return uuid;
   }
 
@@ -575,7 +575,7 @@ class _AppDownloadPrompt extends StatelessWidget {
               const SizedBox(height: 28),
               ElevatedButton.icon(
                 onPressed: () {
-                  html.window.location.href = 'https://beautycita.com/download';
+                  web.window.location.href = 'https://beautycita.com/download';
                 },
                 icon: const Icon(Icons.download_rounded),
                 label: const Text('Descargar App'),

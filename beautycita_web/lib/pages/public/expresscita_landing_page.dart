@@ -10,7 +10,7 @@
 // =============================================================================
 
 import 'dart:async';
-import 'dart:html' as html;
+import 'package:web/web.dart' as web;
 import 'package:flutter/material.dart';
 
 class ExpressCitaLandingPage extends StatefulWidget {
@@ -36,7 +36,7 @@ class _ExpressCitaLandingPageState extends State<ExpressCitaLandingPage> {
   }
 
   _Platform _detectPlatform() {
-    final ua = html.window.navigator.userAgent.toLowerCase();
+    final ua = web.window.navigator.userAgent.toLowerCase();
     if (ua.contains('iphone') || ua.contains('ipad') || ua.contains('ipod')) {
       return _Platform.ios;
     }
@@ -50,7 +50,7 @@ class _ExpressCitaLandingPageState extends State<ExpressCitaLandingPage> {
 
   void _tryDeepLinkThenStore() {
     final deepLink = 'beautycita://expresscita/${widget.slug}';
-    html.window.location.href = deepLink;
+    web.window.location.href = deepLink;
 
     // After 1.5s, assume deep link failed and redirect to store.
     Timer(const Duration(milliseconds: 1500), () {
@@ -58,7 +58,7 @@ class _ExpressCitaLandingPageState extends State<ExpressCitaLandingPage> {
       final storeUrl = _platform == _Platform.ios
           ? 'https://apps.apple.com/mx/app/beautycita/id0000000000'
           : 'https://play.google.com/store/apps/details?id=com.beautycita.app';
-      html.window.location.href = storeUrl;
+      web.window.location.href = storeUrl;
     });
   }
 
@@ -106,11 +106,11 @@ class _MobileRedirectingView extends StatelessWidget {
                 const SizedBox(height: 32),
                 TextButton(
                   onPressed: () {
-                    final ua = html.window.navigator.userAgent.toLowerCase();
+                    final ua = web.window.navigator.userAgent.toLowerCase();
                     final store = ua.contains('iphone') || ua.contains('ipad')
                         ? 'https://apps.apple.com/mx/app/beautycita/id0000000000'
                         : 'https://play.google.com/store/apps/details?id=com.beautycita.app';
-                    html.window.location.href = store;
+                    web.window.location.href = store;
                   },
                   child: const Text('Ir a la tienda manualmente'),
                 ),
@@ -168,7 +168,7 @@ class _DesktopView extends StatelessWidget {
                   alignment: WrapAlignment.center,
                   children: [
                     ElevatedButton.icon(
-                      onPressed: () => html.window.location.href =
+                      onPressed: () => web.window.location.href =
                           'https://apps.apple.com/mx/app/beautycita/id0000000000',
                       icon: const Icon(Icons.apple),
                       label: const Text('App Store'),
@@ -179,7 +179,7 @@ class _DesktopView extends StatelessWidget {
                       ),
                     ),
                     ElevatedButton.icon(
-                      onPressed: () => html.window.location.href =
+                      onPressed: () => web.window.location.href =
                           'https://play.google.com/store/apps/details?id=com.beautycita.app',
                       icon: const Icon(Icons.android),
                       label: const Text('Google Play'),
