@@ -43,6 +43,23 @@ class _BookingDetailContentState extends State<BookingDetailContent> {
         'updated_at': now,
       }).eq('id', booking.id);
 
+      try {
+        await BCSupabase.client.rpc(
+          'log_admin_action',
+          params: {
+            'p_action': 'booking_cancel',
+            'p_target_type': 'appointment',
+            'p_target_id': booking.id,
+            'p_details': {
+              'payment_status': booking.paymentStatus,
+              'amount': booking.amount,
+            },
+          },
+        );
+      } catch (logErr) {
+        debugPrint('admin audit log insert failed (cancel): $logErr');
+      }
+
       // If payment was made, refund to user saldo
       if (booking.paymentStatus == 'paid' && booking.amount > 0) {
         try {

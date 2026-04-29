@@ -200,10 +200,27 @@ class _RegisteredSalonDetailContentState
                 : () async {
                     setState(() => _togglingVerified = true);
                     try {
+                      final newValue = !salon.verified;
                       await BCSupabase.client
                           .from(BCTables.businesses)
-                          .update({'is_verified': !salon.verified})
+                          .update({'is_verified': newValue})
                           .eq('id', salon.id);
+                      try {
+                        await BCSupabase.client.rpc(
+                          'log_admin_action',
+                          params: {
+                            'p_action': 'salon_verify_toggle',
+                            'p_target_type': 'business',
+                            'p_target_id': salon.id,
+                            'p_details': {
+                              'prev_value': salon.verified,
+                              'new_value': newValue,
+                            },
+                          },
+                        );
+                      } catch (logErr) {
+                        debugPrint('admin audit log insert failed (verify toggle): $logErr');
+                      }
                       ref.invalidate(registeredSalonsProvider);
                     } catch (e) {
                       if (mounted) {
