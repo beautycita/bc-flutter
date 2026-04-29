@@ -47,6 +47,7 @@ import '../pages/business/biz_qr_program_page.dart';
 import '../pages/business/biz_reviews_page.dart';
 import '../pages/business/biz_pos_page.dart';
 import '../pages/business/biz_settings_page.dart';
+import '../pages/business/stripe_complete_page.dart';
 import '../pages/business/biz_staff_page.dart';
 import '../pages/client/cuenta_page.dart';
 import '../pages/client/feed_page.dart';
@@ -378,7 +379,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       // and the new charges/payouts flags surface naturally.
       GoRoute(
         path: '/stripe/complete',
-        redirect: (_, __) => WebRoutes.negocioPayments,
+        builder: (context, state) => StripeCompletePage(
+          businessIdQuery: state.uri.queryParameters['business_id'],
+        ),
       ),
       GoRoute(
         path: '/stripe/refresh',

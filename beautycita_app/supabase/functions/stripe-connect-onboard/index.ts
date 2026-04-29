@@ -13,7 +13,11 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
 const STRIPE_API = "https://api.stripe.com/v1";
-const APP_URL = Deno.env.get("APP_URL") ?? "https://beautycita.com";
+// Hardcoded — refuse to honor any APP_URL env override so a misconfigured
+// secret can't redirect Stripe return traffic to a different host.
+const APP_URL = "https://beautycita.com";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // MCC 7230 = Barber and Beauty Shops. Fixed for all BeautyCita accounts.
 const BEAUTYCITA_MCC = "7230";
@@ -244,6 +248,9 @@ Deno.serve(async (req: Request) => {
 
     if (!businessId) {
       return json({ error: "business_id required" }, 400, req);
+    }
+    if (typeof businessId !== "string" || !UUID_RE.test(businessId)) {
+      return json({ error: "business_id must be a UUID" }, 400, req);
     }
 
     // Fetch business data + verify ownership
