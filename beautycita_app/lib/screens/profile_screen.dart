@@ -332,6 +332,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Widget _buildUsernameEditorWhite(TextTheme textTheme) {
+    final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppConstants.paddingSM),
       child: Column(
@@ -344,19 +345,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   controller: _usernameController,
                   autofocus: true,
                   maxLength: 30,
-                  style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
+                  style: TextStyle(color: cs.onSurface),
                   decoration: InputDecoration(
                     hintText: 'Nombre de usuario',
-                    hintStyle: TextStyle(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.5)),
+                    hintStyle: TextStyle(color: cs.onSurface.withValues(alpha: 0.5)),
+                    filled: true,
+                    fillColor: cs.surface,
                     isDense: true,
                     counterText: '',
                     errorText: _usernameError,
-                    errorStyle: const TextStyle(color: Colors.yellowAccent),
                     enabledBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.5)),
+                      borderSide: BorderSide(color: cs.onSurface.withValues(alpha: 0.5)),
                     ),
                     focusedBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: Theme.of(context).colorScheme.onPrimary),
+                      borderSide: BorderSide(color: cs.primary),
                     ),
                     suffixIcon: _checkingUsername
                         ? Padding(
@@ -364,7 +366,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             child: SizedBox(
                               width: 16, height: 16,
                               child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary),
+                                strokeWidth: 2, color: cs.primary),
                             ),
                           )
                         : _usernameController.text.length >= 3
@@ -373,8 +375,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                     ? Icons.check_circle_outlined
                                     : Icons.cancel_outlined,
                                 color: _usernameAvailable
-                                    ? Colors.greenAccent
-                                    : Colors.redAccent,
+                                    ? Colors.green
+                                    : cs.error,
                                 size: 20,
                               )
                             : null,
@@ -385,14 +387,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
               const SizedBox(width: 8),
               IconButton(
-                icon: Icon(Icons.check_outlined, color: Theme.of(context).colorScheme.onPrimary),
+                icon: Icon(Icons.check_outlined, color: cs.onPrimary),
                 onPressed: _usernameAvailable && _usernameError == null
                     ? _saveUsername
                     : null,
               ),
               IconButton(
                 icon: Icon(Icons.close_outlined,
-                    color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7)),
+                    color: cs.onPrimary.withValues(alpha: 0.7)),
                 onPressed: () => setState(() => _editingUsername = false),
               ),
             ],

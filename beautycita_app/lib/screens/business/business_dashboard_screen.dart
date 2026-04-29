@@ -899,12 +899,19 @@ class _TaxDeductionsCardState extends ConsumerState<_TaxDeductionsCard> {
                   ),
                   const SizedBox(height: 8),
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.event_outlined, size: 14, color: const Color(0xFF7C3AED).withValues(alpha: 0.7)),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Icon(Icons.event_outlined, size: 14, color: const Color(0xFF7C3AED).withValues(alpha: 0.7)),
+                      ),
                       const SizedBox(width: 4),
-                      Text(
-                        'Fecha limite para deducciones ${DateTime.now().year}: 31 de Diciembre ${DateTime.now().year}',
-                        style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w700, color: colors.secondary),
+                      Expanded(
+                        child: Text(
+                          'Fecha limite para deducciones ${DateTime.now().year}: 31 de Diciembre ${DateTime.now().year}',
+                          style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w700, color: colors.secondary),
+                          softWrap: true,
+                        ),
                       ),
                     ],
                   ),
