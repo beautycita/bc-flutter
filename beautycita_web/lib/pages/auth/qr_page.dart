@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:beautycita_core/supabase.dart';
@@ -11,6 +12,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/router.dart';
 import '../../providers/auth_provider.dart';
+import '../../utils/jwt_claims.dart';
 import 'auth_layout.dart';
 
 /// QR auth page — generates a session code, displays a scannable QR code,
@@ -180,6 +182,16 @@ class _QrPageState extends ConsumerState<QrPage> {
         return;
       }
 
+      final supabaseUrl = dotenv.env['SUPABASE_URL'] ?? '';
+      final tokenError = validateSupabaseAccessToken(accessToken, supabaseUrl: supabaseUrl);
+      if (tokenError != null) {
+        setState(() {
+          _error = 'Token rechazado por el navegador ($tokenError).';
+          _isSigningIn = false;
+        });
+        return;
+      }
+
       // Set the session directly using server-verified tokens
       await BCSupabase.client.auth.setSession(refreshToken);
 
@@ -189,6 +201,7 @@ class _QrPageState extends ConsumerState<QrPage> {
       final user = BCSupabase.client.auth.currentUser;
       if (user != null) {
         ref.read(authProvider.notifier).setUser(user);
+        await ref.read(authProvider.notifier).subscribeToRevocations();
       }
 
       // Navigate by role
