@@ -354,6 +354,10 @@ serve(async (req) => {
 
       // Store credential
       const rawKey = authData.attestedCredData.publicKey;
+      const aaguidBytes = authData.attestedCredData.aaguid;
+      const aaguidB64 = aaguidBytes.every((b) => b === 0)
+        ? null
+        : base64urlEncode(aaguidBytes);
 
       const { error: credErr } = await supabase
         .from("webauthn_credentials")
@@ -365,6 +369,7 @@ serve(async (req) => {
             .join("")}`,
           sign_count: authData.signCount,
           device_name: device_name ?? null,
+          aaguid: aaguidB64,
         });
 
       if (credErr) {

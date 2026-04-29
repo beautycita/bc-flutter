@@ -97,7 +97,7 @@ class WebAuthnService {
           'residentKey': 'preferred',
           'requireResidentKey': false,
         },
-        'attestation': 'none',
+        'attestation': 'direct',
       },
     }.jsify() as JSObject;
 
