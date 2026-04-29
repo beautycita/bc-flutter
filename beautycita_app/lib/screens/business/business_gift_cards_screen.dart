@@ -720,6 +720,13 @@ class _CreateGiftCardSheetState extends ConsumerState<_CreateGiftCardSheet> {
     return List.generate(8, (_) => chars[rng.nextInt(chars.length)]).join();
   }
 
+  String _escapeHtml(String s) => s
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#x27;');
+
   Future<void> _save() async {
     final amountStr = _amountCtrl.text.trim();
     if (amountStr.isEmpty) {
@@ -764,7 +771,7 @@ class _CreateGiftCardSheetState extends ConsumerState<_CreateGiftCardSheet> {
           final messageBlock = msgText.isNotEmpty
               ? '<p style="margin:0 0 20px 0;font-size:14px;color:#374151;'
                   'font-style:italic;text-align:center;">'
-                  '"$msgText"</p>'
+                  '"${_escapeHtml(msgText)}"</p>'
               : '';
           try {
             await SupabaseClientService.client.functions.invoke('send-email', body: {
