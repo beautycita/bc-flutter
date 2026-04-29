@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:beautycita_core/supabase.dart';
+import 'package:web/web.dart' as web;
 
 import '../services/webauthn_service.dart';
 
@@ -51,7 +52,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         // to user-scoped revocation broadcasts so a mobile-issued kick
         // arrives even though we didn't go through the registerWebSession
         // path on this load.
-        _subscribeToRevocations();
+        subscribeToRevocations();
       }
     }
   }
@@ -228,6 +229,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       await BCSupabase.client.auth.signOut();
+      _clearBcLocalStorage();
       state = const AuthState();
     } catch (e) {
       state = state.copyWith(
@@ -235,6 +237,20 @@ class AuthNotifier extends StateNotifier<AuthState> {
         errorMessage: 'Error al cerrar sesion.',
       );
     }
+  }
+
+  void _clearBcLocalStorage() {
+    try {
+      final storage = web.window.localStorage;
+      final toRemove = <String>[];
+      for (var i = 0; i < storage.length; i++) {
+        final key = storage.key(i);
+        if (key != null && key.startsWith('bc-')) toRemove.add(key);
+      }
+      for (final key in toRemove) {
+        storage.removeItem(key);
+      }
+    } catch (_) {/* storage unavailable */}
   }
 
   /// Query the profiles table for the user's role.
@@ -281,35 +297,25 @@ class AuthNotifier extends StateNotifier<AuthState> {
         body: {'action': 'register_session'},
       );
       final sessionId = response.data?['session_id'] as String?;
-      _subscribeToRevocations();
+      await subscribeToRevocations();
       return sessionId;
     } catch (e) {
       debugPrint('registerWebSession error: $e');
       // Even if register_session failed, still subscribe — a revoke can
       // arrive on this user's channel from any path that captured the
       // auth_session_id (e.g. a prior QR consumption).
-      _subscribeToRevocations();
+      await subscribeToRevocations();
       return null;
     }
   }
 
   RealtimeChannel? _revokeChannel;
 
-  /// Subscribe to the user-scoped revocation channel and sign out only when
-  /// the broadcast targets this client's specific auth.sessions.id.
-  ///
-  /// The mobile device manager publishes on `auth_revoke:<user_id>` with a
-  /// payload of `{ qr_session_id, auth_session_id }`. We compare the
-  /// payload's auth_session_id against this client's own access_token
-  /// session_id claim — if they match, this is the device being revoked.
-  /// If they don't match, the revocation was for a different web session
-  /// belonging to the same user (e.g. a different browser).
-  void _subscribeToRevocations() {
+  Future<void> subscribeToRevocations() async {
     if (!BCSupabase.isInitialized) return;
     final userId = state.user?.id;
     if (userId == null) return;
 
-    // Re-subscribing? Tear down the old channel first.
     if (_revokeChannel != null) {
       try {
         BCSupabase.client.removeChannel(_revokeChannel!);
@@ -317,13 +323,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
       _revokeChannel = null;
     }
 
+    final ready = Completer<void>();
     _revokeChannel = BCSupabase.client.channel('auth_revoke:$userId').onBroadcast(
       event: 'session_revoked',
       callback: (payload) {
         final targetAuthSessionId = payload['auth_session_id'] as String?;
         final selfAuthSessionId = _selfAuthSessionId();
-        // If the broadcast carries a specific target and it doesn't match
-        // this client, ignore — a different device on the same account.
         if (targetAuthSessionId != null &&
             selfAuthSessionId != null &&
             targetAuthSessionId != selfAuthSessionId) {
@@ -333,7 +338,23 @@ class AuthNotifier extends StateNotifier<AuthState> {
         debugPrint('Session revoked by mobile device — signing out');
         signOut();
       },
-    ).subscribe();
+    ).subscribe((status, [error]) {
+      if (ready.isCompleted) return;
+      if (status == RealtimeSubscribeStatus.subscribed) {
+        ready.complete();
+      } else if (status == RealtimeSubscribeStatus.channelError ||
+          status == RealtimeSubscribeStatus.timedOut ||
+          status == RealtimeSubscribeStatus.closed) {
+        ready.complete();
+      }
+    });
+
+    await ready.future.timeout(
+      const Duration(seconds: 4),
+      onTimeout: () {
+        debugPrint('auth_revoke subscribe timed out — proceeding without confirmed channel');
+      },
+    );
   }
 
   /// Decode the `session_id` claim from this client's current access_token
