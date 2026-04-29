@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:beautycita/config/fonts.dart';
 import '../../config/constants.dart';
+import '../../config/routes.dart';
 import '../../providers/business_provider.dart';
 import '../../providers/feature_toggle_provider.dart';
 import 'package:beautycita_core/supabase.dart';
@@ -662,6 +664,51 @@ class _BusinessSettingsScreenState
                     }),
                   ],
                 ],
+              ),
+            ),
+
+            // ---------- Importar clientes ----------
+            const SizedBox(height: AppConstants.paddingLG),
+            _SectionHeader(label: 'IMPORTAR CLIENTES'),
+            const SizedBox(height: AppConstants.paddingSM),
+            InkWell(
+              onTap: () => context.push(AppRoutes.businessImport),
+              borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+              child: Container(
+                decoration: _cardDecoration(colors),
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Icon(Icons.cloud_upload_outlined,
+                        size: 32, color: colors.primary),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Importar de otro sistema',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: colors.onSurface,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Sube tu lista de clientes desde Fresha, Booksy, Vagaro, Square, Acuity, GlossGenius o cualquier CSV/JSON/XML.',
+                            style: GoogleFonts.nunito(
+                              fontSize: 13,
+                              color: colors.onSurface.withValues(alpha: 0.6),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.chevron_right,
+                        color: colors.onSurface.withValues(alpha: 0.3)),
+                  ],
+                ),
               ),
             ),
 

@@ -47,6 +47,7 @@ import 'package:beautycita/screens/press_screen.dart';
 import 'package:beautycita/screens/system_status_screen.dart';
 import 'package:beautycita/screens/report_problem_screen.dart';
 import 'package:beautycita/screens/business/portfolio_capture_screen.dart';
+import 'package:beautycita/screens/business/business_import_screen.dart';
 import 'package:beautycita/screens/booking_confirmation_screen.dart';
 import 'package:beautycita/screens/favorites_screen.dart';
 import 'app_transitions.dart';
@@ -98,6 +99,7 @@ class AppRoutes {
   static const String systemStatus = '/system-status';
   static const String reportProblem = '/report-problem';
   static const String portfolioCapture = '/business/portfolio-capture';
+  static const String businessImport = '/business/importar';
   static const String favorites = '/favorites';
   static const String bookingConfirmed = '/booking-confirmed/:bookingId';
 
@@ -595,6 +597,14 @@ class AppRoutes {
             ),
           );
         },
+      ),
+      GoRoute(
+        path: businessImport,
+        name: 'business-import',
+        pageBuilder: (context, state) => bcSweepPage(
+          key: state.pageKey,
+          child: const BusinessImportScreen(),
+        ),
       ),
       GoRoute(
         path: '/booking-confirmed/:bookingId',
