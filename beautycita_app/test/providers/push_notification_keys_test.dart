@@ -36,10 +36,9 @@ void main() {
                 '${file.path}:${i + 1} (custom_title without custom_body)');
           }
           if (window.contains("'title'") &&
-              !window.contains('custom_title') &&
-              !window.contains('booking_id')) {
+              !window.contains('custom_title')) {
             violations.add(
-                '${file.path}:${i + 1} (raw title without custom_title or booking_id)');
+                '${file.path}:${i + 1} (raw title without custom_title)');
           }
         }
       }

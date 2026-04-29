@@ -414,17 +414,19 @@ class _BusinessCalendarScreenState
         // `.catchError((_) {})` was a type error (onError must return a
         // FunctionResponse, not void). `.ignore()` is the correct
         // swallow-everything idiom.
-        SupabaseClientService.client.functions.invoke(
-          'send-push-notification',
-          body: {
-            'user_id': clientUserId,
-            'notification_type': 'booking_cancelled',
-            'booking_id': id,
-            'custom_title': 'Cita Cancelada',
-            'custom_body': 'Tu salon cancelo tu cita. Se te devolvio el pago completo.',
-            'data': {'type': 'booking_cancelled', 'booking_id': id},
-          },
-        ).ignore();
+        if (clientUserId != null) {
+          SupabaseClientService.client.functions.invoke(
+            'send-push-notification',
+            body: {
+              'user_id': clientUserId,
+              'notification_type': 'booking_cancelled',
+              'booking_id': id,
+              'custom_title': 'Cita Cancelada',
+              'custom_body': 'Tu salon cancelo tu cita. Se te devolvio el pago completo.',
+              'data': {'type': 'booking_cancelled', 'booking_id': id},
+            },
+          ).ignore();
+        }
         if (mounted) await showShredderTransition(context);
       }
     } catch (e, stack) {
