@@ -11,11 +11,15 @@ class DeviceSession {
   final String id;
   final String deviceName;
   final DateTime linkedAt;
+  /// 'consumed' = web finished sign-in. 'authorized' = mobile authorized
+  /// but the web hasn't completed its handshake yet (rare transient).
+  final String status;
 
   DeviceSession({
     required this.id,
     required this.deviceName,
     required this.linkedAt,
+    this.status = 'consumed',
   });
 }
 
@@ -55,10 +59,14 @@ class DeviceSessionsNotifier extends StateNotifier<AsyncValue<List<DeviceSession
         sessions.map((s) {
           final map = s as Map<String, dynamic>;
           final linkedAt = DateTime.tryParse(map['linked_at'] as String? ?? '') ?? DateTime.now();
+          final status = map['status'] as String? ?? 'consumed';
           return DeviceSession(
             id: map['id'] as String,
-            deviceName: 'Sesion Web',
+            deviceName: status == 'authorized'
+                ? 'Sesion Web (vinculando…)'
+                : 'Sesion Web',
             linkedAt: linkedAt,
+            status: status,
           );
         }).toList(),
       );

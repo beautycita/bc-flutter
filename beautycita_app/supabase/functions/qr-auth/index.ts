@@ -263,6 +263,30 @@ serve(async (req) => {
 
       if (upError) throw upError;
 
+      // Realtime kick — emit on the per-session channel the web client
+      // subscribes to at QR display time. The web also polls every 3s,
+      // but the broadcast removes the 0-3s wait and avoids cases where
+      // the poll tick lands after the user has switched tabs.
+      try {
+        const ch = supabase.channel(`qr_auth_${session.id}`);
+        await new Promise<void>((resolve) => {
+          ch.subscribe((status: string) => {
+            if (status === "SUBSCRIBED") {
+              ch.send({
+                type: "broadcast",
+                event: "session_authorized",
+                payload: { session_id: session.id },
+              });
+              resolve();
+            }
+          });
+        });
+        await new Promise((r) => setTimeout(r, 300));
+        supabase.removeChannel(ch);
+      } catch (_) {
+        // Broadcast is best-effort; the 3s poll is still the safety net.
+      }
+
       return json({ success: true });
     }
 
@@ -348,20 +372,26 @@ serve(async (req) => {
       } = await supabase.auth.getUser(token);
       if (authError || !user) return json({ error: "Invalid token" }, 401);
 
-      // Get consumed (active) sessions for this user
+      // Active sessions = anything the user has authorized that hasn't
+      // been revoked yet. Includes both 'consumed' (web finished verify
+      // and minted tokens) and 'authorized' (web hasn't called verify
+      // yet — usually transient sub-second state, but we list it so
+      // the user can revoke a half-completed link from the phone if
+      // the web step never finishes).
       const { data: sessions, error: sessError } = await supabase
         .from("qr_auth_sessions")
-        .select("id, authorized_at, consumed_at")
+        .select("id, status, authorized_at, consumed_at, created_at")
         .eq("user_id", user.id)
-        .eq("status", "consumed")
-        .order("consumed_at", { ascending: false });
+        .in("status", ["consumed", "authorized"])
+        .order("authorized_at", { ascending: false });
 
       if (sessError) throw sessError;
 
       return json({
         sessions: (sessions ?? []).map((s: any) => ({
           id: s.id,
-          linked_at: s.consumed_at || s.authorized_at,
+          status: s.status,
+          linked_at: s.consumed_at || s.authorized_at || s.created_at,
         })),
       });
     }
