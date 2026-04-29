@@ -1,5 +1,13 @@
 import 'package:beautycita_core/supabase.dart';
 
+int _djb2(String s) {
+  var h = 5381;
+  for (var i = 0; i < s.length; i++) {
+    h = ((h << 5) + h + s.codeUnitAt(i)) & 0xFFFFFFFF;
+  }
+  return h;
+}
+
 /// Create a Stripe PaymentIntent via the edge function.
 /// Returns a map with 'client_secret', 'customer_id', etc.
 Future<Map<String, dynamic>> createWebPaymentIntent({
@@ -10,6 +18,7 @@ Future<Map<String, dynamic>> createWebPaymentIntent({
   required int amountCents,
   required String userId,
 }) async {
+  final idempotencyKey = 'pi-${_djb2('$userId|$serviceId|$scheduledAt|$amountCents').toRadixString(16)}';
   final response = await BCSupabase.client.functions.invoke(
     'create-payment-intent',
     body: {
@@ -18,9 +27,11 @@ Future<Map<String, dynamic>> createWebPaymentIntent({
       'staff_id': staffId,
       'scheduled_at': scheduledAt,
       'amount': amountCents,
+      'amount_cents': amountCents,
       'user_id': userId,
       'payment_type': 'full',
       'payment_method': 'card',
+      'idempotency_key': idempotencyKey,
     },
   );
 

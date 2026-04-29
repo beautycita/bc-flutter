@@ -83,6 +83,7 @@ serve(async (req) => {
 
     const body: PaymentIntentRequest = await req.json();
     const { service_id, booking_id, staff_id, scheduled_at, payment_type = "full", payment_method = "card" } = body;
+    const idempotencyKey = (body as Record<string, unknown>).idempotency_key as string | undefined;
 
     if (!service_id || !scheduled_at) {
       return json({ error: "service_id and scheduled_at are required" }, 400);
@@ -354,19 +355,25 @@ serve(async (req) => {
       metadata.provider_tax_residency = business.tax_residency ?? "MX";
     }
 
-    // Create PaymentIntent with Connect destination charge
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: amountCentavos,
-      currency: "mxn",
-      customer: stripeCustomerId,
-      ...paymentMethodConfig,
-      // Transfer to connected account, minus application fee
-      transfer_data: {
-        destination: business.stripe_account_id,
+    // Create PaymentIntent with Connect destination charge.
+    // Forward client-supplied idempotency_key as Stripe Idempotency-Key so a
+    // retry of the same booking attempt returns the same PaymentIntent
+    // instead of creating a duplicate charge.
+    const paymentIntent = await stripe.paymentIntents.create(
+      {
+        amount: amountCentavos,
+        currency: "mxn",
+        customer: stripeCustomerId,
+        ...paymentMethodConfig,
+        // Transfer to connected account, minus application fee
+        transfer_data: {
+          destination: business.stripe_account_id,
+        },
+        application_fee_amount: applicationFeeAmount,
+        metadata,
       },
-      application_fee_amount: applicationFeeAmount,
-      metadata,
-    });
+      idempotencyKey ? { idempotencyKey } : undefined,
+    );
 
     const platformFeeMXN = taxInfo ? taxInfo.platformFee : applicationFeeAmount / 100;
     const providerReceives = taxInfo ? taxInfo.providerNet : (amountCentavos - applicationFeeAmount) / 100;
