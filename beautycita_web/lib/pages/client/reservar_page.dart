@@ -3728,6 +3728,18 @@ class _DiscoveredSalonsListState extends ConsumerState<_DiscoveredSalonsList> {
   Future<void> _fetchDiscovered() async {
     if (!mounted) return;
 
+    // Edge function `list` action requires an authenticated session.
+    // Direct PostgREST queries are blocked by the RPs+admins-only RLS
+    // policy on discovered_salons, which previously left this panel
+    // permanently empty for normal customers.
+    if (BCSupabase.client.auth.currentUser == null) {
+      setState(() {
+        _loading = false;
+        _error = 'auth_required';
+      });
+      return;
+    }
+
     final existing = ref.read(bookingFlowProvider).discoveredSalons;
     if (existing.isNotEmpty) {
       setState(() => _loading = false);
@@ -3744,29 +3756,30 @@ class _DiscoveredSalonsListState extends ConsumerState<_DiscoveredSalonsList> {
       final lat = flowState.userLat;
       final lng = flowState.userLng;
 
-      const delta = 0.45;
+      final body = <String, dynamic>{
+        'action': 'list',
+        if (lat != null) 'lat': lat,
+        if (lng != null) 'lng': lng,
+        'radius_km': 50,
+        'limit': 25,
+      };
 
-      var query = BCSupabase.client
-          .from(BCTables.discoveredSalons)
-          .select(
-              'id, business_name, location_address, phone, whatsapp_verified, categories, feature_image_url, rating_average, rating_count, latitude, longitude')
-          .not('phone', 'is', null)
-          .eq('whatsapp_verified', true);
-
-      if (lat != null && lng != null) {
-        query = query
-            .gte('latitude', lat - delta)
-            .lte('latitude', lat + delta)
-            .gte('longitude', lng - delta)
-            .lte('longitude', lng + delta);
-      }
-
-      final response =
-          await query.order('rating_count', ascending: false).limit(25);
+      final response = await BCSupabase.client.functions.invoke(
+        'outreach-discovered-salon',
+        body: body,
+      );
 
       if (!mounted) return;
 
-      final salons = (response as List).cast<Map<String, dynamic>>();
+      final data = response.data;
+      final raw = data is Map ? data['salons'] : null;
+      final salons = (raw is List)
+          ? raw
+              .whereType<Map>()
+              .map((m) => Map<String, dynamic>.from(m))
+              .toList()
+          : <Map<String, dynamic>>[];
+
       ref.read(bookingFlowProvider.notifier).setDiscoveredSalons(salons);
       setState(() => _loading = false);
     } catch (e) {
@@ -3781,20 +3794,60 @@ class _DiscoveredSalonsListState extends ConsumerState<_DiscoveredSalonsList> {
   Future<void> _inviteSalon(String salonId) async {
     if (_invitedIds.contains(salonId)) return;
 
+    // Optimistically mark as in-flight so duplicate taps no-op.
+    setState(() => _invitedIds.add(salonId));
+
     try {
-      await BCSupabase.client.functions.invoke(
+      final response = await BCSupabase.client.functions.invoke(
         'outreach-discovered-salon',
         body: {
-          'salon_id': salonId,
-          'invited_by': BCSupabase.client.auth.currentUser?.id,
+          'action': 'invite',
+          'discovered_salon_id': salonId,
         },
       );
+
+      final data = response.data;
+      final errorCode = data is Map ? data['error'] as String? : null;
+      if (errorCode != null) {
+        if (!mounted) return;
+        setState(() => _invitedIds.remove(salonId));
+        _showInviteError(errorCode, data is Map ? data['message'] as String? : null);
+      }
     } catch (e) {
       debugPrint('[RESERVAR] Salon outreach invite failed: $e');
+      if (!mounted) return;
+      setState(() => _invitedIds.remove(salonId));
+      _showInviteError(_extractErrorCode(e), null);
     }
+  }
 
-    if (!mounted) return;
-    setState(() => _invitedIds.add(salonId));
+  String _extractErrorCode(Object e) {
+    final msg = e.toString();
+    if (msg.contains('identity_required')) return 'identity_required';
+    if (msg.contains('daily_limit')) return 'daily_limit';
+    if (msg.contains('cooldown')) return 'cooldown';
+    if (msg.contains('Unauthorized') || msg.contains('401')) return 'auth_required';
+    return 'unknown';
+  }
+
+  void _showInviteError(String code, String? serverMessage) {
+    final message = switch (code) {
+      'auth_required' =>
+        'Inicia sesión para invitar salones.',
+      'identity_required' =>
+        serverMessage ?? 'Verifica tu teléfono o email antes de invitar salones.',
+      'daily_limit' =>
+        serverMessage ?? 'Alcanzaste el límite diario de invitaciones. Intenta mañana.',
+      'cooldown' =>
+        serverMessage ?? 'Espera unos segundos entre invitaciones.',
+      _ => 'No pudimos enviar la invitación. Intenta de nuevo.',
+    };
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
@@ -3849,7 +3902,7 @@ class _DiscoveredSalonsListState extends ConsumerState<_DiscoveredSalonsList> {
                         Text(
                           _loading
                               ? 'buscando...'
-                              : '${salons.length} salones verificados',
+                              : '${salons.length} salones disponibles',
                           style: const TextStyle(
                             color: Color(0xCCFFFFFF),
                             fontSize: 12,
@@ -3883,13 +3936,22 @@ class _DiscoveredSalonsListState extends ConsumerState<_DiscoveredSalonsList> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               _buildSystemBubble(
-                                  'No se pudieron cargar los salones'),
+                                _error == 'auth_required'
+                                    ? 'Inicia sesión para ver salones cerca de ti e invitarlos por WhatsApp.'
+                                    : 'No se pudieron cargar los salones',
+                              ),
                               const SizedBox(height: 12),
                               TextButton(
-                                onPressed: _fetchDiscovered,
+                                onPressed: _error == 'auth_required'
+                                    ? () => context.go('/auth')
+                                    : _fetchDiscovered,
                                 style: TextButton.styleFrom(
                                     foregroundColor: _waHeaderBg),
-                                child: const Text('Reintentar'),
+                                child: Text(
+                                  _error == 'auth_required'
+                                      ? 'Iniciar sesión'
+                                      : 'Reintentar',
+                                ),
                               ),
                             ],
                           ),

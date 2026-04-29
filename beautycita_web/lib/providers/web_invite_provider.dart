@@ -394,7 +394,8 @@ class WebInviteNotifier extends StateNotifier<WebInviteState> {
         body: {
           'action': 'invite',
           'discovered_salon_id': salonId,
-          if (state.inviteMessage != null) 'message': state.inviteMessage,
+          if (state.inviteMessage != null)
+            'invite_message': state.inviteMessage,
           'platform': 'wa',
         },
       );
