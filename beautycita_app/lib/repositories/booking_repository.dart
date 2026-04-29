@@ -8,7 +8,7 @@ class BookingRepository {
   ///
   /// Routes through [create_booking_with_financials] RPC so that every booking
   /// has corresponding commission_records and tax_withholdings rows.
-  Future<Booking> createBooking({
+  Future<String> createBooking({
     required String providerId,
     String? providerServiceId,
     required String serviceName,
@@ -73,7 +73,12 @@ class BookingRepository {
     if (row == null) {
       throw Exception('create_booking_with_financials returned empty result');
     }
-    return Booking.fromJson(Map<String, dynamic>.from(row as Map));
+    final bookingId = row['booking_id'] as String?;
+    if (bookingId == null) {
+      throw Exception(
+          'create_booking_with_financials returned no booking_id: $row');
+    }
+    return bookingId;
   }
 
   /// Get the current user's bookings, optionally filtered by status,
