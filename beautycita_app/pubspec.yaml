@@ -1,7 +1,7 @@
 name: beautycita
 description: "BeautyCita — Intelligent Beauty Booking Agent"
 publish_to: 'none'
-version: 1.2.1+60154
+version: 1.2.1+60158
 
 environment:
   sdk: ^3.10.8
@@ -34,7 +34,9 @@ dependencies:
   share_plus: ^12.0.2
   path_provider: ^2.1.5
   google_sign_in: ^7.2.0
-  flutter_stripe: ^12.5.0
+  # flutter_stripe 12.6.0 broke Android build (StripeAndroidPlugin.kt:380
+  # cardParams unresolved). Pin tight until upstream cuts 12.6.1.
+  flutter_stripe: 12.5.0
   firebase_core: ^4.6.0
   firebase_messaging: ^16.1.3
   flutter_local_notifications: ^21.0.0
@@ -56,6 +58,14 @@ dependencies:
   image: ^4.1.2
   printing: ^5.14.3
   video_player: ^2.9.6
+
+# stripe_android 12.6.0 + stripe_ios 12.6.0 ship with a Kotlin/Swift
+# compile error (StripeAndroidPlugin.kt:380 cardParams unresolved).
+# Force the transitive resolution back to 12.5.0 until 12.6.1 lands.
+dependency_overrides:
+  stripe_android: 12.5.0
+  stripe_ios: 12.5.0
+  stripe_platform_interface: 12.5.0
 
 dev_dependencies:
   flutter_test:
