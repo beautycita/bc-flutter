@@ -877,7 +877,7 @@ class _HorizontalDayViewState extends ConsumerState<_HorizontalDayView> {
         if (oldStaffName != null) 'old_staff_name': oldStaffName,
         'salon_name': 'Ejemplo Salon',
         'new_start': newStart.toIso8601String(),
-        'salon_phone': '+52 322 142 9800',
+        'salon_phone': '+52 322 320 8884',
       });
     } catch (e) {
       debugPrint('[DemoReschedule] Edge function error: $e');
@@ -1913,7 +1913,7 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
             'client_name': widget.appt['customer_name'] ?? 'Cliente',
             'staff_name': staffName,
             'salon_name': 'Ejemplo Salon',
-            'salon_phone': '+52 322 142 9800',
+            'salon_phone': '+52 322 320 8884',
           });
         } catch (e) {
           debugPrint('[DemoCancel] Edge function error: $e');

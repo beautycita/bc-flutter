@@ -2162,7 +2162,7 @@ class _LandingPageState extends State<LandingPage>
         ]),
         _footerCol('Soporte', [
           _FooterLink('Centro de ayuda', route: '/soporte'),
-          _FooterLink('WhatsApp', url: 'https://wa.me/527206777800'),
+          _FooterLink('WhatsApp', url: 'https://wa.me/523223208884'),
           _FooterLink('soporte@beautycita.com', url: 'mailto:soporte@beautycita.com'),
         ]),
         _footerCol('Ciudades', [
