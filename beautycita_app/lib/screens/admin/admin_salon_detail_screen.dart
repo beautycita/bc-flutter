@@ -1824,8 +1824,9 @@ class _AppointmentRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final date = appointment['date'] as String?;
-    final time = appointment['time'] as String?;
+    final startsAt = DateTime.tryParse(
+      appointment['starts_at'] as String? ?? '',
+    );
     final status = appointment['status'] as String?;
     final price = (appointment['price'] as num?)?.toDouble();
 
@@ -1834,11 +1835,16 @@ class _AppointmentRow extends StatelessWidget {
 
     final profileMap =
         appointment['profiles'] as Map<String, dynamic>?;
-    final clientName =
-        profileMap?['display_name'] as String? ?? 'Sin cliente';
+    final clientName = (profileMap?['full_name'] as String?) ??
+        (profileMap?['username'] as String?) ??
+        'Sin cliente';
 
-    final dateStr = date != null ? date.substring(0, 10) : '--';
-    final timeStr = time != null ? time.substring(0, 5) : '';
+    final dateStr = startsAt != null
+        ? '${startsAt.year}-${startsAt.month.toString().padLeft(2, '0')}-${startsAt.day.toString().padLeft(2, '0')}'
+        : '--';
+    final timeStr = startsAt != null
+        ? '${startsAt.hour.toString().padLeft(2, '0')}:${startsAt.minute.toString().padLeft(2, '0')}'
+        : '';
     final statusColor = _statusColor(status);
 
     return Padding(
@@ -2007,8 +2013,9 @@ class _ReviewRow extends StatelessWidget {
     final comment = review['comment'] as String?;
     final createdAt = review['created_at'] as String?;
     final profileMap = review['profiles'] as Map<String, dynamic>?;
-    final clientName =
-        profileMap?['display_name'] as String? ?? 'Usuario';
+    final clientName = (profileMap?['full_name'] as String?) ??
+        (profileMap?['username'] as String?) ??
+        'Usuario';
 
     final dateStr =
         createdAt != null ? createdAt.substring(0, 10) : '--';

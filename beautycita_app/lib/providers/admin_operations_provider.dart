@@ -251,7 +251,7 @@ final opsLogsProvider = FutureProvider<List<OpsLogEntry>>((ref) async {
     try {
       final auditData = await client
           .from(BCTables.auditLog)
-          .select('id, action, details, created_at, actor_id')
+          .select('id, action, details, created_at, admin_id')
           .order('created_at', ascending: false)
           .limit(20);
 
@@ -280,7 +280,7 @@ final opsLogsProvider = FutureProvider<List<OpsLogEntry>>((ref) async {
           timestamp:
               DateTime.tryParse(row['created_at']?.toString() ?? '') ??
                   DateTime.now(),
-          actor: row['actor_id']?.toString(),
+          actor: row['admin_id']?.toString(),
         ));
       }
     } catch (_) {

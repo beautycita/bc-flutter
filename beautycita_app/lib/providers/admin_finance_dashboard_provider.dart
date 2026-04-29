@@ -800,7 +800,8 @@ final platformSatDeclarationsProvider =
     final data = await SupabaseClientService.client
         .from(BCTables.platformSatDeclarations)
         .select()
-        .order('period', ascending: false)
+        .order('period_year', ascending: false)
+        .order('period_month', ascending: false)
         .limit(24);
 
     return (data as List)
@@ -821,7 +822,8 @@ final satMonthlyReportsProvider =
     final data = await SupabaseClientService.client
         .from(BCTables.satMonthlyReports)
         .select('*, businesses(name)')
-        .order('period', ascending: false)
+        .order('period_year', ascending: false)
+        .order('period_month', ascending: false)
         .limit(500);
 
     return (data as List)

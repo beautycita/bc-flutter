@@ -977,9 +977,9 @@ final adminSalonDetailProvider = FutureProvider.family<Map<String, dynamic>?, St
 final adminSalonAppointmentsProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, businessId) async {
   final response = await SupabaseClientService.client
       .from(BCTables.appointments)
-      .select('id, user_id, service_id, date, time, status, payment_status, price, profiles!appointments_user_id_fkey(display_name), services(name)')
+      .select('id, user_id, service_id, starts_at, ends_at, status, payment_status, price, profiles!appointments_user_id_fkey(full_name, username), services(name)')
       .eq('business_id', businessId)
-      .order('date', ascending: false)
+      .order('starts_at', ascending: false)
       .limit(10);
   return (response as List).cast<Map<String, dynamic>>();
 });
@@ -999,7 +999,7 @@ final adminSalonDisputesProvider = FutureProvider.family<List<Map<String, dynami
 final adminSalonReviewsProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, businessId) async {
   final response = await SupabaseClientService.client
       .from(BCTables.reviews)
-      .select('id, rating, comment, created_at, profiles!reviews_user_id_fkey(display_name)')
+      .select('id, rating, comment, created_at, profiles!reviews_user_id_fkey(full_name, username)')
       .eq('business_id', businessId)
       .order('created_at', ascending: false)
       .limit(10);
