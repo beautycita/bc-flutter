@@ -738,41 +738,58 @@ class _CreateGiftCardSheetState extends ConsumerState<_CreateGiftCardSheet> {
         // Salon-issued: cash already collected, create card directly
         // BC 3% charged to salon via commission record
         final code = _generateCode();
-        await SupabaseClientService.client.from(BCTables.giftCards).insert({
-          'business_id': widget.bizId,
-          'code': code,
-          'amount': amount,
-          'remaining_amount': amount,
-          'buyer_name': _buyerCtrl.text.trim().isEmpty ? null : _buyerCtrl.text.trim(),
-          'recipient_name': _recipientCtrl.text.trim().isEmpty ? null : _recipientCtrl.text.trim(),
-          'message': _messageCtrl.text.trim().isEmpty ? null : _messageCtrl.text.trim(),
-          'expires_at': _expiresAt?.toUtc().toIso8601String(),
-          'is_active': true,
-        });
-
-        // Record 3% commission charged to salon
-        final bcCommission = amount * 0.03;
-        await SupabaseClientService.client.from(BCTables.commissionRecords).insert({
-          'business_id': widget.bizId,
-          'amount': double.parse(bcCommission.toStringAsFixed(2)),
-          'rate': 0.03,
-          'source': 'gift_card',
-          'period_month': DateTime.now().month,
-          'period_year': DateTime.now().year,
-          'status': 'collected',
-        });
+        // Atomic: gift_cards + commission_records in one transaction
+        await SupabaseClientService.client.rpc(
+          'record_gift_card_commission',
+          params: {
+            'p_business_id': widget.bizId,
+            'p_code': code,
+            'p_amount': amount,
+            'p_buyer_name': _buyerCtrl.text.trim().isEmpty
+                ? null
+                : _buyerCtrl.text.trim(),
+            'p_recipient_name': _recipientCtrl.text.trim().isEmpty
+                ? null
+                : _recipientCtrl.text.trim(),
+            'p_message': _messageCtrl.text.trim().isEmpty
+                ? null
+                : _messageCtrl.text.trim(),
+            'p_expires_at': _expiresAt?.toUtc().toIso8601String(),
+          },
+        );
 
         // If virtual, send email with code
         if (_isVirtual && _emailCtrl.text.trim().isNotEmpty) {
-          SupabaseClientService.client.functions.invoke('send-email', body: {
-            'to': _emailCtrl.text.trim(),
-            'subject': 'Tarjeta de Regalo BeautyCita — \$${amount.toStringAsFixed(0)} MXN',
-            'text': 'Tienes una tarjeta de regalo!\n\n'
-                'Monto: \$${amount.toStringAsFixed(0)} MXN\n'
-                'Codigo: $code\n'
-                '${_messageCtrl.text.trim().isNotEmpty ? 'Mensaje: ${_messageCtrl.text.trim()}\n' : ''}'
-                '\nCanjea tu codigo en la app BeautyCita o en beautycita.com',
-          }).then((_) {}).catchError((_) {});
+          final msgText = _messageCtrl.text.trim();
+          final messageBlock = msgText.isNotEmpty
+              ? '<p style="margin:0 0 20px 0;font-size:14px;color:#374151;'
+                  'font-style:italic;text-align:center;">'
+                  '"$msgText"</p>'
+              : '';
+          try {
+            await SupabaseClientService.client.functions.invoke('send-email', body: {
+              'template': 'gift_card',
+              'to': _emailCtrl.text.trim(),
+              'subject': 'Tu tarjeta de regalo BeautyCita — \$${amount.toStringAsFixed(0)} MXN',
+              'variables': {
+                'AMOUNT': amount.toStringAsFixed(0),
+                'CODE': code,
+                'MESSAGE': messageBlock,
+              },
+            });
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Tarjeta creada, pero no pudimos enviar el email. '
+                    'Comparte el codigo manualmente: $code',
+                  ),
+                  duration: const Duration(seconds: 8),
+                ),
+              );
+            }
+          }
         }
 
         widget.onCreated();

@@ -783,6 +783,132 @@ const TEMPLATES: Record<string, string> = {
   </table>
 </body>
 </html>`,
+
+  gift_card: `<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
+  <title>Tu tarjeta de regalo BeautyCita</title>
+  <style>
+    body,table,td,p,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}
+    table,td{mso-table-lspace:0pt;mso-table-rspace:0pt;}
+    img{border:0;outline:none;text-decoration:none;}
+    body{margin:0;padding:0;width:100%!important;background-color:#F5F0E8;}
+    @media only screen and (max-width:620px){
+      .email-container{width:100%!important;max-width:100%!important;}
+      .content-padding{padding:24px 20px!important;}
+    }
+  </style>
+</head>
+<body style="margin:0;padding:0;background-color:#F5F0E8;font-family:'Nunito','Segoe UI',Helvetica,Arial,sans-serif;">
+  <div style="display:none;font-size:1px;color:#F5F0E8;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
+    Tu tarjeta de regalo BeautyCita por ${{AMOUNT}} MXN esta lista.
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F5F0E8;">
+    <tr>
+      <td align="center" style="padding:24px 10px;">
+
+        <!-- Gold outer border -->
+        <table role="presentation" class="email-container" width="600" cellpadding="0" cellspacing="0" border="0"
+               style="border-collapse:collapse;background-color:#D4AF37;background-image:linear-gradient(135deg,#8B6914 0%,#D4AF37 12%,#FFF8DC 28%,#FFD700 42%,#C19A26 58%,#F5D547 72%,#D4AF37 85%,#8B6914 100%);border-radius:4px;">
+          <tr>
+            <td style="padding:10px;">
+
+              <!-- Maroon inner frame -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="border-collapse:collapse;background-color:#FFF8F0;border-radius:2px;">
+                <tr>
+                  <td class="content-padding" align="center" style="padding:36px 40px 28px 40px;">
+
+                    <!-- Logo -->
+                    <img src="https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/media/brand/logo.png"
+                         width="60" height="60" alt="BeautyCita"
+                         style="display:block;border-radius:50%;margin:0 auto 20px auto;">
+
+                    <!-- Heading -->
+                    <p style="margin:0 0 6px 0;font-family:Georgia,'Times New Roman',serif;font-size:26px;font-weight:700;color:#D4AF37;letter-spacing:0.5px;">
+                      Tarjeta de regalo
+                    </p>
+                    <p style="margin:0 0 28px 0;font-family:Georgia,'Times New Roman',serif;font-size:14px;color:#7B1038;letter-spacing:1px;text-transform:uppercase;">
+                      BeautyCita
+                    </p>
+
+                    <!-- Amount badge -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 28px auto;">
+                      <tr>
+                        <td style="background-color:#7B1038;border-radius:12px;padding:14px 36px;text-align:center;">
+                          <span style="font-family:Georgia,'Times New Roman',serif;font-size:36px;font-weight:700;color:#FFD700;letter-spacing:1px;">
+                            ${{AMOUNT}} MXN
+                          </span>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- Code box -->
+                    <p style="margin:0 0 10px 0;font-size:13px;color:#6B7280;text-transform:uppercase;letter-spacing:1px;">
+                      Tu codigo de canje
+                    </p>
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 28px auto;">
+                      <tr>
+                        <td style="background-color:#F3E8FF;border:2px solid #7C3AED;border-radius:10px;padding:12px 28px;text-align:center;">
+                          <span style="font-family:'Courier New',Courier,monospace;font-size:26px;font-weight:700;color:#7C3AED;letter-spacing:6px;">
+                            {{CODE}}
+                          </span>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- Optional message -->
+                    {{MESSAGE}}
+
+                    <!-- Instructions -->
+                    <p style="margin:0 0 8px 0;font-size:14px;color:#374151;line-height:1.6;">
+                      Canjea este codigo en la app BeautyCita o en
+                      <a href="https://beautycita.com" style="color:#C2185B;text-decoration:none;">beautycita.com</a>
+                      al realizar tu reserva.
+                    </p>
+
+                    <!-- CTA -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:24px auto 0 auto;">
+                      <tr>
+                        <td style="border-radius:24px;background-color:#C2185B;">
+                          <a href="https://beautycita.com" target="_blank"
+                             style="display:inline-block;padding:14px 36px;color:#ffffff;font-family:'Nunito','Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;text-decoration:none;letter-spacing:0.5px;">
+                            Reservar ahora
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+        </table>
+
+        <!-- Footer -->
+        <table role="presentation" class="email-container" width="600" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td align="center" style="padding:16px 20px 0 20px;">
+              <p style="margin:0;color:#9E9E9E;font-family:'Nunito','Segoe UI',Helvetica,Arial,sans-serif;font-size:11px;">
+                BeautyCita &middot; Guadalajara, Jalisco, Mexico
+              </p>
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`,
 };
 
 // ---------------------------------------------------------------------------
