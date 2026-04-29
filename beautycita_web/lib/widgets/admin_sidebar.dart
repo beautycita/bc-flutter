@@ -48,6 +48,8 @@ const _navItems = <_NavItem>[
   _NavItem(label: 'RPs', icon: Icons.badge_outlined, route: WebRoutes.adminRpTracking),
   _NavItem(label: 'Plantillas', icon: Icons.notifications_none_outlined, route: WebRoutes.adminNotificationTemplates),
   _NavItem(label: 'Chat Admin', icon: Icons.forum_outlined, route: WebRoutes.adminChat),
+  _NavDivider(),
+  _NavItem(label: 'Panel de Negocio', icon: Icons.storefront_outlined, route: WebRoutes.negocio),
 ];
 
 /// Reusable admin sidebar content.

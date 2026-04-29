@@ -144,20 +144,52 @@ serve(async (req) => {
       } = await supabase.auth.getUser(token);
       if (authError || !user) return json({ error: "Invalid token" }, 401);
 
-      // Check if user already has an active web session
-      const { data: existing } = await supabase
-        .from("qr_auth_sessions")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("status", "consumed")
-        .limit(1)
-        .maybeSingle();
+      // Capture auth.sessions.id from this caller's access_token so a
+      // future revoke from the mobile device manager can authoritatively
+      // delete the row. Without this, register_session-created rows had
+      // auth_session_id=NULL and the revoke RPC's `DELETE FROM
+      // auth.sessions` was skipped — meaning the web tab stayed signed
+      // in even after the user revoked it.
+      const callerAuthSessionId = decodeJwtSessionId(token);
+
+      // Match on (user_id, auth_session_id) so distinct browsers each get
+      // their own row instead of all collapsing onto a single record.
+      let existing: { id: string } | null = null;
+      if (callerAuthSessionId) {
+        const r = await supabase
+          .from("qr_auth_sessions")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("auth_session_id", callerAuthSessionId)
+          .eq("status", "consumed")
+          .limit(1)
+          .maybeSingle();
+        existing = r.data;
+      }
+      // Legacy fallback: if we couldn't match by auth_session_id (caller
+      // didn't send a session-shaped token, or the row was created before
+      // we started capturing), update the most recent consumed row to
+      // backfill the auth_session_id and refresh the timestamp.
+      if (!existing) {
+        const r = await supabase
+          .from("qr_auth_sessions")
+          .select("id, auth_session_id")
+          .eq("user_id", user.id)
+          .eq("status", "consumed")
+          .is("auth_session_id", null)
+          .order("consumed_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        existing = r.data;
+      }
 
       if (existing) {
-        // Refresh the existing session's timestamp
         await supabase
           .from("qr_auth_sessions")
-          .update({ consumed_at: new Date().toISOString() })
+          .update({
+            consumed_at: new Date().toISOString(),
+            ...(callerAuthSessionId ? { auth_session_id: callerAuthSessionId } : {}),
+          })
           .eq("id", existing.id);
         return json({ success: true, session_id: existing.id });
       }
@@ -172,6 +204,7 @@ serve(async (req) => {
           email: user.email,
           authorized_at: new Date().toISOString(),
           consumed_at: new Date().toISOString(),
+          auth_session_id: callerAuthSessionId,
           expires_at: new Date(
             Date.now() + 30 * 24 * 60 * 60 * 1000
           ).toISOString(), // 30 days
