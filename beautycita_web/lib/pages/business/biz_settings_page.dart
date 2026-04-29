@@ -10,6 +10,7 @@ import '../../config/breakpoints.dart';
 import '../../config/web_theme.dart';
 import '../../providers/business_portal_provider.dart';
 import '../../providers/demo_providers.dart';
+import '../../widgets/demo_action_guard.dart';
 import '../../widgets/web_design_system.dart';
 
 /// Business settings page — profile, social, operating hours, policies.
@@ -200,6 +201,14 @@ class _SettingsContentState extends ConsumerState<_SettingsContent> {
   }
 
   Future<void> _save() async {
+    if (ref.read(isDemoProvider)) {
+      await DemoActionGuard.intercept(
+        context,
+        isDemo: true,
+        actionLabel: 'guardar cambios de configuracion',
+      );
+      return;
+    }
     setState(() => _saving = true);
     try {
       await BCSupabase.client.from(BCTables.businesses).update({
