@@ -57,38 +57,62 @@ function generateOtp(): string {
   return String(array[0] % 1000000).padStart(6, "0");
 }
 
-/** Send OTP via beautypi WhatsApp API (25s timeout per step) */
+/** Send OTP via the WA server's fast-path endpoint.
+ *
+ * OTPs MUST arrive in seconds — they're useless after a minute. So we
+ * skip the global wa_message_queue (which paces everything at 45s and
+ * drains via a 1-min cron) and call the WA server's `/api/wa/send-otp`
+ * directly. That endpoint enforces its own narrower OTP-only safeguards
+ * (30s per-recipient cooldown, global daily cap, idempotency dedup) so
+ * the line stays protected even though it's bypassing the queue.
+ *
+ * If the fast-path fails for any reason, we fall back to the queue with
+ * CRITICAL priority so the OTP still has a chance to arrive (slowly).
+ */
 async function sendWhatsApp(phone: string, code: string): Promise<{ sent: boolean; channel: string }> {
   if (!BEAUTYPI_WA_URL) return { sent: false, channel: "whatsapp" };
+  const message = `*BeautyCita* - Tu codigo de verificacion es: *${code}*\n\nValido por ${OTP_EXPIRY_MINUTES} minutos. No compartas este codigo.`;
+
+  // Fast-path — synchronous direct call to the WA server.
   try {
-    const ac1 = new AbortController();
-    const t1 = setTimeout(() => ac1.abort(), 25000);
-    const checkRes = await fetch(`${BEAUTYPI_WA_URL}/api/wa/check`, {
+    const ac = new AbortController();
+    const t = setTimeout(() => ac.abort(), 15000); // 15s budget — OTP must be fast
+    const res = await fetch(`${BEAUTYPI_WA_URL}/api/wa/send-otp`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${BEAUTYPI_WA_TOKEN}`,
       },
-      body: JSON.stringify({ phone }),
-      signal: ac1.signal,
+      body: JSON.stringify({ phone, message }),
+      signal: ac.signal,
     });
-    clearTimeout(t1);
-
-    if (!checkRes.ok) {
-      console.log(`[WA] Check failed: ${checkRes.status}`);
+    clearTimeout(t);
+    if (res.ok) {
+      const body = await res.json().catch(() => ({}));
+      if (body?.sent === true) {
+        console.log(`[WA-OTP] fast-path delivered to ${phone.slice(0, 6)}***`);
+        return { sent: true, channel: "whatsapp" };
+      }
+      // 200 with sent:false (idempotency dedup, cooldown). Don't
+      // retry — the user's prior code is still valid.
+      if (body?.skipped) {
+        console.log(`[WA-OTP] skipped: ${body.reason}`);
+        return { sent: true, channel: "whatsapp" };
+      }
+    } else if (res.status === 404) {
+      // Recipient not on WhatsApp — caller will fall back to SMS.
+      console.log(`[WA-OTP] ${phone.slice(0, 6)}*** not on WhatsApp`);
       return { sent: false, channel: "whatsapp" };
+    } else {
+      const errBody = await res.text().catch(() => "");
+      console.warn(`[WA-OTP] fast-path failed ${res.status}: ${errBody.slice(0, 200)} — falling back to queue`);
     }
+  } catch (e) {
+    console.warn(`[WA-OTP] fast-path error: ${e} — falling back to queue`);
+  }
 
-    const checkData = await checkRes.json();
-    if (!checkData.onWhatsApp) {
-      console.log(`[WA] ${phone} not on WhatsApp`);
-      return { sent: false, channel: "whatsapp" };
-    }
-
-    const message = `*BeautyCita* - Tu codigo de verificacion es: *${code}*\n\nValido por ${OTP_EXPIRY_MINUTES} minutos. No compartas este codigo.`;
-
-    // Route through global throttle queue. CRITICAL priority jumps the line
-    // ahead of bulk/marketing traffic. Drainer enforces the 20s pace gate.
+  // Fallback: queue with CRITICAL priority. Slower but more resilient.
+  try {
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
@@ -100,7 +124,7 @@ async function sendWhatsApp(phone: string, code: string): Promise<{ sent: boolea
     });
     return { sent: queueId !== null, channel: "whatsapp" };
   } catch (e) {
-    console.error(`[WA] Error: ${e}`);
+    console.error(`[WA-OTP] queue fallback also failed: ${e}`);
     return { sent: false, channel: "whatsapp" };
   }
 }
@@ -261,11 +285,19 @@ Deno.serve(async (req) => {
       return json({ error: "Codigo incorrecto", remaining: MAX_ATTEMPTS - record.attempts - 1 }, 400);
     }
 
-    // Mark verified
-    await db
+    // Mark verified — compare-and-swap on verified=false so two concurrent
+    // verify-code calls can't both win (lookup at line above already filters
+    // verified=false, this guards the update-side TOCTOU).
+    const { data: claimedRows } = await db
       .from("phone_verification_codes")
       .update({ verified: true, verified_at: new Date().toISOString() })
-      .eq("id", record.id);
+      .eq("id", record.id)
+      .eq("verified", false)
+      .select("id");
+
+    if (!claimedRows || claimedRows.length === 0) {
+      return json({ error: "Codigo ya verificado" }, 409);
+    }
 
     // Update user profile
     await db
