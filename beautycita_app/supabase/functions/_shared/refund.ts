@@ -93,7 +93,6 @@ export async function processRefund(params: RefundParams): Promise<RefundResult>
   // 3. Reverse tax withholdings (appointments only — products don't have tax withholdings yet)
   let taxReversed = { isr: 0, iva: 0 };
   if (appointmentId) {
-    // Look up original withholding
     const { data: original } = await supabase
       .from("tax_withholdings")
       .select("id, isr_withheld, iva_withheld")
@@ -102,7 +101,6 @@ export async function processRefund(params: RefundParams): Promise<RefundResult>
       .maybeSingle();
 
     if (original) {
-      // Call the SQL helper to insert reversal + mark original as reversed
       const { error: taxErr } = await supabase.rpc("reverse_tax_withholding", {
         p_appointment_id: appointmentId,
         p_reason: reason,
@@ -117,6 +115,31 @@ export async function processRefund(params: RefundParams): Promise<RefundResult>
         };
         console.log(`[REFUND] Tax reversed: ISR $${taxReversed.isr}, IVA $${taxReversed.iva}`);
       }
+    } else {
+      // No tax_withholdings row. Two legitimate cases vs one bug:
+      //  A) Appointment pre-dates the withholding ledger (legacy refund)
+      //     → appt.isr_withheld + iva_withheld both 0/NULL. Skip silently.
+      //  B) Appointment is cash/saldo path that never accrued withholdings.
+      //     → same shape (both 0). Skip silently.
+      //  C) Appointment recorded ISR/IVA but the ledger row is missing.
+      //     → bug. Hard-fail so the audit trail surfaces it.
+      const { data: appt } = await supabase
+        .from("appointments")
+        .select("isr_withheld, iva_withheld")
+        .eq("id", appointmentId)
+        .maybeSingle();
+      const isrCharged = Number(appt?.isr_withheld) || 0;
+      const ivaCharged = Number(appt?.iva_withheld) || 0;
+
+      if (isrCharged > 0 || ivaCharged > 0) {
+        console.error(
+          `[REFUND] tax_withholding_record_missing appt=${appointmentId} isr=${isrCharged} iva=${ivaCharged}`,
+        );
+        throw new Error("tax_withholding_record_missing");
+      }
+      console.log(
+        `[REFUND] tax_reversal_skipped appt=${appointmentId} reason=no_withholding_recorded`,
+      );
     }
   }
 
