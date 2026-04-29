@@ -136,11 +136,11 @@ class InviteService {
       'aphrodite-chat',
       body: {
         'action': 'generate_salon_bio',
+        'discovered_salon_id': salon.id,
         'salon_name': salon.name,
         'salon_city': salon.city,
-        'salon_address': salon.address,
         'salon_rating': salon.rating,
-        'salon_reviews_count': salon.reviewsCount,
+        'salon_review_count': salon.reviewsCount,
       },
     ).timeout(const Duration(seconds: 20));
 
@@ -155,7 +155,7 @@ class InviteService {
     }
 
     final data = response.data as Map<String, dynamic>;
-    return data['text'] as String? ?? '';
+    return data['bio'] as String? ?? '';
   }
 
   /// Generate personalized invite message. Returns message text.
@@ -189,7 +189,7 @@ class InviteService {
     }
 
     final data = response.data as Map<String, dynamic>;
-    return data['text'] as String? ?? '';
+    return data['message'] as String? ?? '';
   }
 
   /// Send invite: record interest signal in DB. Server sends via best channel

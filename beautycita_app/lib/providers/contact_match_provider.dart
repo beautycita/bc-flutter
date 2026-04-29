@@ -248,13 +248,13 @@ class ContactMatchNotifier extends StateNotifier<ContactMatchState> {
         await SupabaseClientService.client.functions.invoke(
           'aphrodite-chat',
           body: {
-            'action': 'generate_bio',
-            'salon_id': salon['id']?.toString(),
+            'action': 'generate_salon_bio',
+            'discovered_salon_id': salon['id']?.toString(),
             'salon_name': salon['business_name'],
             'salon_city': salon['location_city'],
-            'salon_categories': salon['matched_categories'],
+            'salon_specialties': salon['matched_categories'],
             'salon_rating': salon['rating_average'],
-            'salon_reviews_count': salon['rating_count'],
+            'salon_review_count': salon['rating_count'],
           },
         );
       } catch (e) {
