@@ -371,6 +371,20 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
 
+      // ── Stripe Connect return URLs ───────────────────────────────────────
+      // Stripe redirects here after the hosted onboarding flow finishes
+      // (complete) or is abandoned (refresh). Just bounce back to the
+      // payments tab; the dashboard's currentBusinessProvider re-fetches
+      // and the new charges/payouts flags surface naturally.
+      GoRoute(
+        path: '/stripe/complete',
+        redirect: (_, __) => WebRoutes.negocioPayments,
+      ),
+      GoRoute(
+        path: '/stripe/refresh',
+        redirect: (_, __) => WebRoutes.negocioPayments,
+      ),
+
       // ── Auth routes (no shell) ───────────────────────────────────────────
       GoRoute(
         path: WebRoutes.auth,

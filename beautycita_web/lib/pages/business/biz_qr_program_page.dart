@@ -120,7 +120,7 @@ class _QrProgramBodyState extends ConsumerState<_QrProgramBody> {
     // route is whitelisted as public-readable; we just open it in a new
     // tab and let the user print/save as PDF.
     final url = Uri.parse(
-      'https://beautycita.com/supabase/functions/v1/generate-qr-poster'
+      'https://beautycita.com/functions/v1/generate-qr-poster'
       '?business_id=$_bizId&poster_type=$posterType',
     );
     launchUrl(url, mode: LaunchMode.externalApplication);

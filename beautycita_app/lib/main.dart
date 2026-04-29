@@ -297,6 +297,23 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
       // Invalid or missing salonId — fall through to home.
     }
 
+    // Stripe Connect return URLs. Stripe redirects here after the hosted
+    // onboarding flow finishes (complete) or is abandoned (refresh). Bring
+    // the user to the business Pagos tab and refresh status.
+    if (path == '/stripe/complete' || path == '/stripe/refresh') {
+      final isComplete = path == '/stripe/complete';
+      supabaseReady.future.then((_) {
+        if (!mounted) return;
+        ref.read(businessTabProvider.notifier).state = 7;
+        AppRoutes.router.go(AppRoutes.business);
+        if (isComplete) {
+          ToastService.showSuccess(
+              'Stripe conectado — tus servicios estan listos');
+        }
+      });
+      return;
+    }
+
     // Cita Express walk-in QR deep link.
     // bizId must be a valid UUID.
     if (path.startsWith('/cita-express/')) {

@@ -117,13 +117,11 @@ class _BusinessQrProgramScreenState extends ConsumerState<BusinessQrProgramScree
       return;
     }
     // The edge function returns HTML with a print button. Open in a new
-    // external browser tab so the user can print / save as PDF.
-    final supabaseUrl = SupabaseClientService.client.rest.url;
-    final base = supabaseUrl.endsWith('/rest/v1')
-        ? supabaseUrl.substring(0, supabaseUrl.length - 8)
-        : supabaseUrl;
+    // external browser tab so the user can print / save as PDF. Use the
+    // public canonical URL (whitelisted in Kong as no-auth) since
+    // launchUrl can't attach an apikey header.
     final url = Uri.parse(
-      '$base/functions/v1/generate-qr-poster'
+      'https://beautycita.com/functions/v1/generate-qr-poster'
       '?business_id=${_biz!['id']}&poster_type=$posterType',
     );
 
