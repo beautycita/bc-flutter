@@ -73,35 +73,31 @@ class _DemoShellInnerState extends ConsumerState<_DemoShellInner> {
     context.go(demoRoute);
   }
 
-  void _exitDemo() {
-    // Sign out the anonymous session created during the demo phone verify
-    // so the router doesn't bounce us into /reservar on the way home,
-    // then navigate. Sign-out is fire-and-forget — the redirect doesn't
-    // need to wait for the token revoke to round-trip.
+  Future<void> _exitDemo() async {
     try {
       if (BCSupabase.isInitialized &&
           BCSupabase.client.auth.currentUser != null) {
-        BCSupabase.client.auth.signOut();
+        await BCSupabase.client.auth.signOut();
       }
     } catch (_) {/* best-effort */}
     try {
       web.window.localStorage.removeItem(demoTokenKey);
     } catch (_) {/* storage unavailable */}
+    if (!mounted) return;
     context.go(WebRoutes.home);
   }
 
-  /// Banner CTA path — same teardown, but land on the register flow so the
-  /// user actually signs up instead of getting router-bounced to /reservar.
-  void _signUpFromDemo() {
+  Future<void> _signUpFromDemo() async {
     try {
       if (BCSupabase.isInitialized &&
           BCSupabase.client.auth.currentUser != null) {
-        BCSupabase.client.auth.signOut();
+        await BCSupabase.client.auth.signOut();
       }
     } catch (_) {/* best-effort */}
     try {
       web.window.localStorage.removeItem(demoTokenKey);
     } catch (_) {/* storage unavailable */}
+    if (!mounted) return;
     context.go(WebRoutes.register);
   }
 
