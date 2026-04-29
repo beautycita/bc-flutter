@@ -5,6 +5,9 @@ import 'package:beautycita/services/behavior_event_service.dart';
 
 class BookingRepository {
   /// Create a new booking for the currently authenticated user.
+  ///
+  /// Routes through [create_booking_with_financials] RPC so that every booking
+  /// has corresponding commission_records and tax_withholdings rows.
   Future<Booking> createBooking({
     required String providerId,
     String? providerServiceId,
@@ -14,8 +17,6 @@ class BookingRepository {
     int durationMinutes = 60,
     double? price,
     String? notes,
-    String? paymentIntentId,
-    String? paymentStatus,
     String? paymentMethod,
     String? transportMode,
     String? staffId,
@@ -42,41 +43,37 @@ class BookingRepository {
 
     final endsAt = scheduledAt.add(Duration(minutes: durationMinutes));
 
-    // Map payment status to DB constraint values:
-    // DB allows: unpaid, pending, paid, refunded, partial_refund, failed
-    String dbPaymentStatus = 'unpaid';
-    if (paymentStatus == 'paid') {
-      dbPaymentStatus = 'paid';
-    } else if (paymentStatus == 'pending_payment' || paymentStatus == 'pending') {
-      dbPaymentStatus = 'pending';
+    final response = await SupabaseClientService.client.rpc(
+      'create_booking_with_financials',
+      params: {
+        'p_user_id': userId,
+        'p_business_id': providerId,
+        'p_service_id': providerServiceId,
+        'p_service_name': serviceName,
+        'p_service_type': category,
+        'p_starts_at': scheduledAt.toUtc().toIso8601String(),
+        'p_ends_at': endsAt.toUtc().toIso8601String(),
+        'p_price': price,
+        'p_payment_method': paymentMethod ?? 'card',
+        'p_booking_source': bookingSource,
+        if (transportMode != null) 'p_transport_mode': transportMode,
+        if (staffId != null) 'p_staff_id': staffId,
+        if (notes != null) 'p_notes': notes,
+        // p_idempotency_key and p_deposit_amount use RPC defaults
+      },
+    );
+
+    // RPC returns the inserted row as a record or single-element list.
+    if (response == null) {
+      throw Exception('create_booking_with_financials returned null');
     }
-
-    final data = {
-      'user_id': userId,
-      'business_id': providerId,
-      'service_id': providerServiceId,
-      'service_name': serviceName,
-      'service_type': category,
-      'starts_at': scheduledAt.toUtc().toIso8601String(),
-      'ends_at': endsAt.toUtc().toIso8601String(),
-      'price': price,
-      'notes': notes,
-      'status': paymentStatus == 'paid' ? 'confirmed' : 'pending',
-      'payment_status': dbPaymentStatus,
-      'staff_id': ?staffId,
-      'payment_intent_id': ?paymentIntentId,
-      'payment_method': ?paymentMethod,
-      'transport_mode': ?transportMode,
-      'booking_source': bookingSource,
-    };
-
-    final response = await SupabaseClientService.client
-        .from(BCTables.appointments)
-        .insert(data)
-        .select()
-        .single();
-
-    return Booking.fromJson(response);
+    final row = response is List
+        ? (response.isEmpty ? null : response.first)
+        : response;
+    if (row == null) {
+      throw Exception('create_booking_with_financials returned empty result');
+    }
+    return Booking.fromJson(Map<String, dynamic>.from(row as Map));
   }
 
   /// Get the current user's bookings, optionally filtered by status,

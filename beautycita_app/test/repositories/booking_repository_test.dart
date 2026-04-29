@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:beautycita/models/booking.dart';
@@ -6,94 +7,32 @@ import '../helpers/test_mocks.dart';
 import '../helpers/model_fixtures.dart';
 
 void main() {
+  // Static source-scan: ensures createBooking goes through the financial RPC
+  // and never does a direct appointments.insert (which bypasses commission_records
+  // and tax_withholdings).
+  test('booking_repository.createBooking goes through financial RPC', () {
+    final source =
+        File('lib/repositories/booking_repository.dart').readAsStringSync();
+
+    expect(
+      source.contains("'create_booking_with_financials'"),
+      isTrue,
+      reason: 'createBooking must call create_booking_with_financials',
+    );
+    expect(
+      source.contains('.from(BCTables.appointments)') &&
+          source.contains('.insert('),
+      isFalse,
+      reason:
+          'Direct appointments.insert is forbidden — financials/tax bypassed',
+    );
+  });
+
   group('BookingRepository (via mock)', () {
     late MockBookingRepository repo;
 
     setUp(() {
       repo = MockBookingRepository();
-    });
-
-    group('payment status mapping', () {
-      // These test the mapping logic that lives in BookingRepository.createBooking:
-      //   'paid' → 'paid'
-      //   'pending_payment' or 'pending' → 'pending'
-      //   null → 'unpaid'
-      //   Booking status: 'paid' → 'confirmed', else → 'pending'
-
-      test('paid payment creates confirmed booking', () async {
-        final expectedBooking = Booking.fromJson(bookingJson(
-          status: 'confirmed',
-          paymentStatus: 'paid',
-        ));
-
-        when(() => repo.createBooking(
-              providerId: any(named: 'providerId'),
-              serviceName: any(named: 'serviceName'),
-              category: any(named: 'category'),
-              scheduledAt: any(named: 'scheduledAt'),
-              paymentStatus: 'paid',
-            )).thenAnswer((_) async => expectedBooking);
-
-        final result = await repo.createBooking(
-          providerId: 'biz-1',
-          serviceName: 'Manicure',
-          category: 'nails',
-          scheduledAt: DateTime.now(),
-          paymentStatus: 'paid',
-        );
-
-        expect(result.status, 'confirmed');
-        expect(result.paymentStatus, 'paid');
-      });
-
-      test('pending payment creates pending booking', () async {
-        final expectedBooking = Booking.fromJson(bookingJson(
-          status: 'pending',
-          paymentStatus: 'pending',
-        ));
-
-        when(() => repo.createBooking(
-              providerId: any(named: 'providerId'),
-              serviceName: any(named: 'serviceName'),
-              category: any(named: 'category'),
-              scheduledAt: any(named: 'scheduledAt'),
-              paymentStatus: 'pending',
-            )).thenAnswer((_) async => expectedBooking);
-
-        final result = await repo.createBooking(
-          providerId: 'biz-1',
-          serviceName: 'Manicure',
-          category: 'nails',
-          scheduledAt: DateTime.now(),
-          paymentStatus: 'pending',
-        );
-
-        expect(result.status, 'pending');
-        expect(result.paymentStatus, 'pending');
-      });
-
-      test('null payment creates unpaid booking', () async {
-        final expectedBooking = Booking.fromJson(bookingJson(
-          status: 'pending',
-          paymentStatus: null,
-        ));
-
-        when(() => repo.createBooking(
-              providerId: any(named: 'providerId'),
-              serviceName: any(named: 'serviceName'),
-              category: any(named: 'category'),
-              scheduledAt: any(named: 'scheduledAt'),
-            )).thenAnswer((_) async => expectedBooking);
-
-        final result = await repo.createBooking(
-          providerId: 'biz-1',
-          serviceName: 'Manicure',
-          category: 'nails',
-          scheduledAt: DateTime.now(),
-        );
-
-        expect(result.status, 'pending');
-      });
     });
 
     group('getUserBookings', () {
