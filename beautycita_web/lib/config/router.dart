@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:web/web.dart' as web;
 import 'package:beautycita_core/supabase.dart';
 
 import '../providers/auth_provider.dart';
@@ -81,6 +82,45 @@ import '../shells/admin_shell.dart';
 import '../shells/business_shell.dart';
 import '../shells/client_shell.dart';
 import '../shells/demo_shell.dart';
+
+const _kRedirectCountKey = 'bc-redirect-count';
+const _kRedirectStartKey = 'bc-redirect-start';
+const _kRedirectLastPathKey = 'bc-redirect-last-path';
+
+bool _redirectLoopTrip(String path) {
+  try {
+    final storage = web.window.sessionStorage;
+    final lastPath = storage.getItem(_kRedirectLastPathKey);
+    if (lastPath != null && lastPath != path) {
+      // Different destination than the last redirect — loop is broken,
+      // reset the counter.
+      storage.removeItem(_kRedirectCountKey);
+      storage.removeItem(_kRedirectStartKey);
+    }
+    storage.setItem(_kRedirectLastPathKey, path);
+
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    final startStr = storage.getItem(_kRedirectStartKey);
+    final start = startStr == null ? 0 : int.tryParse(startStr) ?? 0;
+    if (start == 0 || nowMs - start > 10000) {
+      storage.setItem(_kRedirectStartKey, nowMs.toString());
+      storage.setItem(_kRedirectCountKey, '1');
+      return false;
+    }
+    final count = int.tryParse(storage.getItem(_kRedirectCountKey) ?? '0') ?? 0;
+    final next = count + 1;
+    storage.setItem(_kRedirectCountKey, next.toString());
+    if (next > 5) {
+      storage.removeItem(_kRedirectCountKey);
+      storage.removeItem(_kRedirectStartKey);
+      storage.removeItem(_kRedirectLastPathKey);
+      return true;
+    }
+    return false;
+  } catch (_) {
+    return false;
+  }
+}
 
 // ── Route paths ──────────────────────────────────────────────────────────────
 
@@ -200,6 +240,12 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) async {
       final path = state.matchedLocation;
 
+      // Loop guard: if more than 5 redirects fire in a 10-second window,
+      // hard-stop on the safe-error route. Resets on any successful nav.
+      if (_redirectLoopTrip(path)) {
+        return WebRoutes.home;
+      }
+
       final isPublicRoute = path == '/' ||
           path.startsWith('/auth') ||
           path == '/soporte' ||
@@ -229,7 +275,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         return WebRoutes.auth;
       }
 
-      // Redirect unverified email users to verify page (skip for public routes + verify page itself)
+      // Redirect unverified email users to verify page. Server-side enforces
+      // email verification on protected RPCs/edge fns (per audit L5); this
+      // client check is UX scaffolding only — a determined user bypassing
+      // it gains no extra privilege.
       if (isAuthenticated && !isPublicRoute && !path.startsWith('/auth/verify')) {
         final user = BCSupabase.client.auth.currentUser;
         if (user != null && user.emailConfirmedAt == null && user.email != null) {
