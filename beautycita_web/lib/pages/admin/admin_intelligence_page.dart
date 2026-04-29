@@ -154,13 +154,11 @@ class _AdminIntelligencePageState extends State<AdminIntelligencePage> {
   }
 
   Future<void> _loadSegments() async {
-    final summaries = await BCSupabase.client
-        .from(BCTables.userBehaviorSummaries)
-        .select('segment');
+    final rows = await BCSupabase.client.rpc('get_segment_distribution');
     final counts = <String, int>{};
-    for (final row in summaries as List) {
+    for (final row in (rows as List? ?? const [])) {
       final seg = (row['segment'] ?? 'unknown') as String;
-      counts[seg] = (counts[seg] ?? 0) + 1;
+      counts[seg] = (row['n'] as num?)?.toInt() ?? 0;
     }
     _segmentCounts = counts;
   }
@@ -210,15 +208,20 @@ class _AdminIntelligencePageState extends State<AdminIntelligencePage> {
         .limit(200);
     _userSummaries = List<Map<String, dynamic>>.from(summaries as List);
 
-    // Fetch all trait scores for these users
-    final userIds = _userSummaries.map((s) => s['user_id']).toList();
+    // Fetch trait scores via audited bulk RPC. The prior direct
+    // user_trait_scores select bypassed the admin_trait_access_log
+    // requirement (LFPDPPP).
+    final userIds = _userSummaries
+        .map((s) => s['user_id']?.toString())
+        .whereType<String>()
+        .toList();
     if (userIds.isNotEmpty) {
-      final traits = await BCSupabase.client
-          .from(BCTables.userTraitScores)
-          .select()
-          .inFilter('user_id', userIds);
+      final traits = await BCSupabase.client.rpc(
+        'get_users_trait_summary',
+        params: {'p_user_ids': userIds},
+      );
       final grouped = <String, List<Map<String, dynamic>>>{};
-      for (final t in traits as List) {
+      for (final t in (traits as List? ?? const [])) {
         final uid = t['user_id'].toString();
         grouped.putIfAbsent(uid, () => []);
         grouped[uid]!.add(Map<String, dynamic>.from(t));
