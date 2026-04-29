@@ -1009,6 +1009,13 @@ class _BiometricToggleTile extends ConsumerWidget {
   }
 }
 
+/// Reflects whether this device has a stored biometric registration.
+/// Both _BiometricRegisterTile and _BiometricForgetTile invalidate this
+/// after their respective actions so the register tile flips between
+/// "Registrar este dispositivo" / "Datos biometricos registrados".
+final _biometricRegisteredProvider =
+    FutureProvider.autoDispose<bool>((ref) => UserSession().isRegistered());
+
 class _BiometricRegisterTile extends ConsumerStatefulWidget {
   @override
   ConsumerState<_BiometricRegisterTile> createState() => _BiometricRegisterTileState();
@@ -1040,6 +1047,7 @@ class _BiometricRegisterTileState extends ConsumerState<_BiometricRegisterTile> 
         return;
       }
       await session.saveSupabaseUserId(supabaseId);
+      ref.invalidate(_biometricRegisteredProvider);
       if (mounted) {
         ToastService.showSuccess('Dispositivo registrado para biometrico');
       }
@@ -1053,6 +1061,18 @@ class _BiometricRegisterTileState extends ConsumerState<_BiometricRegisterTile> 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final registered = ref.watch(_biometricRegisteredProvider).valueOrNull ?? false;
+
+    if (registered) {
+      return SettingsTile(
+        icon: Icons.fingerprint,
+        iconColor: Colors.green,
+        label: 'Datos biometricos registrados',
+        trailing: const Icon(Icons.check_circle, size: 20, color: Colors.green),
+        onTap: null,
+      );
+    }
+
     return SettingsTile(
       icon: Icons.add_circle_outline,
       label: 'Registrar este dispositivo',
@@ -1095,6 +1115,7 @@ class _BiometricForgetTileState extends ConsumerState<_BiometricForgetTile> {
       // Wipe local biometric state but DO NOT sign out the active Supabase
       // session — we just want next-launch biometric to require re-register.
       await UserSession().clearBiometricRegistration();
+      ref.invalidate(_biometricRegisteredProvider);
       if (mounted) ToastService.showSuccess('Biometrico borrado de este dispositivo');
     } catch (e) {
       if (mounted) ToastService.showError('Error: $e');
