@@ -156,6 +156,25 @@
 
 <script>
 const API = 'https://beautycita.com/supabase/functions/v1/portfolio-upload';
+// Anon key is fetched at runtime from a deploy-time-generated config file
+// served alongside the HTML. This avoids embedding even the (public) anon key
+// in source — Deploy Guardian flags any JWT-shaped string in committed files.
+let FETCH_HEADERS = { 'Content-Type': 'application/json' };
+let _configReady = (async () => {
+  try {
+    const r = await fetch('/portfolio-upload-config.json', { cache: 'no-store' });
+    if (r.ok) {
+      const cfg = await r.json();
+      if (cfg.anon_key) {
+        FETCH_HEADERS = {
+          'Content-Type': 'application/json',
+          'apikey': cfg.anon_key,
+          'Authorization': 'Bearer ' + cfg.anon_key,
+        };
+      }
+    }
+  } catch (_) { /* fall back to no-key headers; Kong will 401 with a clear message */ }
+})();
 const STICKER_BASE = 'https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/media/sticker_overlays/';
 const STICKERS = [
   { id: 'sticker_01_watermark', label: '@bc' },
@@ -193,6 +212,7 @@ document.querySelectorAll('.pin-input input').forEach((inp, i, all) => {
 });
 
 async function verifyPin() {
+  await _configReady;
   const pin = ['p1','p2','p3','p4'].map(id => document.getElementById(id).value).join('');
   const errEl = document.getElementById('pin-error');
   errEl.classList.add('hidden');
@@ -200,7 +220,7 @@ async function verifyPin() {
   try {
     const res = await fetch(API, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: FETCH_HEADERS,
       body: JSON.stringify({ action: 'verify', token, pin }),
     });
     const data = await res.json();
@@ -305,13 +325,13 @@ async function hidePhoto(photoId) {
   try {
     await fetch(API, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: FETCH_HEADERS,
       body: JSON.stringify({ action: 'hide', photo_id: photoId }),
     });
     const pin = ['p1','p2','p3','p4'].map(id => document.getElementById(id).value).join('');
     const refresh = await fetch(API, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: FETCH_HEADERS,
       body: JSON.stringify({ action: 'verify', token, pin }),
     });
     const rData = await refresh.json();
@@ -327,7 +347,7 @@ async function uploadMediaFile(file, overlays = []) {
       try {
         const res = await fetch(API, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: FETCH_HEADERS,
           body: JSON.stringify({
             action: 'upload',
             staff_id: staffId,
@@ -346,7 +366,7 @@ async function uploadMediaFile(file, overlays = []) {
         const pin = ['p1','p2','p3','p4'].map(id => document.getElementById(id).value).join('');
         const refresh = await fetch(API, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: FETCH_HEADERS,
           body: JSON.stringify({ action: 'verify', token, pin }),
         });
         const rData = await refresh.json();
@@ -605,7 +625,7 @@ async function toggleFeed(photoId, publish) {
   try {
     await fetch(API, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: FETCH_HEADERS,
       body: JSON.stringify({ action: 'toggle_feed', photo_id: photoId, publish }),
     });
     // Toggle visually
