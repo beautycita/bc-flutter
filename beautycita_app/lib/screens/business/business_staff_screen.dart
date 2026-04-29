@@ -1108,12 +1108,12 @@ class _AddStaffSheetState extends ConsumerState<_AddStaffSheet> {
         SupabaseClientService.client.functions.invoke(
           'send-push-notification',
           body: {
-            'type': 'staff_link_request',
             'user_id': _matchedStylist!['id'],
-            'title': 'Solicitud de salon',
-            'body': '${_firstCtrl.text.trim()} quiere agregarte como miembro de su equipo. Acepta o rechaza desde tu app.',
+            'notification_type': 'staff_link_request',
+            'custom_title': 'Solicitud de salon',
+            'custom_body': '${_firstCtrl.text.trim()} quiere agregarte como miembro de su equipo. Acepta o rechaza desde tu app.',
           },
-        ).then((_) {}).catchError((_) {});
+        ).ignore();
 
         ToastService.showSuccess('Solicitud enviada al estilista');
       }

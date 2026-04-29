@@ -75,9 +75,10 @@ class _ReportProblemScreenState extends ConsumerState<ReportProblemScreen> {
       try {
         await client.functions.invoke('send-push-notification', body: {
           'user_id': 'admin',
-          'title': 'Nuevo reporte',
-          'body':
-              '[$_selectedCategory] ${description.length > 50 ? description.substring(0, 50) : description}...',
+          'notification_type': 'admin_report',
+          'custom_title': 'Nuevo reporte',
+          'custom_body':
+              'Reporte de ${_selectedCategory ?? "problema"} de ${client.auth.currentUser?.email ?? "usuario"}',
         });
       } catch (_) {
         // Admin push failed — report was still sent successfully

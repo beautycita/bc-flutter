@@ -738,11 +738,11 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
     SupabaseClientService.client.functions.invoke(
       'send-push-notification',
       body: {
-        'type': 'booking_confirmed',
         'user_id': SupabaseClientService.currentUserId,
+        'notification_type': 'booking_confirmed',
         'booking_id': bookingId,
-        'title': 'Cita confirmada',
-        'body': '${state.serviceName ?? "Servicio"} reservado',
+        'custom_title': 'Cita confirmada',
+        'custom_body': '${state.serviceName ?? "Servicio"} reservado',
       },
     ).ignore();
 

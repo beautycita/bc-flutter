@@ -352,6 +352,7 @@ class _BusinessCalendarScreenState
     }
 
     try {
+      String? clientUserId;
       // If business is cancelling a paid appointment, refund to saldo
       if (action == 'cancelled_business') {
         final apptData = await SupabaseClientService.client
@@ -359,6 +360,8 @@ class _BusinessCalendarScreenState
             .select('user_id, price, payment_status')
             .eq('id', id)
             .maybeSingle();
+
+        clientUserId = apptData?['user_id'] as String?;
 
         await SupabaseClientService.client
             .from(BCTables.appointments)
@@ -414,10 +417,11 @@ class _BusinessCalendarScreenState
         SupabaseClientService.client.functions.invoke(
           'send-push-notification',
           body: {
-            'type': 'booking_cancelled',
+            'user_id': clientUserId,
+            'notification_type': 'booking_cancelled',
             'booking_id': id,
-            'title': 'Cita Cancelada',
-            'body': 'Tu salon cancelo tu cita. Se te devolvio el pago completo.',
+            'custom_title': 'Cita Cancelada',
+            'custom_body': 'Tu salon cancelo tu cita. Se te devolvio el pago completo.',
             'data': {'type': 'booking_cancelled', 'booking_id': id},
           },
         ).ignore();

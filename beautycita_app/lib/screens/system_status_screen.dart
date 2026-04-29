@@ -947,8 +947,9 @@ class _SmokeTestSectionState extends ConsumerState<_SmokeTestSection> {
     await _test('send-push-notification', () async {
       await _invokeAlive(client, 'send-push-notification', body: {
         'user_id': client.auth.currentUser?.id ?? '',
-        'title': 'test',
-        'body': 'diagnostico',
+        'notification_type': 'diagnostic',
+        'custom_title': 'test',
+        'custom_body': 'diagnostico',
       });
     });
     await Future.delayed(pause);
