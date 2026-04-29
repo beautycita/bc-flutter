@@ -6,6 +6,7 @@ import 'package:beautycita_core/supabase.dart';
 
 import '../../config/breakpoints.dart';
 import '../../config/web_theme.dart';
+import '../../data/demo_data.dart';
 import '../../utils/friendly_error.dart';
 import '../../providers/business_portal_provider.dart';
 import '../../providers/demo_providers.dart';
@@ -16,6 +17,11 @@ import '../../widgets/web_design_system.dart';
 /// Products for the current business.
 final _businessProductsProvider =
     FutureProvider.autoDispose<List<Product>>((ref) async {
+  if (ref.watch(isDemoProvider)) {
+    return DemoData.products
+        .map((r) => Product.fromJson(Map<String, dynamic>.from(r)))
+        .toList();
+  }
   final biz = await ref.watch(currentBusinessProvider.future);
   if (biz == null) return [];
   final bizId = biz['id'] as String;
@@ -33,6 +39,7 @@ final _businessProductsProvider =
 /// Product showcases for the current business, with joined product data.
 final _businessShowcasesProvider =
     FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+  if (ref.watch(isDemoProvider)) return DemoData.productShowcases;
   final biz = await ref.watch(currentBusinessProvider.future);
   if (biz == null) return [];
   final bizId = biz['id'] as String;
@@ -82,14 +89,31 @@ class _PosOptIn extends ConsumerStatefulWidget {
 class _PosOptInState extends ConsumerState<_PosOptIn> {
   bool _loading = false;
 
+  static const String _kPosTermsVersion = '2026-04-29';
+
   Future<void> _activate() async {
+    final accepted = await _showTermsGate();
+    if (!accepted) return;
+    if (!mounted) return;
     setState(() => _loading = true);
     try {
-      await BCSupabase.client
-          .from(BCTables.businesses)
-          .update({'pos_enabled': true})
-          .eq('id', widget.biz['id'] as String);
-      ref.invalidate(currentBusinessProvider);
+      final response = await BCSupabase.client.functions.invoke(
+        'pos-opt-in',
+        body: {
+          'business_id': widget.biz['id'] as String,
+          'terms_version': _kPosTermsVersion,
+        },
+      );
+      final data = response.data as Map<String, dynamic>?;
+      if (data?['success'] == true) {
+        ref.invalidate(currentBusinessProvider);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text((data?['error'] as String?) ?? 'No se pudo activar POS')),
+          );
+        }
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -99,6 +123,34 @@ class _PosOptInState extends ConsumerState<_PosOptIn> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<bool> _showTermsGate() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Acuerdo de vendedor POS'),
+        content: const Text(
+          'Al activar POS aceptas:\n'
+          '• 7% de comision BeautyCita + 3% de procesamiento por venta\n'
+          '• Inventario y precios bajo tu responsabilidad\n'
+          '• Politica de devoluciones a saldo (no a tarjeta)\n'
+          '• Cumplimiento de SAT (CFDI 4.0) cuando aplique\n\n'
+          'Version: 2026-04-29',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Acepto y activar'),
+          ),
+        ],
+      ),
+    );
+    return result == true;
   }
 
   @override
