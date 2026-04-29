@@ -543,55 +543,72 @@ function registrationPage(ref: string | null, salon: SalonData): string {
         </div>
       </div>
 
-      <!-- Smart app launch: tries deep link first, falls back to download -->
+      <!-- Smart app launch: one button, tries deep link, falls back to Play Store -->
       <div id="appLaunch">
-        <a href="beautycita://salon-home" id="openAppLink" class="btn btn-green" style="display:block;text-align:center;text-decoration:none;margin-top:24px">
-          ABRIR LA APP
-        </a>
-        <p class="note" style="margin-top:8px" id="appNote">Si ya tienes la app instalada, se abrira automaticamente</p>
-        <a href="${APK_URL}" id="downloadLink" class="btn" style="display:none;text-align:center;text-decoration:none;margin-top:12px;background:#555">
-          DESCARGAR LA APP
-        </a>
+        <button type="button" id="appLaunchBtn" class="btn btn-green" style="display:block;width:100%;text-align:center;border:none;cursor:pointer;margin-top:24px">
+          ABRIR O DESCARGAR LA APP
+        </button>
+        <p class="note" style="margin-top:8px" id="appNote">Si tienes la app, se abre. Si no, te llevamos a Google Play.</p>
       </div>
 
       <script>
       (function() {
-        // Detect if on mobile
+        // Standard Play Store URL (works even pre-publication — sends user to
+        // the listing page once we ship; today they get a "not found" page).
+        var PLAY_URL = 'https://play.google.com/store/apps/details?id=com.beautycita';
+        var APK_URL = ${JSON.stringify(APK_URL)};
+        var DEEP_LINK = 'beautycita://salon-home';
+
         var isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
-        var openBtn = document.getElementById('openAppLink');
-        var downloadBtn = document.getElementById('downloadLink');
+        var isAndroid = /Android/i.test(navigator.userAgent);
+        var btn = document.getElementById('appLaunchBtn');
         var note = document.getElementById('appNote');
 
-        if (isMobile) {
-          // Show both: try to open app, show download as backup after 2s
-          setTimeout(function() {
-            downloadBtn.style.display = 'block';
-            note.textContent = 'No se abrio? Descarga la app aqui';
-          }, 2000);
-        } else {
-          // Desktop: show web panel setup prominently, download secondary
-          openBtn.style.display = 'none';
-          note.textContent = 'Configura acceso web abajo o descarga la app en tu telefono';
-          downloadBtn.style.display = 'block';
-          downloadBtn.textContent = 'DESCARGAR APP (ANDROID)';
-          downloadBtn.style.background = '#888';
+        if (!isMobile) {
+          // Desktop: deep link is meaningless; relabel + send to Play Store.
+          btn.textContent = 'DESCARGAR LA APP';
+          note.textContent = 'Disponible para Android. La app abrira tu salon listo para usarse.';
         }
+
+        btn.addEventListener('click', function() {
+          if (!isMobile) {
+            window.location.href = PLAY_URL;
+            return;
+          }
+
+          // Mobile: race the deep link against a fallback timer. If the app
+          // opens, the page goes hidden and we cancel the redirect. If 1500ms
+          // pass with the page still visible, the app is not installed —
+          // redirect to Play Store (Android) or the APK (iOS shows page).
+          var fallback = isAndroid ? PLAY_URL : APK_URL;
+          var fallbackTimer = setTimeout(function() {
+            if (document.visibilityState === 'visible') {
+              window.location.href = fallback;
+            }
+          }, 1500);
+
+          var onHide = function() {
+            if (document.visibilityState === 'hidden') {
+              clearTimeout(fallbackTimer);
+              document.removeEventListener('visibilitychange', onHide);
+            }
+          };
+          document.addEventListener('visibilitychange', onHide);
+
+          window.location.href = DEEP_LINK;
+        });
       })();
       </script>
 
       <!-- Web access setup -->
       <div class="web-access" id="webAccess">
         <h3>Acceso al panel web</h3>
-        <p>Configura email y contrasena para gestionar tu salon desde la computadora</p>
-        <label class="field">
-          <span class="label">Email</span>
-          <input type="email" id="webEmail" placeholder="tu@email.com" autocomplete="email">
-        </label>
+        <p>Crea una contrasena para entrar desde la computadora. Tu usuario es tu numero de WhatsApp.</p>
         <label class="field">
           <span class="label">Contrasena</span>
           <input type="password" id="webPass" placeholder="Minimo 8 caracteres" minlength="8" autocomplete="new-password">
         </label>
-        <button class="btn" id="webAccessBtn" onclick="setWebAccess()">GUARDAR ACCESO WEB</button>
+        <button class="btn" id="webAccessBtn" onclick="setWebAccess()">GUARDAR CONTRASENA</button>
         <div class="error" id="step4Error" style="text-align:center"></div>
       </div>
     </div>
@@ -806,14 +823,8 @@ function registrationPage(ref: string | null, salon: SalonData): string {
       const errEl = document.getElementById('step4Error');
       errEl.style.display = 'none';
       const btn = document.getElementById('webAccessBtn');
-      const email = document.getElementById('webEmail').value.trim();
       const pass = document.getElementById('webPass').value;
 
-      if (!email || !email.includes('@')) {
-        errEl.textContent = 'Ingresa un email valido';
-        errEl.style.display = 'block';
-        return;
-      }
       if (pass.length < 8) {
         errEl.textContent = 'La contrasena debe tener al menos 8 caracteres';
         errEl.style.display = 'block';
@@ -830,7 +841,6 @@ function registrationPage(ref: string | null, salon: SalonData): string {
           body: JSON.stringify({
             action: 'set_web_access',
             phone: phoneInput.value.trim(),
-            email,
             password: pass,
             token: verifyToken,
           }),
@@ -839,12 +849,12 @@ function registrationPage(ref: string | null, salon: SalonData): string {
         if (!res.ok) throw new Error(data.error || 'Error al guardar');
 
         document.getElementById('webAccess').innerHTML =
-          '<div style="text-align:center;color:#4CAF50;font-weight:600">\\u2705 Acceso web configurado</div>';
+          '<div style="text-align:center;color:#4CAF50;font-weight:600">\\u2705 Contrasena guardada. Entra en beautycita.com con tu numero de WhatsApp.</div>';
       } catch (err) {
         errEl.textContent = err.message;
         errEl.style.display = 'block';
         btn.disabled = false;
-        btn.textContent = 'GUARDAR ACCESO WEB';
+        btn.textContent = 'GUARDAR CONTRASENA';
       }
     }
   </script>
@@ -1379,11 +1389,10 @@ Deno.serve(async (req: Request) => {
       // ── SET WEB ACCESS ────────────────────────────────────────
       if (action === "set_web_access") {
         const phone = normalizePhone(body.phone || "");
-        const email = (body.email || "").trim();
         const password = body.password;
         const token = body.token;
 
-        if (!phone || !email || !password || !token) {
+        if (!phone || !password || !token) {
           return json({ error: "Datos incompletos" }, 400);
         }
 
@@ -1430,12 +1439,13 @@ Deno.serve(async (req: Request) => {
           return json({ error: "Usuario no encontrado. Intenta de nuevo o contacta soporte." }, 404);
         }
 
-        // Update auth user with email + password
+        // Update auth user with password only — phone stays as the username
+        // (set during phone-OTP registration upstream). Avoids GoTrue
+        // "Database error updating user" failures that hit when changing
+        // email on a phone-only auth row.
         const { error: updateErr } =
           await supabase.auth.admin.updateUserById(profile.id, {
-            email,
             password,
-            email_confirm: true,
           });
 
         if (updateErr) {
@@ -1447,7 +1457,7 @@ Deno.serve(async (req: Request) => {
         }
 
         console.log(
-          `[SALON-REG] Web access set for user ${profile.id}: ${email}`,
+          `[SALON-REG] Web access password set for user ${profile.id}`,
         );
         return json({ success: true });
       }

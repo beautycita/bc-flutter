@@ -402,7 +402,14 @@ serve(async (req: Request) => {
           queueId = await enqueueWa(serviceClient, recipientPhone, messagePrefix + messageText, {
             priority: WA_PRIORITY.BULK,
             source: "outreach-discovered-salon:invite",
-            idempotencyKey: `discover-invite-${discovered_salon_id}-${Date.now()}`,
+            // Stable per (salon, user) — prevents duplicate WA messages if the
+            // edge function fires twice (client retry, edge isolate restart,
+            // double-tap that beats the client-side guard). The wa_message_queue
+            // ON CONFLICT (idempotency_key) WHERE status='pending' clause drops
+            // the second insert silently. Without this, every invocation got a
+            // unique Date.now() key and BC's salon-test phone got the message
+            // twice.
+            idempotencyKey: `discover-invite-${discovered_salon_id}-${user.id}`,
           });
           outreachSent = queueId !== null;
           console.log(`[OUTREACH] queued msg for ${salonHot.business_name}, queueId=${queueId}, channel=${channel}`);
