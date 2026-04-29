@@ -10,6 +10,7 @@
 library;
 
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -30,8 +31,12 @@ String _activeToken() {
   try {
     final existing = web.window.localStorage.getItem(demoTokenKey);
     if (existing != null && existing.isNotEmpty) return existing;
-    final anon =
-        'demo-anon-${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}';
+    final rng = Random.secure();
+    final bytes = List<int>.generate(16, (_) => rng.nextInt(256));
+    final hex = bytes
+        .map((b) => b.toRadixString(16).padLeft(2, '0'))
+        .join();
+    final anon = 'demo-anon-$hex';
     web.window.localStorage.setItem(demoTokenKey, anon);
     return anon;
   } catch (_) {
