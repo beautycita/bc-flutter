@@ -9,6 +9,7 @@ import '../../config/web_theme.dart';
 import '../../data/demo_data.dart';
 import '../../providers/business_portal_provider.dart';
 import '../../providers/demo_providers.dart';
+import '../../widgets/demo_action_guard.dart';
 
 // ── Providers ────────────────────────────────────────────────────────────────
 
@@ -471,6 +472,16 @@ class _CreateGiftCardDialogState extends ConsumerState<_CreateGiftCardDialog> {
 
   Future<void> _create() async {
     if (!_formKey.currentState!.validate()) return;
+    final isDemo = ref.read(isDemoProvider);
+    final shouldProceed = await DemoActionGuard.intercept(
+      context,
+      isDemo: isDemo,
+      actionLabel: 'crear esta tarjeta de regalo',
+    );
+    if (!shouldProceed) {
+      if (mounted) Navigator.of(context).pop();
+      return;
+    }
     setState(() => _saving = true);
     try {
       final amount = double.parse(_amountCtrl.text.trim());

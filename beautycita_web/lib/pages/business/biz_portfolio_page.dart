@@ -8,10 +8,11 @@ import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
 
 import '../../config/breakpoints.dart';
 import '../../config/web_theme.dart';
+import '../../data/demo_data.dart';
 import '../../providers/business_portal_provider.dart';
 import '../../providers/demo_providers.dart';
+import '../../widgets/demo_action_guard.dart';
 import '../../widgets/photo_studio.dart';
-import '../../widgets/web_design_system.dart';
 
 /// Business portfolio page — template selector + live preview builder.
 ///
@@ -30,69 +31,174 @@ class BizPortfolioPage extends ConsumerWidget {
       error: (e, _) => Center(child: Text('Error: $e')),
       data: (biz) {
         if (biz == null) return const Center(child: Text('Sin negocio'));
-        if (isDemo) return const _PortfolioDemoPlaceholder();
+        if (isDemo) return const _PortfolioDemoContent();
         return _PortfolioContent(biz: biz);
       },
     );
   }
 }
 
-class _PortfolioDemoPlaceholder extends StatelessWidget {
-  const _PortfolioDemoPlaceholder();
+/// Demo-mode portfolio: same PortfolioBuilder the real salon would use,
+/// fed with DemoData and a curated set of sample portfolio photos so the
+/// presentation is "this is how your portfolio will look", not a marketing
+/// placeholder. Write actions (publish, cover-photo upload) are gated by
+/// DemoActionGuard.
+class _PortfolioDemoContent extends ConsumerWidget {
+  const _PortfolioDemoContent();
+
+  // Sample before/after work. URLs live alongside the existing demo-staff
+  // bucket so the asset pipeline already serves them.
+  static const _samplePortfolio = <String>[
+    'https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/media/web/img/demo-portfolio/01.jpg',
+    'https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/media/web/img/demo-portfolio/02.jpg',
+    'https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/media/web/img/demo-portfolio/03.jpg',
+    'https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/media/web/img/demo-portfolio/04.jpg',
+    'https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/media/web/img/demo-portfolio/05.jpg',
+    'https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/media/web/img/demo-portfolio/06.jpg',
+    'https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/media/web/img/demo-portfolio/07.jpg',
+    'https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/media/web/img/demo-portfolio/08.jpg',
+  ];
+
+  PortfolioSalonData _buildDemoSalon() {
+    final biz = DemoData.business;
+    final staffPhotos = DemoData.staff
+        .map((s) {
+          final firstName = s['first_name'] as String? ?? '';
+          final lastName = s['last_name'] as String? ?? '';
+          final fullName = '$firstName $lastName'.trim();
+          return PortfolioStaff(
+            name: fullName.isEmpty ? 'Staff' : fullName,
+            role: s['role'] as String? ?? '',
+            photoUrl: s['avatar_url'] as String?,
+          );
+        })
+        .take(6)
+        .toList();
+
+    final serviceNames = DemoData.services
+        .map((s) => s['name'] as String? ?? '')
+        .where((n) => n.isNotEmpty)
+        .take(8)
+        .toList();
+
+    // Map weekday keys to localized labels for the hours card.
+    const dayNames = {
+      'monday': 'Lunes',
+      'tuesday': 'Martes',
+      'wednesday': 'Miercoles',
+      'thursday': 'Jueves',
+      'friday': 'Viernes',
+      'saturday': 'Sabado',
+      'sunday': 'Domingo',
+    };
+    final hoursMap = <String, String>{};
+    final raw = biz['hours'];
+    if (raw is Map<String, dynamic>) {
+      for (final entry in raw.entries) {
+        final label = dayNames[entry.key] ?? entry.key;
+        final v = entry.value;
+        if (v is Map<String, dynamic>) {
+          if (v['open'] == true) {
+            hoursMap[label] =
+                '${v['start'] ?? '09:00'} - ${v['end'] ?? '20:00'}';
+          } else {
+            hoursMap[label] = 'Cerrado';
+          }
+        }
+      }
+    }
+
+    return PortfolioSalonData(
+      name: biz['name'] as String? ?? 'Ejemplo Salon',
+      slug: 'ejemplo-salon',
+      tagline:
+          'Belleza profesional en el corazon de Puerto Vallarta. Reserva en segundos.',
+      phone: biz['phone'] as String? ?? '',
+      address: biz['address'] as String? ?? '',
+      rating: (biz['average_rating'] as num?)?.toDouble() ?? 4.75,
+      reviewCount: (biz['total_reviews'] as num?)?.toInt() ?? 16,
+      coverPhotoUrl: biz['photo_url'] as String?,
+      logoUrl: biz['photo_url'] as String?,
+      servicePhotos: _samplePortfolio,
+      staffPhotos: staffPhotos,
+      services: serviceNames,
+      hours: hoursMap,
+    );
+  }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 540),
-        child: WebCard(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 80, height: 80,
-                decoration: BoxDecoration(
-                  color: kWebPrimary.withValues(alpha: 0.08),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.photo_library_outlined,
-                    size: 40, color: kWebPrimary),
-              ),
-              const SizedBox(height: 20),
-              Text('Portafolio Visual',
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w700, color: kWebTextPrimary)),
-              const SizedBox(height: 12),
-              Text(
-                'Construye tu pagina publica en beautycita.com/p/tu-salon. '
-                'Elige tema (portfolio, team-builder, storefront, gallery, '
-                'local), sube fotos antes/despues, publica con un toque. '
-                'Los motores de busqueda indexan tu pagina — visibilidad '
-                'gratis.',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: kWebTextSecondary,
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: 8),
-              ShaderMask(
-                shaderCallback: (b) => kWebBrandGradient.createShader(b),
-                child: Text(
-                  'Salones con portafolio visual reciben 4x mas reservas.',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = WebBreakpoints.isMobile(constraints.maxWidth);
+        final padding = isMobile ? 16.0 : 24.0;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: EdgeInsets.all(padding),
+              child: Row(
+                children: [
+                  const Icon(Icons.photo_library_outlined,
+                      color: kWebPrimary, size: 28),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Portafolio y Plantilla',
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            color: kWebTextPrimary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Asi se vera la pagina publica de tu salon',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: kWebTextSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
-        ),
-      ),
+            ),
+            const Divider(height: 1, color: kWebCardBorder),
+            Expanded(
+              child: PortfolioBuilder(
+                salon: _buildDemoSalon(),
+                onPublish: () async {
+                  await DemoActionGuard.intercept(
+                    context,
+                    isDemo: true,
+                    actionLabel: 'publicar tu portafolio',
+                  );
+                },
+                onCoverPhotoChanged: (_) async {
+                  await DemoActionGuard.intercept(
+                    context,
+                    isDemo: true,
+                    actionLabel: 'subir esta foto de portada',
+                  );
+                },
+                onServicePhotosChanged: (_) async {
+                  await DemoActionGuard.intercept(
+                    context,
+                    isDemo: true,
+                    actionLabel: 'subir fotos de tu trabajo',
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

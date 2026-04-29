@@ -7,6 +7,7 @@ import '../../config/web_theme.dart';
 import '../../data/demo_data.dart';
 import '../../providers/business_portal_provider.dart';
 import '../../providers/demo_providers.dart';
+import '../../widgets/demo_action_guard.dart';
 
 // ── Providers ────────────────────────────────────────────────────────────────
 
@@ -563,6 +564,12 @@ class _OrderDetailPanelState extends ConsumerState<_OrderDetailPanel> {
   }
 
   Future<void> _updateStatus(String newStatus) async {
+    final shouldProceed = await DemoActionGuard.intercept(
+      context,
+      isDemo: ref.read(isDemoProvider),
+      actionLabel: 'cambiar el estado de esta orden',
+    );
+    if (!shouldProceed) return;
     setState(() => _saving = true);
     try {
       final updates = <String, dynamic>{'status': newStatus};

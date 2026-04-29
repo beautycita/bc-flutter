@@ -12,6 +12,7 @@ import '../../config/web_theme.dart';
 import '../../data/demo_data.dart';
 import '../../providers/business_portal_provider.dart';
 import '../../providers/demo_providers.dart';
+import '../../widgets/demo_action_guard.dart';
 
 // ── Providers ────────────────────────────────────────────────────────────────
 
@@ -624,6 +625,12 @@ class _ClientDetailPanelState extends ConsumerState<_ClientDetailPanel> {
   }
 
   Future<void> _save() async {
+    final shouldProceed = await DemoActionGuard.intercept(
+      context,
+      isDemo: ref.read(isDemoProvider),
+      actionLabel: 'guardar las notas y etiquetas de este cliente',
+    );
+    if (!shouldProceed) return;
     setState(() => _saving = true);
     try {
       final tags = _tagsCtrl.text

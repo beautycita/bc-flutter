@@ -6,6 +6,7 @@ import '../../config/web_theme.dart';
 import '../../data/demo_data.dart';
 import '../../providers/business_portal_provider.dart';
 import '../../providers/demo_providers.dart';
+import '../../widgets/demo_action_guard.dart';
 
 // ── Providers ────────────────────────────────────────────────────────────────
 
@@ -230,6 +231,12 @@ class _TriggerCardState extends ConsumerState<_TriggerCard> {
   }
 
   Future<void> _save() async {
+    final shouldProceed = await DemoActionGuard.intercept(
+      context,
+      isDemo: ref.read(isDemoProvider),
+      actionLabel: 'guardar este disparador de marketing',
+    );
+    if (!shouldProceed) return;
     setState(() => _saving = true);
     try {
       final payload = {
