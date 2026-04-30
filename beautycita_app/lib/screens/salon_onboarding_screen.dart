@@ -908,7 +908,7 @@ class _SalonOnboardingScreenState
                         Padding(
                           padding: const EdgeInsets.only(left: 4),
                           child: Text(
-                            'Requerido para configurar pagos y cumplir con SAT. Con RFC te retenemos solo 2.5% ISR + 8% IVA.',
+                            'Requerido para que BC entregue al SAT a tu nombre solo 2.5% ISR + 8% IVA por reserva. Sin RFC el SAT exige 20% + 16%.',
                             style: GoogleFonts.nunito(
                               fontSize: 11,
                               color: Theme.of(context)

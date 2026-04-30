@@ -644,16 +644,29 @@ class _TaxDeductionsCard extends StatelessWidget {
                     Text('Impuestos y deducciones (YTD)', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600, color: kWebTextPrimary)),
                   ],
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
+                // BC commission vs SAT-on-behalf framing — never ship a sentence
+                // that combines 3% + retentions into one BC number.
+                Text(
+                  'BeautyCita cobra 3% de comision por reserva en la plataforma. '
+                  'Los montos de IVA e ISR de abajo NO son ingreso de BeautyCita: '
+                  'son la mitad de tu obligacion legal con el SAT que entregamos a '
+                  'tu nombre bajo tu RFC (reflejado en tu CFDI 4.0).',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: kWebTextSecondary,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 16),
                 // Tax breakdown grid
                 Wrap(
                   spacing: 24,
                   runSpacing: 16,
                   children: [
                     _TaxMetric(label: 'Ingresos YTD', value: '\$${_fmtCurrency(tax.ytdRevenue)}', color: const Color(0xFF4CAF50)),
-                    _TaxMetric(label: 'IVA 8%', value: '\$${_fmtCurrency(tax.ivaAmount)}', color: const Color(0xFFFF9800)),
-                    _TaxMetric(label: 'ISR 2.5%', value: '\$${_fmtCurrency(tax.isrAmount)}', color: const Color(0xFFE53935)),
-                    _TaxMetric(label: 'Total impuestos', value: '\$${_fmtCurrency(tax.totalTaxes)}', color: const Color(0xFF9C27B0)),
+                    _TaxMetric(label: 'IVA entregado al SAT (8%)', value: '\$${_fmtCurrency(tax.ivaAmount)}', color: const Color(0xFFFF9800)),
+                    _TaxMetric(label: 'ISR entregado al SAT (2.5%)', value: '\$${_fmtCurrency(tax.isrAmount)}', color: const Color(0xFFE53935)),
+                    _TaxMetric(label: 'Total entregado al SAT a tu nombre', value: '\$${_fmtCurrency(tax.totalTaxes)}', color: const Color(0xFF9C27B0)),
                     _TaxMetric(label: 'Gastos YTD', value: '\$${_fmtCurrency(tax.ytdExpenses)}', color: const Color(0xFF2196F3)),
                     _TaxMetric(
                       label: 'Presupuesto deducible',
@@ -661,6 +674,32 @@ class _TaxDeductionsCard extends StatelessWidget {
                       color: tax.deductionBudget > 0 ? const Color(0xFF4CAF50) : const Color(0xFFE53935),
                     ),
                   ],
+                ),
+                const SizedBox(height: 16),
+                // Salon-still-owes-half warning callout — match mobile's tone.
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF9800).withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFFF9800).withValues(alpha: 0.25)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.warning_amber_rounded, size: 18, color: Color(0xFFFF9800)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Sigues debiendo al SAT directamente la otra mitad de tus obligaciones (la parte que BeautyCita no entera a tu nombre). Cada peso entregado arriba es 100% deducible: si reinviertes ese monto en tu negocio (equipo, productos, capacitacion), recuperas el total al cierre del ejercicio.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: kWebTextPrimary,
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 20),
                 // Deadline countdown
