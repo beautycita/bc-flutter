@@ -165,13 +165,40 @@ class _MutePill extends ConsumerWidget {
               width: 1.2,
             ),
           ),
-          child: Icon(
-            playing ? Icons.volume_up_rounded : Icons.volume_off_rounded,
-            color: playing
-                ? Colors.white
-                : Theme.of(context).colorScheme.onSurfaceVariant,
-            size: 22,
-            semanticLabel: playing ? 'Silenciar musica' : 'Activar musica',
+          // Cross-fade the icon on toggle so mute/unmute reads as a smooth
+          // state change rather than an instant glyph swap. The Stack +
+          // AnimatedOpacity pair lets both icons share the same center cell
+          // — fade-out the outgoing, fade-in the incoming, no layout shift.
+          child: SizedBox(
+            width: 22,
+            height: 22,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                AnimatedOpacity(
+                  duration: const Duration(milliseconds: 240),
+                  curve: Curves.easeOut,
+                  opacity: playing ? 1.0 : 0.0,
+                  child: Icon(
+                    Icons.volume_up_rounded,
+                    color: Colors.white,
+                    size: 22,
+                    semanticLabel: 'Silenciar musica',
+                  ),
+                ),
+                AnimatedOpacity(
+                  duration: const Duration(milliseconds: 240),
+                  curve: Curves.easeOut,
+                  opacity: playing ? 0.0 : 1.0,
+                  child: Icon(
+                    Icons.volume_off_rounded,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    size: 22,
+                    semanticLabel: 'Activar musica',
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

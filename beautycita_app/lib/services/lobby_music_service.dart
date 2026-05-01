@@ -24,6 +24,10 @@ class LobbyMusicService {
   bool _enabled = false;
   bool _suppressed = false;
   bool _hasPrompted = false;
+  // True once we've issued the first play(UrlSource) for this session.
+  // Subsequent toggles use resume()/pause() so playback continues from where
+  // it left off instead of restarting the loop from t=0.
+  bool _sourceLoaded = false;
 
   bool get enabled => _enabled;
   bool get hasPrompted => _hasPrompted;
@@ -56,7 +60,10 @@ class LobbyMusicService {
     if (value && !_suppressed) {
       await _start();
     } else {
-      await _stop();
+      // Pause (don't stop) so the playhead position is preserved.
+      // Next setEnabled(true) calls resume(), continuing the loop from
+      // where the user paused it instead of restarting from t=0.
+      await _pause();
     }
   }
 
@@ -68,7 +75,7 @@ class LobbyMusicService {
     if (_suppressed == value) return;
     _suppressed = value;
     if (value) {
-      await _player.pause();
+      await _pause();
     } else if (_enabled) {
       await _start();
     }
@@ -76,11 +83,7 @@ class LobbyMusicService {
 
   /// Lifecycle-driven pause (app backgrounded). Different from suppression
   /// because we don't want to flip the user's saved preference.
-  Future<void> pauseForLifecycle() async {
-    try {
-      await _player.pause();
-    } catch (_) {/* best-effort */}
-  }
+  Future<void> pauseForLifecycle() => _pause();
 
   Future<void> resumeAfterLifecycle() async {
     if (_enabled && !_suppressed) {
@@ -90,17 +93,23 @@ class LobbyMusicService {
 
   Future<void> _start() async {
     try {
-      // play() with UrlSource handles "already playing" gracefully —
-      // resume() alone won't (re)open the source if it was never set.
-      await _player.play(UrlSource(_lobbyMusicUrl), volume: _kFixedVolume);
+      if (!_sourceLoaded) {
+        // First play of the session — open the URL source.
+        await _player.play(UrlSource(_lobbyMusicUrl), volume: _kFixedVolume);
+        _sourceLoaded = true;
+      } else {
+        // Source already opened — resume() continues from the paused
+        // playhead instead of restarting the loop from t=0.
+        await _player.resume();
+      }
     } catch (e) {
-      if (kDebugMode) debugPrint('[LobbyMusic] play failed: $e');
+      if (kDebugMode) debugPrint('[LobbyMusic] play/resume failed: $e');
     }
   }
 
-  Future<void> _stop() async {
+  Future<void> _pause() async {
     try {
-      await _player.stop();
+      await _player.pause();
     } catch (_) {/* best-effort */}
   }
 
