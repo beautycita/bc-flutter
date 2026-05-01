@@ -39,6 +39,9 @@ images/
 **/Zone.Identifier
 .superpowers/
 
+# Audio source assets — uploaded to R2, not bundled in the apps
+audio/
+
 # Confidential legal/corporate documents
 docs/consult/
 
