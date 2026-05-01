@@ -57,6 +57,118 @@ class _State extends ConsumerState<OperacionesOutreach> {
     });
   }
 
+  Future<OutreachTemplate?> _pickTemplate(List<OutreachTemplate> templates) {
+    return showModalBottomSheet<OutreachTemplate>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => SafeArea(
+        child: FractionallySizedBox(
+          heightFactor: 0.8,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AdminV2Tokens.spacingLG,
+              AdminV2Tokens.spacingLG,
+              AdminV2Tokens.spacingLG,
+              AdminV2Tokens.spacingMD,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Templates para ${_audience.label} · ${_channel.label}',
+                  style: AdminV2Tokens.title(ctx),
+                ),
+                const SizedBox(height: AdminV2Tokens.spacingXS),
+                Text(
+                  '${templates.length} template${templates.length == 1 ? '' : 's'} activo${templates.length == 1 ? '' : 's'}',
+                  style: AdminV2Tokens.muted(ctx),
+                ),
+                const SizedBox(height: AdminV2Tokens.spacingMD),
+                Expanded(
+                  child: ListView.separated(
+                    itemCount: templates.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: AdminV2Tokens.spacingSM),
+                    itemBuilder: (_, i) {
+                      final t = templates[i];
+                      final isSelected = _template?.id == t.id;
+                      final preview = t.bodyTemplate
+                          .replaceAll(RegExp(r'\s+'), ' ')
+                          .trim();
+                      return InkWell(
+                        onTap: () => Navigator.of(ctx).pop(t),
+                        borderRadius: BorderRadius.circular(AdminV2Tokens.radiusSM),
+                        child: Container(
+                          padding: const EdgeInsets.all(AdminV2Tokens.spacingMD),
+                          decoration: BoxDecoration(
+                            color: Theme.of(ctx).colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(AdminV2Tokens.radiusSM),
+                            border: Border.all(
+                              color: isSelected
+                                  ? Theme.of(ctx).colorScheme.primary
+                                  : Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.10),
+                              width: isSelected ? 1.5 : 1,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      t.name,
+                                      style: AdminV2Tokens.body(ctx).copyWith(fontWeight: FontWeight.w700),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  if (t.isInvite)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: AdminV2Tokens.spacingSM,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(ctx).colorScheme.primary.withValues(alpha: 0.14),
+                                        borderRadius: BorderRadius.circular(AdminV2Tokens.radiusFull),
+                                      ),
+                                      child: Text(
+                                        'Invitación',
+                                        style: AdminV2Tokens.muted(ctx).copyWith(
+                                          color: Theme.of(ctx).colorScheme.primary,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              if (t.category.isNotEmpty) ...[
+                                const SizedBox(height: 2),
+                                Text(t.category, style: AdminV2Tokens.muted(ctx)),
+                              ],
+                              const SizedBox(height: AdminV2Tokens.spacingSM),
+                              Text(
+                                preview,
+                                style: AdminV2Tokens.muted(ctx).copyWith(fontSize: 12),
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _renderPreview(OutreachRecipient firstSelected) async {
     if (_template == null) return;
     setState(() {
@@ -168,78 +280,145 @@ class _State extends ConsumerState<OperacionesOutreach> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Selecciona audiencia, canal y template. Multi-selecciona destinatarios para envío masivo o uno solo para envío individual. El servidor aplica opt-outs, cooldowns de invitaciones y rate-limits automáticamente.',
+                'Tres pasos: audiencia → canal → template. El servidor aplica opt-outs, cooldowns y rate-limits automáticamente.',
                 style: AdminV2Tokens.muted(context),
               ),
-              const SizedBox(height: AdminV2Tokens.spacingMD),
-              Wrap(
-                spacing: AdminV2Tokens.spacingSM,
-                runSpacing: AdminV2Tokens.spacingSM,
+              const SizedBox(height: AdminV2Tokens.spacingLG),
+
+              // Step 1: Audience
+              Text('1. Audiencia', style: AdminV2Tokens.muted(context).copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: AdminV2Tokens.spacingSM),
+              Row(
                 children: [
-                  for (final a in OutreachAudience.values)
-                    ChoiceChip(
-                      label: Text(a.label),
-                      selected: _audience == a,
-                      onSelected: (_) => setState(() {
-                        _audience = a;
-                        _template = null;
-                        _selected.clear();
-                        _resetPreview();
-                      }),
-                    ),
-                  const SizedBox(width: AdminV2Tokens.spacingMD),
-                  for (final ch in OutreachChannel.values)
-                    ChoiceChip(
-                      label: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(ch == OutreachChannel.wa ? Icons.chat_outlined : Icons.email_outlined, size: 14),
-                          const SizedBox(width: 4),
-                          Text(ch.label),
-                        ],
+                  for (final a in OutreachAudience.values) ...[
+                    Expanded(
+                      child: ChoiceChip(
+                        label: SizedBox(
+                          width: double.infinity,
+                          child: Text(a.label, textAlign: TextAlign.center),
+                        ),
+                        selected: _audience == a,
+                        onSelected: (_) => setState(() {
+                          _audience = a;
+                          _template = null;
+                          _selected.clear();
+                          _resetPreview();
+                        }),
                       ),
-                      selected: _channel == ch,
-                      onSelected: (_) => setState(() {
-                        _channel = ch;
-                        _template = null;
-                        _resetPreview();
-                      }),
                     ),
+                    if (a != OutreachAudience.values.last) const SizedBox(width: AdminV2Tokens.spacingSM),
+                  ],
                 ],
               ),
-              const SizedBox(height: AdminV2Tokens.spacingMD),
+              const SizedBox(height: AdminV2Tokens.spacingLG),
+
+              // Step 2: Channel
+              Text('2. Canal', style: AdminV2Tokens.muted(context).copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: AdminV2Tokens.spacingSM),
+              Row(
+                children: [
+                  for (final ch in OutreachChannel.values) ...[
+                    Expanded(
+                      child: ChoiceChip(
+                        label: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(ch == OutreachChannel.wa ? Icons.chat_outlined : Icons.email_outlined, size: 16),
+                            const SizedBox(width: 6),
+                            Text(ch.label),
+                          ],
+                        ),
+                        selected: _channel == ch,
+                        onSelected: (_) => setState(() {
+                          _channel = ch;
+                          _template = null;
+                          _resetPreview();
+                        }),
+                      ),
+                    ),
+                    if (ch != OutreachChannel.values.last) const SizedBox(width: AdminV2Tokens.spacingSM),
+                  ],
+                ],
+              ),
+              const SizedBox(height: AdminV2Tokens.spacingLG),
+
+              // Step 3: Template — tap-to-pick row that opens a bottom sheet
+              // listing every template available for the selected audience+channel
+              // with their full names. Much more discoverable than a dropdown.
+              Text(
+                '3. Template para ${_audience.label} · ${_channel.label}',
+                style: AdminV2Tokens.muted(context).copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: AdminV2Tokens.spacingSM),
               templatesAsync.when(
                 loading: () => const LinearProgressIndicator(),
                 error: (e, _) => AdminEmptyState(kind: AdminEmptyKind.error, body: '$e'),
                 data: (templates) {
-                  if (templates.isEmpty) {
-                    return const AdminEmptyState(
-                      kind: AdminEmptyKind.empty,
-                      title: 'Sin templates',
-                      body: 'No hay templates activos para esta combinación.',
-                    );
-                  }
-                  return DropdownButtonFormField<String>(
-                    value: _template?.id,
-                    isExpanded: true,
-                    decoration: InputDecoration(
-                      labelText: 'Template',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AdminV2Tokens.radiusSM)),
-                    ),
-                    items: [
-                      for (final t in templates)
-                        DropdownMenuItem(
-                          value: t.id,
-                          child: Text(t.name, overflow: TextOverflow.ellipsis),
+                  return InkWell(
+                    onTap: templates.isEmpty
+                        ? null
+                        : () async {
+                            final picked = await _pickTemplate(templates);
+                            if (picked != null) {
+                              setState(() {
+                                _template = picked;
+                                _resetPreview();
+                              });
+                            }
+                          },
+                    borderRadius: BorderRadius.circular(AdminV2Tokens.radiusSM),
+                    child: Container(
+                      padding: const EdgeInsets.all(AdminV2Tokens.spacingMD),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(AdminV2Tokens.radiusSM),
+                        border: Border.all(
+                          color: _template != null
+                              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.4)
+                              : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12),
                         ),
-                    ],
-                    onChanged: (id) {
-                      final t = templates.firstWhere((x) => x.id == id);
-                      setState(() {
-                        _template = t;
-                        _resetPreview();
-                      });
-                    },
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _template != null
+                                ? Icons.check_circle_outline
+                                : Icons.unfold_more_rounded,
+                            size: 20,
+                            color: _template != null
+                                ? Theme.of(context).colorScheme.primary
+                                : AdminV2Tokens.subtle(context),
+                          ),
+                          const SizedBox(width: AdminV2Tokens.spacingMD),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _template?.name ??
+                                      (templates.isEmpty
+                                          ? 'Sin templates activos para esta combinación'
+                                          : 'Toca para elegir un template (${templates.length} disponible${templates.length == 1 ? '' : 's'})'),
+                                  style: AdminV2Tokens.body(context).copyWith(fontWeight: FontWeight.w600),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                if (_template != null) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    _template!.category,
+                                    style: AdminV2Tokens.muted(context),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          if (templates.isNotEmpty)
+                            Icon(Icons.chevron_right, size: 18, color: AdminV2Tokens.subtle(context)),
+                        ],
+                      ),
+                    ),
                   );
                 },
               ),
