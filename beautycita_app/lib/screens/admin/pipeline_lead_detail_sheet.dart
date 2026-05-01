@@ -9,7 +9,6 @@ import '../../providers/rp_provider.dart';
 import 'package:beautycita_core/supabase.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
-import '../../widgets/admin/outreach_send_sheet.dart';
 
 // ---------------------------------------------------------------------------
 // Entry point
@@ -29,62 +28,8 @@ void showLeadDetailSheet(
 }
 
 // ---------------------------------------------------------------------------
-// Status helpers (mirrors pipeline screen)
-// ---------------------------------------------------------------------------
-
-const _allStatuses = [
-  'discovered',
-  'selected',
-  'outreach_sent',
-  'registered',
-  'declined',
-  'unreachable',
-];
-
-const _statusLabels = {
-  'discovered': 'Encontrado',
-  'selected': 'Seleccionado',
-  'outreach_sent': 'Contactado',
-  'registered': 'Registrado',
-  'declined': 'Rechazado',
-  'unreachable': 'Inalcanzable',
-};
-
-Color _statusColor(String? status) {
-  switch (status) {
-    case 'discovered':
-      return Colors.grey;
-    case 'selected':
-      return Colors.blue;
-    case 'outreach_sent':
-      return Colors.orange;
-    case 'registered':
-      return Colors.green;
-    case 'declined':
-      return Colors.red;
-    case 'unreachable':
-      return Colors.grey.shade400;
-    default:
-      return Colors.grey;
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Channel helpers
 // ---------------------------------------------------------------------------
-
-const _channelOptions = [
-  'whatsapp',
-  'sms',
-  'email',
-  'phone_call',
-  'in_person',
-  'radio_ad',
-  'social_media_ad',
-  'flyer',
-  'referral',
-  'other',
-];
 
 const _channelLabels = {
   'whatsapp': 'WhatsApp',
@@ -206,15 +151,10 @@ class _LeadDetailSheetState extends State<_LeadDetailSheet> {
   late TextEditingController _nameCtrl;
   bool _savingName = false;
 
-  // Current status (local copy so UI updates instantly)
-  late String _status;
-  bool _savingStatus = false;
-
   @override
   void initState() {
     super.initState();
     _lead = Map<String, dynamic>.from(widget.lead);
-    _status = _lead['status'] as String? ?? 'discovered';
     _nameCtrl = TextEditingController(
       text: _lead['business_name']?.toString() ?? '',
     );
@@ -245,29 +185,6 @@ class _LeadDetailSheetState extends State<_LeadDetailSheet> {
       ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
     } finally {
       if (mounted) setState(() => _savingName = false);
-    }
-  }
-
-  // ---- status change ----
-  Future<void> _changeStatus(String newStatus, WidgetRef ref) async {
-    if (newStatus == _status) return;
-    setState(() {
-      _status = newStatus;
-      _savingStatus = true;
-    });
-    try {
-      await SupabaseClientService.client
-          .from(BCTables.discoveredSalons)
-          .update({'status': newStatus})
-          .eq('id', _lead['id'] as String);
-      setState(() => _lead['status'] = newStatus);
-      widget.onChanged?.call();
-    } catch (e, stack) {
-      // revert on failure
-      setState(() => _status = _lead['status'] as String? ?? 'discovered');
-      ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
-    } finally {
-      if (mounted) setState(() => _savingStatus = false);
     }
   }
 
@@ -325,10 +242,6 @@ class _LeadDetailSheetState extends State<_LeadDetailSheet> {
                 _buildRpSection(context, ref),
                 const SizedBox(height: 12),
                 _buildOutreachTimeline(context, ref, logAsync),
-                const SizedBox(height: 12),
-                _buildRegisterContactButton(context, ref),
-                const SizedBox(height: 16),
-                _buildQuickActions(context, ref),
               ],
             ),
           ),
@@ -436,48 +349,6 @@ class _LeadDetailSheetState extends State<_LeadDetailSheet> {
             ),
           ),
         ],
-
-        const SizedBox(height: 10),
-
-        // Status chips row
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: _allStatuses.map((s) {
-              final isSelected = s == _status;
-              final color = _statusColor(s);
-              return Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: GestureDetector(
-                  onTap: _savingStatus ? null : () => _changeStatus(s, ref),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isSelected ? color : Theme.of(context).colorScheme.surface,
-                      border: Border.all(
-                        color: color,
-                        width: isSelected ? 0 : 1.5,
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      _statusLabels[s] ?? s,
-                      style: GoogleFonts.nunito(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: isSelected ? Theme.of(context).colorScheme.onPrimary : color,
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        ),
 
         const SizedBox(height: 10),
 
@@ -1021,296 +892,6 @@ class _LeadDetailSheetState extends State<_LeadDetailSheet> {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Section 4: Register contact button
-  // ---------------------------------------------------------------------------
-
-  Widget _buildRegisterContactButton(BuildContext context, WidgetRef ref) {
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: () => _showRegisterContactDialog(context, ref),
-        icon: const Icon(Icons.add_comment_outlined),
-        label: Text(
-          'Registrar Visita Presencial',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-        ),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: Colors.blue.shade700,
-          side: BorderSide(color: Colors.blue.shade300),
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _showRegisterContactDialog(
-    BuildContext context,
-    WidgetRef ref,
-  ) async {
-    String selectedChannel = 'whatsapp';
-    final notesCtrl = TextEditingController();
-    DateTime selectedDate = DateTime.now();
-    bool saving = false;
-
-    await showBurstDialog(
-      context: context,
-      builder: (dialogCtx) => StatefulBuilder(
-        builder: (dialogCtx, setDialogState) {
-          return AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
-            title: Text(
-              'Registrar Contacto',
-              style: GoogleFonts.poppins(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Channel dropdown
-                  Text(
-                    'Canal',
-                    style: GoogleFonts.nunito(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.grey.shade700,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade400),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: DropdownButton<String>(
-                      value: selectedChannel,
-                      isExpanded: true,
-                      underline: const SizedBox.shrink(),
-                      isDense: true,
-                      items: _channelOptions.map((ch) {
-                        return DropdownMenuItem(
-                          value: ch,
-                          child: Row(
-                            children: [
-                              Icon(
-                                _channelIcon(ch),
-                                size: 16,
-                                color: _channelColor(ch),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                _channelLabels[ch] ?? ch,
-                                style: GoogleFonts.nunito(fontSize: 13),
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                      onChanged: (v) {
-                        if (v != null) {
-                          setDialogState(() => selectedChannel = v);
-                        }
-                      },
-                    ),
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  // Notes field
-                  Text(
-                    'Notas',
-                    style: GoogleFonts.nunito(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.grey.shade700,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  TextField(
-                    controller: notesCtrl,
-                    minLines: 2,
-                    maxLines: 4,
-                    style: GoogleFonts.nunito(fontSize: 13),
-                    decoration: InputDecoration(
-                      hintText: 'Descripcion del contacto...',
-                      hintStyle: GoogleFonts.nunito(
-                        fontSize: 13,
-                        color: Colors.grey.shade400,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      isDense: true,
-                      contentPadding: const EdgeInsets.all(10),
-                    ),
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  // Date picker
-                  Text(
-                    'Fecha',
-                    style: GoogleFonts.nunito(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.grey.shade700,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  GestureDetector(
-                    onTap: () async {
-                      final picked = await showDatePicker(
-                        context: dialogCtx,
-                        initialDate: selectedDate,
-                        firstDate: DateTime(2024),
-                        lastDate: DateTime.now(),
-                      );
-                      if (picked != null) {
-                        setDialogState(() => selectedDate = DateTime(
-                              picked.year,
-                              picked.month,
-                              picked.day,
-                              selectedDate.hour,
-                              selectedDate.minute,
-                            ));
-                      }
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade400),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.calendar_today,
-                            size: 16,
-                            color: Colors.grey.shade600,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            _formatDateTime(selectedDate.toIso8601String()),
-                            style: GoogleFonts.nunito(fontSize: 13),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed:
-                    saving ? null : () => Navigator.of(dialogCtx).pop(),
-                child: Text(
-                  'Cancelar',
-                  style: GoogleFonts.nunito(color: Colors.grey.shade600),
-                ),
-              ),
-              ElevatedButton(
-                onPressed: saving
-                    ? null
-                    : () async {
-                        setDialogState(() => saving = true);
-                        try {
-                          final salonId = _lead['id'] as String;
-                          await SupabaseClientService.client
-                              .from(BCTables.salonOutreachLog)
-                              .insert({
-                            'discovered_salon_id': salonId,
-                            'channel': selectedChannel,
-                            'notes': notesCtrl.text.trim().isEmpty
-                                ? null
-                                : notesCtrl.text.trim(),
-                            'sent_at': selectedDate.toIso8601String(),
-                          });
-
-                          // Update discovered_salons metadata
-                          final currentCount =
-                              (_lead['outreach_count'] as num?)?.toInt() ?? 0;
-                          await SupabaseClientService.client
-                              .from(BCTables.discoveredSalons)
-                              .update({
-                            'outreach_count': currentCount + 1,
-                            'last_outreach_at':
-                                selectedDate.toIso8601String(),
-                            'outreach_channel': selectedChannel,
-                          }).eq('id', salonId);
-
-                          setState(() {
-                            _lead['outreach_count'] = currentCount + 1;
-                            _lead['last_outreach_at'] =
-                                selectedDate.toIso8601String();
-                            _lead['outreach_channel'] = selectedChannel;
-                          });
-
-                          // Invalidate so timeline refreshes
-                          ref.invalidate(pipelineOutreachLogProvider(salonId));
-
-                          widget.onChanged?.call();
-
-                          if (dialogCtx.mounted) {
-                            Navigator.of(dialogCtx).pop();
-                          }
-                        } catch (e, stack) {
-                          setDialogState(() => saving = false);
-                          ToastService.showErrorWithDetails(ToastService.friendlyError(e), e, stack);
-                        }
-                      },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue.shade700,
-                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: saving
-                    ? SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Theme.of(context).colorScheme.onPrimary,
-                        ),
-                      )
-                    : Text(
-                        'Guardar',
-                        style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                        ),
-                      ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-
-    notesCtrl.dispose();
-  }
-
-  // ---------------------------------------------------------------------------
-  // Section 5: Quick action buttons
-  // ---------------------------------------------------------------------------
 
   Widget _buildRpSection(BuildContext context, WidgetRef ref) {
     final rpId = _lead['assigned_rp_id'] as String?;
@@ -1494,102 +1075,6 @@ class _LeadDetailSheetState extends State<_LeadDetailSheet> {
     );
   }
 
-  Widget _buildQuickActions(BuildContext context, WidgetRef ref) {
-    final salonId = _lead['id']?.toString();
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        // Send templated invite (single recipient → opens unified send sheet).
-        if (salonId != null)
-          _quickBtn(
-            label: 'Enviar mensaje',
-            icon: Icons.send,
-            color: Theme.of(context).colorScheme.primary,
-            onTap: () async {
-              final sent = await showOutreachSendSheet(
-                context: context,
-                recipientTable: 'discovered_salons',
-                recipientIds: [salonId],
-                recipientLabel: 'Enviar mensaje a ${_lead['business_name'] ?? "este salón"}',
-              );
-              if (sent && context.mounted) {
-                // Refresh outreach timeline + status after enqueue
-                ref.invalidate(pipelineOutreachLogProvider(salonId));
-              }
-            },
-          ),
-
-        // "Registered" status is set automatically when a salon completes
-        // onboarding through the app. Admin cannot manually set it.
-        if (_status == 'registered')
-          _quickBtn(
-            label: 'Registrado',
-            icon: Icons.check_circle,
-            color: Colors.teal,
-            onTap: null, // read-only indicator
-          ),
-
-        // Mark as declined
-        _quickBtn(
-          label: 'Rechazado',
-          icon: Icons.cancel_outlined,
-          color: Colors.red,
-          outlined: true,
-          onTap: _status == 'declined'
-              ? null
-              : () => _changeStatus('declined', ref),
-        ),
-      ],
-    );
-  }
-
-  Widget _quickBtn({
-    required String label,
-    required IconData icon,
-    required Color color,
-    required VoidCallback? onTap,
-    bool outlined = false,
-  }) {
-    final disabled = onTap == null;
-    if (outlined) {
-      return OutlinedButton.icon(
-        onPressed: onTap,
-        icon: Icon(icon, size: 16),
-        label: Text(
-          label,
-          style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600),
-        ),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: disabled ? Colors.grey.shade400 : color,
-          side: BorderSide(
-            color: disabled ? Colors.grey.shade300 : color,
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-        ),
-      );
-    }
-    return ElevatedButton.icon(
-      onPressed: onTap,
-      icon: Icon(icon, size: 16),
-      label: Text(
-        label,
-        style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600),
-      ),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: disabled ? Colors.grey.shade200 : color,
-        foregroundColor: disabled ? Colors.grey.shade500 : Theme.of(context).colorScheme.onPrimary,
-        elevation: 0,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-      ),
-    );
-  }
 
   // ---------------------------------------------------------------------------
   // Shared: card builder

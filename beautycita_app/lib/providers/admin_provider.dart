@@ -1039,21 +1039,10 @@ final searchDiscoveredSalonsProvider = FutureProvider.family<List<Map<String, dy
     results = results.where((s) => s['assigned_rp_id'] == null).toList();
   }
 
-  // Phone-only client filter: surface salons with no verified WA + no email.
-  // The RPC doesn't expose contact_status as a search arg yet, so filter
-  // client-side off the row's phone/whatsapp/email/whatsapp_verified fields.
-  if (params['phone_only_client'] == true) {
-    results = results.where((s) {
-      final phone = (s['phone'] as String?) ?? '';
-      final whatsapp = (s['whatsapp'] as String?) ?? '';
-      final waVerified = (s['whatsapp_verified'] as bool?) ?? false;
-      final email = (s['email'] as String?) ?? '';
-      final hasPhone = phone.isNotEmpty;
-      final hasWa = whatsapp.isNotEmpty && waVerified;
-      final hasEmail = email.contains('@');
-      return hasPhone && !hasWa && !hasEmail;
-    }).toList();
-  }
+  // Email filter: surface salons that have an email on file. The RPC's
+  // RETURNS TABLE doesn't include `email`, so we enrich the rendered ids
+  // below (alongside HVT) and apply the filter against that joined map.
+  // The flag itself just opts into that join+filter step.
 
   // Client-side location filtering (country + state not in RPC)
   final countryFilter = params['country_filter'] as String?;
@@ -1073,8 +1062,9 @@ final searchDiscoveredSalonsProvider = FutureProvider.family<List<Map<String, dy
 
   // HVT enrichment: the search_discovered_salons RPC predates the tier
   // columns on discovered_salons. Fetch tier_id + hvt_score + tier_locked
-  // in one follow-up query so the Pipeline screen can render tier badges
-  // and sort by HVT score without a breaking RPC migration.
+  // (and `email` for the admin email filter chip) in one follow-up query
+  // so the Pipeline screen can render tier badges, filter by email, and
+  // sort by HVT score without a breaking RPC migration.
   if (results.isNotEmpty) {
     final ids = results
         .map((s) => s['id']?.toString())
@@ -1084,7 +1074,7 @@ final searchDiscoveredSalonsProvider = FutureProvider.family<List<Map<String, dy
       try {
         final hvtRows = await SupabaseClientService.client
             .from('discovered_salons')
-            .select('id, tier_id, hvt_score, tier_locked, owner_chain_size')
+            .select('id, tier_id, hvt_score, tier_locked, owner_chain_size, email')
             .inFilter('id', ids);
         final byId = <String, Map<String, dynamic>>{
           for (final r in (hvtRows as List).cast<Map<String, dynamic>>())
@@ -1097,12 +1087,21 @@ final searchDiscoveredSalonsProvider = FutureProvider.family<List<Map<String, dy
           s['hvt_score'] = extra['hvt_score'];
           s['tier_locked'] = extra['tier_locked'];
           s['owner_chain_size'] = extra['owner_chain_size'];
+          s['email'] = extra['email'];
         }
       } catch (_) {
-        // Tier columns are admin-only via existing RLS — non-admin sessions
-        // would error here. Silently fall back to tier-less rows.
+        // Tier/email columns are admin-only via existing RLS — non-admin
+        // sessions would error here. Silently fall back to tier-less rows.
       }
     }
+  }
+
+  // Email filter applies AFTER enrichment so it can read the joined `email`.
+  if (params['has_email_client'] == true) {
+    results = results.where((s) {
+      final email = (s['email'] as String?) ?? '';
+      return email.contains('@');
+    }).toList();
   }
 
   // Optional sort-by-hvt: when the caller sets sort_by='hvt_score', resort

@@ -41,17 +41,6 @@ const _pipelineExportColumns = [
 // Status & source helpers
 // ---------------------------------------------------------------------------
 
-const _allStatuses = [
-  'discovered',
-  'selected',
-  'outreach_sent',
-  'registered',
-  'declined',
-  'unreachable',
-];
-
-const _allSources = ['google_maps', 'facebook', 'bing', 'manual'];
-
 Color _statusColor(BuildContext context, String? status) {
   final colors = Theme.of(context).colorScheme;
   final bcExt = Theme.of(context).extension<BCThemeExtension>()!;
@@ -126,13 +115,6 @@ String _sourceLabel(String source) {
 // RP status helpers
 // ---------------------------------------------------------------------------
 
-const _allRpStatuses = [
-  'unassigned',
-  'assigned',
-  'visited',
-  'onboarding_complete',
-];
-
 Color _rpStatusColor(BuildContext context, String? rpStatus) {
   final colors = Theme.of(context).colorScheme;
   final bcExt = Theme.of(context).extension<BCThemeExtension>()!;
@@ -150,20 +132,35 @@ Color _rpStatusColor(BuildContext context, String? rpStatus) {
   }
 }
 
-String _rpStatusLabel(String rpStatus) {
-  switch (rpStatus) {
-    case 'unassigned':
-      return 'Sin asignar';
-    case 'assigned':
-      return 'Asignado';
-    case 'visited':
-      return 'Visitado';
-    case 'onboarding_complete':
-      return 'Onboarding completo';
-    default:
-      return rpStatus;
-  }
+// ---------------------------------------------------------------------------
+// Pipeline views — the user-facing concept of "what stage of the funnel are
+// these leads in." Replaces the raw status enum exposure. Each view is a
+// preset combination of filter values applied on top of geo + search.
+// ---------------------------------------------------------------------------
+
+enum _PipelineView {
+  uncontacted, // discovered, never reached out, has WA — ready for first invite
+  contacted,   // outreach_sent — awaiting reply
+  interested,  // has_interest = true
+  assigned,    // rp_status assigned OR visited — RP is working it
+  declined,    // declined OR unreachable — dead leads
 }
+
+const Map<_PipelineView, String> _viewLabels = {
+  _PipelineView.uncontacted: 'Por contactar',
+  _PipelineView.contacted: 'Contactados',
+  _PipelineView.interested: 'Interesados',
+  _PipelineView.assigned: 'Asignados',
+  _PipelineView.declined: 'Descartados',
+};
+
+const Map<_PipelineView, IconData> _viewIcons = {
+  _PipelineView.uncontacted: Icons.fiber_new_outlined,
+  _PipelineView.contacted: Icons.send_outlined,
+  _PipelineView.interested: Icons.favorite_outline,
+  _PipelineView.assigned: Icons.person_outline,
+  _PipelineView.declined: Icons.do_not_disturb_alt,
+};
 
 // ---------------------------------------------------------------------------
 // Screen
@@ -184,19 +181,15 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
   String _searchQuery = '';
   Set<String> _statusFilters = {};
   bool? _hasWhatsapp;
+  bool? _hasEmail;
   bool? _hasInterest;
-  /// Surface salons with no verified WA + no email (only phone). They're the
-  /// outreach-blocker queue: enrichment needed before they can be contacted.
-  bool _phoneOnly = false;
-  String? _sourceFilter;
   String? _rpStatusFilter;
+  _PipelineView _currentView = _PipelineView.uncontacted;
   String? _assignedRpId;
   double? _pinLat;
   double? _pinLng;
   double _radiusKm = 25;
   Set<String> _selectedIds = {};
-  bool _selectionMode = false;
-  bool _metricsExpanded = false;
 
   // Location filters
   String? _countryFilter;
@@ -211,17 +204,73 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
   /// Stable string key for the family provider (Map has reference equality,
   /// which creates a new provider on every rebuild). This encodes all filters
   /// into a single string so Riverpod can cache correctly.
+  /// Resolve the active smart view into concrete filter values. Returns
+  /// `(statusFilter, rpStatus, hasInterest)`. The view is the dominant
+  /// intent — "show me leads in stage X" — and overrides any conflicting
+  /// advanced toggles; the advanced toggles still layer on top for the
+  /// orthogonal axes (WA, email, geo).
+  ({
+    List<String>? statusFilter,
+    String? rpStatus,
+    bool? hasInterest,
+    bool unassignedOnly,
+  }) get _viewSlice {
+    switch (_currentView) {
+      case _PipelineView.uncontacted:
+        return (
+          statusFilter: ['discovered', 'selected'],
+          rpStatus: null,
+          hasInterest: null,
+          unassignedOnly: true,
+        );
+      case _PipelineView.contacted:
+        return (
+          statusFilter: ['outreach_sent'],
+          rpStatus: null,
+          hasInterest: null,
+          unassignedOnly: false,
+        );
+      case _PipelineView.interested:
+        return (
+          statusFilter: null,
+          rpStatus: null,
+          hasInterest: true,
+          unassignedOnly: false,
+        );
+      case _PipelineView.assigned:
+        return (
+          statusFilter: null,
+          rpStatus: _rpStatusFilter ?? 'assigned',
+          hasInterest: null,
+          unassignedOnly: false,
+        );
+      case _PipelineView.declined:
+        return (
+          statusFilter: ['declined', 'unreachable'],
+          rpStatus: null,
+          hasInterest: null,
+          unassignedOnly: false,
+        );
+    }
+  }
+
   String get _searchKey {
-    final parts = <String>[_searchQuery];
-    if (_statusFilters.isNotEmpty) {
-      final sorted = _statusFilters.toList()..sort();
+    final v = _viewSlice;
+    final parts = <String>['v:${_currentView.name}', _searchQuery];
+    final mergedStatuses = <String>{
+      ..._statusFilters,
+      ...?v.statusFilter,
+    };
+    if (mergedStatuses.isNotEmpty) {
+      final sorted = mergedStatuses.toList()..sort();
       parts.add('s:${sorted.join(',')}');
     }
     if (_hasWhatsapp == true) parts.add('wa:1');
-    if (_hasInterest == true) parts.add('int:1');
-    if (_phoneOnly) parts.add('phoneonly:1');
-    if (_sourceFilter != null) parts.add('src:$_sourceFilter');
-    if (_rpStatusFilter != null) parts.add('rps:$_rpStatusFilter');
+    if (_hasEmail == true) parts.add('em:1');
+    final hasInterest = _hasInterest ?? v.hasInterest;
+    if (hasInterest == true) parts.add('int:1');
+    final rpStatus = v.rpStatus ?? _rpStatusFilter;
+    if (rpStatus != null) parts.add('rps:$rpStatus');
     if (_assignedRpId != null) parts.add('rp:$_assignedRpId');
     if (_hasGeoFilter) parts.add('geo:$_pinLat,$_pinLng,$_radiusKm');
     if (_countryFilter != null) parts.add('country:$_countryFilter');
@@ -230,26 +279,67 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
     return parts.join('|');
   }
 
-  Map<String, dynamic> get _searchParams => {
-        'query': _searchQuery,
-        if (_statusFilters.isNotEmpty)
-          'status_filter': _statusFilters.toList(),
-        if (_hasWhatsapp == true) 'has_whatsapp': true,
-        if (_hasInterest == true) 'has_interest': true,
-        if (_phoneOnly) 'phone_only_client': true,
-        if (_sourceFilter != null) 'source_filter': _sourceFilter,
-        if (_rpStatusFilter != null) 'p_rp_status_filter': _rpStatusFilter,
-        if (_assignedRpId != null) 'p_assigned_rp_id': _assignedRpId,
-        // Only show unassigned when no RP-specific filters are active
-        if (_assignedRpId == null && _rpStatusFilter == null)
-          'p_unassigned_only': true,
-        if (_pinLat != null) 'p_pin_lat': _pinLat,
-        if (_pinLng != null) 'p_pin_lng': _pinLng,
-        if (_hasGeoFilter) 'p_radius_km': _radiusKm,
-        if (_cityFilter != null) 'city_filter': _cityFilter,
-        if (_countryFilter != null) 'country_filter': _countryFilter,
-        if (_stateFilter != null) 'state_filter': _stateFilter,
-      };
+  Map<String, dynamic> get _searchParams {
+    final v = _viewSlice;
+    final mergedStatuses = <String>{
+      ..._statusFilters,
+      ...?v.statusFilter,
+    };
+    final hasInterest = _hasInterest ?? v.hasInterest;
+    final rpStatus = v.rpStatus ?? _rpStatusFilter;
+    return {
+      'query': _searchQuery,
+      if (mergedStatuses.isNotEmpty)
+        'status_filter': mergedStatuses.toList(),
+      if (_hasWhatsapp == true) 'has_whatsapp': true,
+      if (_hasEmail == true) 'has_email_client': true,
+      if (hasInterest == true) 'has_interest': true,
+      'p_rp_status_filter': ?rpStatus,
+      if (_assignedRpId != null) 'p_assigned_rp_id': _assignedRpId,
+      if (_assignedRpId == null && rpStatus == null && v.unassignedOnly)
+        'p_unassigned_only': true,
+      if (_pinLat != null) 'p_pin_lat': _pinLat,
+      if (_pinLng != null) 'p_pin_lng': _pinLng,
+      if (_hasGeoFilter) 'p_radius_km': _radiusKm,
+      if (_cityFilter != null) 'city_filter': _cityFilter,
+      if (_countryFilter != null) 'country_filter': _countryFilter,
+      if (_stateFilter != null) 'state_filter': _stateFilter,
+    };
+  }
+
+  /// Translate raw funnel-status counts into smart-view counts. Some
+  /// views are unions of multiple statuses (uncontacted = discovered +
+  /// selected; declined = declined + unreachable); two views (interested,
+  /// assigned) don't map to status counts at all and stay null until we
+  /// add dedicated counters server-side.
+  Map<_PipelineView, int?> _funnelCountsFromStats(
+      AsyncValue<Map<String, int>> statsAsync) {
+    final s = statsAsync.valueOrNull;
+    if (s == null) {
+      return {for (final v in _PipelineView.values) v: null};
+    }
+    int g(String k) => s[k] ?? 0;
+    return {
+      _PipelineView.uncontacted: g('discovered') + g('selected'),
+      _PipelineView.contacted: g('outreach_sent'),
+      _PipelineView.interested: null, // needs interest_count breakdown
+      _PipelineView.assigned: null,   // needs rp_status breakdown
+      _PipelineView.declined: g('declined') + g('unreachable'),
+    };
+  }
+
+  void _setView(_PipelineView v) {
+    if (_currentView == v) return;
+    setState(() {
+      _currentView = v;
+      // Reset transient overrides — the view sets the headline filter,
+      // and we don't want stale extras polluting the next slice.
+      _statusFilters = {};
+      _rpStatusFilter = null;
+      _hasInterest = null;
+      _selectedIds = {};
+    });
+  }
 
   @override
   void initState() {
@@ -360,17 +450,13 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
   }
 
   void _exitSelection() {
-    setState(() {
-      _selectionMode = false;
-      _selectedIds = {};
-    });
+    setState(() => _selectedIds = {});
   }
 
   void _toggleSelection(String id) {
     setState(() {
       if (_selectedIds.contains(id)) {
         _selectedIds.remove(id);
-        if (_selectedIds.isEmpty) _selectionMode = false;
       } else {
         _selectedIds.add(id);
       }
@@ -437,50 +523,6 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
     });
   }
 
-  Future<void> _bulkUnassign() async {
-    final count = _selectedIds.length;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          'Desasignar $count salones?',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-        ),
-        content: Text(
-          'Se removera la asignacion RP de $count salones.',
-          style: GoogleFonts.nunito(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancelar', style: GoogleFonts.nunito()),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).extension<BCThemeExtension>()!.warningColor,
-              foregroundColor: Theme.of(context).colorScheme.onPrimary,
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Desasignar', style: GoogleFonts.nunito()),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true || !mounted) return;
-
-    try {
-      await adminUnassignSalons(salonIds: _selectedIds.toList());
-      ref.invalidate(searchDiscoveredSalonsProvider(_searchKey));
-      if (mounted) {
-        _exitSelection();
-        ToastService.showSuccess('$count salones desasignados');
-      }
-    } catch (e) {
-      if (mounted) ToastService.showError('Error al desasignar: $e');
-    }
-  }
-
   void _showExportSheet(List<Map<String, dynamic>> leads) {
     showBurstBottomSheet(
       context: context,
@@ -490,80 +532,6 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
         ),
       ),
       builder: (ctx) => _ExportBottomSheet(leads: leads, query: _searchQuery),
-    );
-  }
-
-  void _showStatusPickerDialog() {
-    final theme = Theme.of(context);
-    String? picked;
-
-    showBurstDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          'Cambiar estado',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-        ),
-        content: StatefulBuilder(
-          builder: (innerCtx, setInner) => Column(
-            mainAxisSize: MainAxisSize.min,
-            children: _allStatuses.map((s) {
-              final isPickedStatus = picked == s;
-              return InkWell(
-                onTap: () => setInner(() => picked = s),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: AppConstants.paddingSM, horizontal: 4),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 10,
-                        height: 10,
-                        decoration: BoxDecoration(
-                          color: _statusColor(context, s),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          _statusLabel(s),
-                          style: GoogleFonts.nunito(
-                            fontSize: 14,
-                            fontWeight: isPickedStatus
-                                ? FontWeight.w700
-                                : FontWeight.normal,
-                          ),
-                        ),
-                      ),
-                      if (isPickedStatus)
-                        Icon(Icons.check, size: 18, color: Theme.of(context).extension<BCThemeExtension>()!.successColor),
-                    ],
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancelar', style: GoogleFonts.nunito()),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: theme.colorScheme.primary,
-              foregroundColor: theme.colorScheme.onPrimary,
-            ),
-            onPressed: picked == null
-                ? null
-                : () async {
-                    Navigator.pop(ctx);
-                    await _bulkUpdateStatus(picked!);
-                  },
-            child: Text('Aplicar', style: GoogleFonts.nunito()),
-          ),
-        ],
-      ),
     );
   }
 
@@ -608,12 +576,12 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
       children: [
         Column(
           children: [
-            // 1. Metrics header
-            _MetricsHeader(
-              statsAsync: statsAsync,
-              expanded: _metricsExpanded,
-              onToggle: () =>
-                  setState(() => _metricsExpanded = !_metricsExpanded),
+            // 1. Smart-view selector — the user's primary axis through the
+            // funnel. Hides the raw status enum behind named workflows.
+            _PipelineViewBar(
+              current: _currentView,
+              onSelect: _setView,
+              counts: _funnelCountsFromStats(statsAsync),
             ),
 
             // 2. Search bar
@@ -748,19 +716,10 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
               ),
             ),
 
-            // 3. Filter chips
-            _FilterChipsRow(
-              statusFilters: _statusFilters,
+            // 3. Geo + advanced toggles (a compact single row, scrollable)
+            _PipelineFilterStrip(
               hasWhatsapp: _hasWhatsapp,
-              hasInterest: _hasInterest,
-              phoneOnly: _phoneOnly,
-              onPhoneOnlyToggle: () {
-                setState(() => _phoneOnly = !_phoneOnly);
-              },
-              sourceFilter: _sourceFilter,
-              rpStatusFilter: _rpStatusFilter,
-              assignedRpId: _assignedRpId,
-              rpUsersAsync: ref.watch(rpUsersProvider),
+              hasEmail: _hasEmail,
               countryFilter: _countryFilter,
               stateFilter: _stateFilter,
               cityFilter: _cityFilter,
@@ -770,108 +729,162 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
               onCountrySelect: _setCountryFilter,
               onStateSelect: _setStateFilter,
               onCitySelect: _setCityFilter,
-              onStatusToggle: (s) {
-                setState(() {
-                  if (_statusFilters.contains(s)) {
-                    _statusFilters = {..._statusFilters}..remove(s);
-                  } else {
-                    _statusFilters = {..._statusFilters, s};
-                  }
-                });
-              },
               onWhatsappToggle: () {
                 setState(() {
                   _hasWhatsapp = _hasWhatsapp == true ? null : true;
                 });
               },
-              onInterestToggle: () {
+              onEmailToggle: () {
                 setState(() {
-                  _hasInterest = _hasInterest == true ? null : true;
-                });
-              },
-              onSourceSelect: (src) {
-                setState(() {
-                  _sourceFilter = _sourceFilter == src ? null : src;
-                });
-              },
-              onRpStatusSelect: (rps) {
-                setState(() {
-                  _rpStatusFilter = _rpStatusFilter == rps ? null : rps;
-                });
-              },
-              onAssignedRpSelect: (rpId) {
-                setState(() {
-                  _assignedRpId = _assignedRpId == rpId ? null : rpId;
+                  _hasEmail = _hasEmail == true ? null : true;
                 });
               },
             ),
 
             const SizedBox(height: AppConstants.paddingXS),
 
-            // 4. Lead list
+            // 4. Lead list — leave room at bottom for the always-visible
+            // bulk action bar so the last card never sits behind it.
             Expanded(
-              child: _buildLeadList(colors, leadsAsync),
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 64),
+                child: _buildLeadList(colors, leadsAsync),
+              ),
             ),
           ],
         ),
 
-        // 5. Bulk action bar (slides in from bottom)
+        // 5. Bulk action bar — always visible. Empty state prompts the
+        // user to start selecting; populated state activates the actions.
         Positioned(
           left: 0,
           right: 0,
           bottom: 0,
-          child: AnimatedSlide(
-            duration: AppConstants.shortAnimation,
-            offset: _selectedIds.isNotEmpty
-                ? Offset.zero
-                : const Offset(0, 1),
-            child: _BulkActionBar(
-              count: _selectedIds.length,
-              onOutreach: () async {
-                if (_selectedIds.isEmpty) return;
-                final ids = _selectedIds.toList();
-                if (ids.length > 100) {
-                  ToastService.showError(
-                    'Máximo 100 salones por envío. Hay ${ids.length} seleccionados.',
-                  );
-                  return;
-                }
-                final sent = await showOutreachSendSheet(
-                  context: context,
-                  recipientTable: 'discovered_salons',
-                  recipientIds: ids,
-                  recipientLabel: 'Enviar mensaje a ${ids.length} salones',
-                );
-                if (sent && context.mounted) {
-                  _exitSelection();
-                  ref.invalidate(searchDiscoveredSalonsProvider(_searchKey));
-                  ref.invalidate(pipelineFunnelStatsProvider(_searchKey));
-                }
-              },
-              onStatus: _showStatusPickerDialog,
-              onAssignRp: _showBulkAssignDialog,
-              onUnassign: _bulkUnassign,
-              onExport: () {
-                leadsAsync.whenData((leads) {
-                  final selected = leads
-                      .where((l) => _selectedIds.contains(l['id']?.toString()))
-                      .toList();
-                  _showExportSheet(selected.isEmpty ? leads : selected);
-                });
-              },
-              onClose: _exitSelection,
-              onSelectAll: () {
-                leadsAsync.whenData((leads) {
-                  setState(() {
-                    _selectedIds = leads.map((l) => l['id']?.toString() ?? '').where((id) => id.isNotEmpty).toSet();
-                  });
-                });
-              },
+          child: _BulkActionBar(
+            count: _selectedIds.length,
+            totalLoaded: leadsAsync.maybeWhen(
+              data: (l) => l.length,
+              orElse: () => 0,
             ),
+            onOutreach: () async {
+              if (_selectedIds.isEmpty) return;
+              final ids = _selectedIds.toList();
+              if (ids.length > 100) {
+                ToastService.showError(
+                  'Máximo 100 salones por envío. Hay ${ids.length} seleccionados.',
+                );
+                return;
+              }
+              final sent = await showOutreachSendSheet(
+                context: context,
+                recipientTable: 'discovered_salons',
+                recipientIds: ids,
+                recipientLabel: 'Enviar mensaje a ${ids.length} salones',
+              );
+              if (sent && context.mounted) {
+                _exitSelection();
+                ref.invalidate(searchDiscoveredSalonsProvider(_searchKey));
+                ref.invalidate(pipelineFunnelStatsProvider(_searchKey));
+              }
+            },
+            onAssignRp: _selectedIds.isEmpty ? null : _showBulkAssignDialog,
+            onMarcar: _selectedIds.isEmpty
+                ? null
+                : () => _showMarcarDialog(context),
+            onSelectAll: () {
+              leadsAsync.whenData((leads) {
+                setState(() {
+                  _selectedIds = leads
+                      .map((l) => l['id']?.toString() ?? '')
+                      .where((id) => id.isNotEmpty)
+                      .toSet();
+                });
+              });
+            },
+            onClear: _selectedIds.isEmpty ? null : _exitSelection,
           ),
         ),
       ],
     );
+  }
+
+  /// Disposition picker — the only manual state-machine surface left.
+  /// Three options that map to the public "this lead is dead/promising/
+  /// unreachable" mental model. Routes through `_bulkUpdateStatus`.
+  Future<void> _showMarcarDialog(BuildContext context) async {
+    if (_selectedIds.isEmpty) return;
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppConstants.paddingMD),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  'Marcar ${_selectedIds.length} salones como…',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.favorite, color: Colors.pink),
+                title: const Text('Interesados'),
+                subtitle: const Text(
+                    'Mostraron interés en respuesta a un mensaje'),
+                onTap: () => Navigator.of(ctx).pop('interested'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.cancel_outlined, color: Colors.red),
+                title: const Text('Declinados'),
+                subtitle: const Text('Dijeron explícitamente que no'),
+                onTap: () => Navigator.of(ctx).pop('declined'),
+              ),
+              ListTile(
+                leading: Icon(Icons.signal_cellular_off,
+                    color: Colors.grey.shade500),
+                title: const Text('Inalcanzables'),
+                subtitle: const Text('Teléfono fuera de servicio o sin respuesta'),
+                onTap: () => Navigator.of(ctx).pop('unreachable'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (picked == null || !context.mounted) return;
+
+    if (picked == 'interested') {
+      // Bump interest_count via direct table update so the "Interesados"
+      // view picks the leads up. Status stays at outreach_sent.
+      try {
+        await SupabaseClientService.client
+            .from('discovered_salons')
+            .update({'interest_count': 1})
+            .inFilter('id', _selectedIds.toList());
+        ref.invalidate(searchDiscoveredSalonsProvider(_searchKey));
+        ref.invalidate(pipelineFunnelStatsProvider(_searchKey));
+        if (mounted) {
+          ToastService.showSuccess(
+              '${_selectedIds.length} marcados como interesados');
+        }
+        _exitSelection();
+      } catch (e, stack) {
+        ToastService.showErrorWithDetails(
+            ToastService.friendlyError(e), e, stack);
+      }
+      return;
+    }
+
+    await _bulkUpdateStatus(picked);
   }
 
   Widget _buildLeadList(
@@ -974,20 +987,8 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
             return _LeadCard(
               lead: lead,
               isSelected: isSelected,
-              selectionMode: _selectionMode,
-              onTap: () {
-                if (_selectionMode) {
-                  _toggleSelection(id);
-                } else {
-                  showLeadDetailSheet(context, lead);
-                }
-              },
-              onLongPress: () {
-                setState(() {
-                  _selectionMode = true;
-                  _selectedIds = {..._selectedIds, id};
-                });
-              },
+              onTap: () => showLeadDetailSheet(context, lead),
+              onToggleSelection: () => _toggleSelection(id),
             );
           },
         );
@@ -1000,631 +1001,6 @@ class _AdminPipelineScreenState extends ConsumerState<AdminPipelineScreen> {
 // Metrics header
 // ---------------------------------------------------------------------------
 
-class _MetricsHeader extends StatelessWidget {
-  final AsyncValue<Map<String, int>> statsAsync;
-  final bool expanded;
-  final VoidCallback onToggle;
-
-  const _MetricsHeader({
-    required this.statsAsync,
-    required this.expanded,
-    required this.onToggle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    return GestureDetector(
-      onTap: onToggle,
-      child: Container(
-        decoration: BoxDecoration(
-          color: colors.surface,
-          border: Border(
-            bottom: BorderSide(
-              color: colors.onSurface.withValues(alpha: 0.08),
-            ),
-          ),
-        ),
-        child: statsAsync.when(
-          loading: () => const Padding(
-            padding: EdgeInsets.all(AppConstants.paddingMD),
-            child: Center(
-              child: SizedBox(
-                height: 16,
-                width: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            ),
-          ),
-          error: (e, _) => Padding(
-            padding: const EdgeInsets.all(AppConstants.paddingSM),
-            child: Text(
-              'Error al cargar estadisticas',
-              style: GoogleFonts.nunito(
-                fontSize: 12,
-                color: colors.error,
-              ),
-            ),
-          ),
-          data: (counts) {
-            final total = counts.values.fold(0, (a, b) => a + b);
-            final outreachSent = counts['outreach_sent'] ?? 0;
-            final registered = counts['registered'] ?? 0;
-            final convRate =
-                total > 0 ? (registered / total * 100) : 0.0;
-
-            return AnimatedCrossFade(
-              duration: AppConstants.shortAnimation,
-              crossFadeState: expanded
-                  ? CrossFadeState.showSecond
-                  : CrossFadeState.showFirst,
-              // Collapsed view
-              firstChild: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppConstants.paddingMD,
-                  vertical: AppConstants.paddingSM + 2,
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _CompactStat(
-                        label: 'Total',
-                        value: total.toString(),
-                        color: colors.primary,
-                      ),
-                    ),
-                    Expanded(
-                      child: _CompactStat(
-                        label: 'Contactados',
-                        value: outreachSent.toString(),
-                        color: Theme.of(context).extension<BCThemeExtension>()!.warningColor,
-                      ),
-                    ),
-                    Expanded(
-                      child: _CompactStat(
-                        label: 'Registrados',
-                        value: registered.toString(),
-                        color: Theme.of(context).extension<BCThemeExtension>()!.successColor,
-                      ),
-                    ),
-                    Expanded(
-                      child: _CompactStat(
-                        label: 'Conversion',
-                        value: '${convRate.toStringAsFixed(1)}%',
-                        color: colors.secondary,
-                      ),
-                    ),
-                    Icon(
-                      Icons.expand_more,
-                      size: 18,
-                      color: colors.onSurface.withValues(alpha: 0.4),
-                    ),
-                  ],
-                ),
-              ),
-              // Expanded view
-              secondChild: Padding(
-                padding: const EdgeInsets.all(AppConstants.paddingMD),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Embudo de Pipeline',
-                          style: GoogleFonts.poppins(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: colors.onSurface,
-                          ),
-                        ),
-                        Icon(
-                          Icons.expand_less,
-                          size: 18,
-                          color: colors.onSurface.withValues(alpha: 0.4),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppConstants.paddingSM),
-                    Wrap(
-                      spacing: AppConstants.paddingMD,
-                      runSpacing: AppConstants.paddingSM,
-                      children: _allStatuses.map((s) {
-                        final count = counts[s] ?? 0;
-                        return _FunnelStatusRow(
-                          status: s,
-                          count: count,
-                          total: total,
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: AppConstants.paddingSM),
-                    Text(
-                      'Conversion: ${convRate.toStringAsFixed(1)}%  |  Total: $total',
-                      style: GoogleFonts.nunito(
-                        fontSize: 12,
-                        color: colors.onSurface.withValues(alpha: 0.5),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
-class _CompactStat extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color color;
-
-  const _CompactStat({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          value,
-          style: GoogleFonts.poppins(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: color,
-          ),
-        ),
-        Text(
-          label,
-          style: GoogleFonts.nunito(
-            fontSize: 10,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-          ),
-          textAlign: TextAlign.center,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ],
-    );
-  }
-}
-
-class _FunnelStatusRow extends StatelessWidget {
-  final String status;
-  final int count;
-  final int total;
-
-  const _FunnelStatusRow({
-    required this.status,
-    required this.count,
-    required this.total,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final pct = total > 0 ? (count / total * 100) : 0.0;
-    final color = _statusColor(context, status);
-
-    return SizedBox(
-      width: (MediaQuery.sizeOf(context).width - 48) / 2,
-      child: Row(
-        children: [
-          Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              _statusLabel(status),
-              style: GoogleFonts.nunito(
-                fontSize: 12,
-                color:
-                    Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            '$count',
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: color,
-            ),
-          ),
-          const SizedBox(width: 2),
-          Text(
-            '(${pct.toStringAsFixed(0)}%)',
-            style: GoogleFonts.nunito(
-              fontSize: 10,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.4),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Filter chips row
-// ---------------------------------------------------------------------------
-
-class _FilterChipsRow extends StatelessWidget {
-  final Set<String> statusFilters;
-  final bool? hasWhatsapp;
-  final bool? hasInterest;
-  final bool phoneOnly;
-  final VoidCallback onPhoneOnlyToggle;
-  final String? sourceFilter;
-  final String? rpStatusFilter;
-  final String? assignedRpId;
-  final AsyncValue<List<Map<String, dynamic>>> rpUsersAsync;
-  final String? countryFilter;
-  final String? stateFilter;
-  final String? cityFilter;
-  final List<String> countries;
-  final List<String> states;
-  final List<String> cities;
-  final void Function(String?) onCountrySelect;
-  final void Function(String?) onStateSelect;
-  final void Function(String?) onCitySelect;
-  final void Function(String) onStatusToggle;
-  final VoidCallback onWhatsappToggle;
-  final VoidCallback onInterestToggle;
-  final void Function(String) onSourceSelect;
-  final void Function(String) onRpStatusSelect;
-  final void Function(String) onAssignedRpSelect;
-
-  const _FilterChipsRow({
-    required this.statusFilters,
-    required this.hasWhatsapp,
-    required this.hasInterest,
-    required this.phoneOnly,
-    required this.onPhoneOnlyToggle,
-    required this.sourceFilter,
-    required this.rpStatusFilter,
-    required this.assignedRpId,
-    required this.rpUsersAsync,
-    required this.countryFilter,
-    required this.stateFilter,
-    required this.cityFilter,
-    required this.countries,
-    required this.states,
-    required this.cities,
-    required this.onCountrySelect,
-    required this.onStateSelect,
-    required this.onCitySelect,
-    required this.onStatusToggle,
-    required this.onWhatsappToggle,
-    required this.onInterestToggle,
-    required this.onSourceSelect,
-    required this.onRpStatusSelect,
-    required this.onAssignedRpSelect,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    return SizedBox(
-      height: 40,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: AppConstants.paddingMD),
-        child: Row(
-          children: [
-            // Location dropdown chips
-            _PipelineDropdownChip(
-              label: countryFilter ?? 'Pais',
-              isActive: countryFilter != null,
-              options: countries,
-              onSelected: onCountrySelect,
-              onClear: () => onCountrySelect(null),
-              colors: colors,
-            ),
-            const SizedBox(width: AppConstants.paddingXS),
-            _PipelineDropdownChip(
-              label: stateFilter ?? 'Estado',
-              isActive: stateFilter != null,
-              options: states,
-              onSelected: onStateSelect,
-              onClear: () => onStateSelect(null),
-              colors: colors,
-              enabled: countryFilter != null,
-            ),
-            const SizedBox(width: AppConstants.paddingXS),
-            _PipelineDropdownChip(
-              label: cityFilter ?? 'Ciudad',
-              isActive: cityFilter != null,
-              options: cities,
-              onSelected: onCitySelect,
-              onClear: () => onCitySelect(null),
-              colors: colors,
-              enabled: stateFilter != null,
-            ),
-            const SizedBox(width: AppConstants.paddingSM),
-            // Status chips
-            ..._allStatuses.map((s) {
-              final selected = statusFilters.contains(s);
-              final color = _statusColor(context, s);
-              return Padding(
-                padding: const EdgeInsets.only(right: AppConstants.paddingXS),
-                child: FilterChip(
-                  label: Text(
-                    _statusLabel(s),
-                    style: GoogleFonts.nunito(
-                      fontSize: 12,
-                      color: selected ? Theme.of(context).colorScheme.onPrimary : colors.onSurface,
-                    ),
-                  ),
-                  selected: selected,
-                  onSelected: (_) => onStatusToggle(s),
-                  selectedColor: color,
-                  checkmarkColor: Theme.of(context).colorScheme.onPrimary,
-                  backgroundColor:
-                      colors.surfaceContainerHighest.withValues(alpha: 0.5),
-                  side: BorderSide(
-                    color: selected ? color : colors.onSurface.withValues(alpha: 0.15),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  visualDensity: VisualDensity.compact,
-                  showCheckmark: false,
-                  avatar: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: selected ? Theme.of(context).colorScheme.onPrimary : color,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-              );
-            }),
-
-            const SizedBox(width: AppConstants.paddingXS),
-
-            // Has WhatsApp chip
-            Padding(
-              padding: const EdgeInsets.only(right: AppConstants.paddingXS),
-              child: FilterChip(
-                label: Text(
-                  'WhatsApp',
-                  style: GoogleFonts.nunito(
-                    fontSize: 12,
-                    color: hasWhatsapp == true ? Theme.of(context).colorScheme.onPrimary : colors.onSurface,
-                  ),
-                ),
-                selected: hasWhatsapp == true,
-                onSelected: (_) => onWhatsappToggle(),
-                selectedColor: Theme.of(context).extension<BCThemeExtension>()!.successColor,
-                checkmarkColor: Theme.of(context).colorScheme.onPrimary,
-                backgroundColor:
-                    colors.surfaceContainerHighest.withValues(alpha: 0.5),
-                side: BorderSide(
-                  color: hasWhatsapp == true
-                      ? Theme.of(context).extension<BCThemeExtension>()!.successColor
-                      : colors.onSurface.withValues(alpha: 0.15),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                visualDensity: VisualDensity.compact,
-                showCheckmark: false,
-                avatar: Icon(
-                  Icons.phone_android_outlined,
-                  size: 14,
-                  color: hasWhatsapp == true ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).extension<BCThemeExtension>()!.successColor,
-                ),
-              ),
-            ),
-
-            // Phone-only chip — surfaces salons missing email + verified WA so
-            // enrichment can be prioritized before bulk outreach.
-            Padding(
-              padding: const EdgeInsets.only(right: AppConstants.paddingXS),
-              child: FilterChip(
-                label: Text(
-                  'Solo teléfono',
-                  style: GoogleFonts.nunito(
-                    fontSize: 12,
-                    color: phoneOnly ? Theme.of(context).colorScheme.onPrimary : colors.onSurface,
-                  ),
-                ),
-                selected: phoneOnly,
-                onSelected: (_) => onPhoneOnlyToggle(),
-                selectedColor: Colors.deepOrange,
-                checkmarkColor: Theme.of(context).colorScheme.onPrimary,
-                backgroundColor: colors.surfaceContainerHighest.withValues(alpha: 0.5),
-                side: BorderSide(
-                  color: phoneOnly
-                      ? Colors.deepOrange
-                      : colors.onSurface.withValues(alpha: 0.15),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                visualDensity: VisualDensity.compact,
-                showCheckmark: false,
-                avatar: Text('📞', style: TextStyle(fontSize: 12,
-                  color: phoneOnly ? Theme.of(context).colorScheme.onPrimary : Colors.deepOrange)),
-              ),
-            ),
-
-            // Has interest chip
-            Padding(
-              padding: const EdgeInsets.only(right: AppConstants.paddingXS),
-              child: FilterChip(
-                label: Text(
-                  'Con interes',
-                  style: GoogleFonts.nunito(
-                    fontSize: 12,
-                    color:
-                        hasInterest == true ? Theme.of(context).colorScheme.onPrimary : colors.onSurface,
-                  ),
-                ),
-                selected: hasInterest == true,
-                onSelected: (_) => onInterestToggle(),
-                selectedColor: Colors.pink[400],
-                checkmarkColor: Theme.of(context).colorScheme.onPrimary,
-                backgroundColor:
-                    colors.surfaceContainerHighest.withValues(alpha: 0.5),
-                side: BorderSide(
-                  color: hasInterest == true
-                      ? Colors.pink
-                      : colors.onSurface.withValues(alpha: 0.15),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                visualDensity: VisualDensity.compact,
-                showCheckmark: false,
-              ),
-            ),
-
-            const SizedBox(width: AppConstants.paddingXS),
-
-            // Source chips
-            ..._allSources.map((src) {
-              final selected = sourceFilter == src;
-              final color = _sourceColor(context, src);
-              return Padding(
-                padding: const EdgeInsets.only(right: AppConstants.paddingXS),
-                child: FilterChip(
-                  label: Text(
-                    _sourceLabel(src),
-                    style: GoogleFonts.nunito(
-                      fontSize: 12,
-                      color: selected ? Theme.of(context).colorScheme.onPrimary : colors.onSurface,
-                    ),
-                  ),
-                  selected: selected,
-                  onSelected: (_) => onSourceSelect(src),
-                  selectedColor: color,
-                  checkmarkColor: Theme.of(context).colorScheme.onPrimary,
-                  backgroundColor:
-                      colors.surfaceContainerHighest.withValues(alpha: 0.5),
-                  side: BorderSide(
-                    color: selected
-                        ? color
-                        : colors.onSurface.withValues(alpha: 0.15),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  visualDensity: VisualDensity.compact,
-                  showCheckmark: false,
-                ),
-              );
-            }),
-
-            const SizedBox(width: AppConstants.paddingSM),
-
-            // RP Status chips
-            ..._allRpStatuses.map((rps) {
-              final selected = rpStatusFilter == rps;
-              final color = _rpStatusColor(context, rps);
-              return Padding(
-                padding: const EdgeInsets.only(right: AppConstants.paddingXS),
-                child: FilterChip(
-                  label: Text(
-                    _rpStatusLabel(rps),
-                    style: GoogleFonts.nunito(
-                      fontSize: 12,
-                      color: selected ? Theme.of(context).colorScheme.onPrimary : colors.onSurface,
-                    ),
-                  ),
-                  selected: selected,
-                  onSelected: (_) => onRpStatusSelect(rps),
-                  selectedColor: color,
-                  checkmarkColor: Theme.of(context).colorScheme.onPrimary,
-                  backgroundColor:
-                      colors.surfaceContainerHighest.withValues(alpha: 0.5),
-                  side: BorderSide(
-                    color: selected ? color : colors.onSurface.withValues(alpha: 0.15),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  visualDensity: VisualDensity.compact,
-                  showCheckmark: false,
-                  avatar: Icon(
-                    Icons.person_outline,
-                    size: 14,
-                    color: selected ? Theme.of(context).colorScheme.onPrimary : color,
-                  ),
-                ),
-              );
-            }),
-
-            const SizedBox(width: AppConstants.paddingSM),
-
-            // RP user filter chips
-            ...rpUsersAsync.when(
-              loading: () => [const Padding(
-                padding: EdgeInsets.all(AppConstants.paddingSM),
-                child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
-              )],
-              error: (e, _) => [Padding(
-                padding: const EdgeInsets.all(AppConstants.paddingSM),
-                child: Text('Error', style: TextStyle(color: Colors.red.shade400, fontSize: 12)),
-              )],
-              data: (rpUsers) => rpUsers.map((rp) {
-                final rpId = rp['id'] as String;
-                final rpName = rp['full_name'] as String? ??
-                    rp['username'] as String? ??
-                    'RP';
-                final selected = assignedRpId == rpId;
-                return Padding(
-                  padding: const EdgeInsets.only(right: AppConstants.paddingXS),
-                  child: FilterChip(
-                    label: Text(
-                      rpName,
-                      style: GoogleFonts.nunito(
-                        fontSize: 12,
-                        color: selected ? Theme.of(context).colorScheme.onPrimary : colors.onSurface,
-                      ),
-                    ),
-                    selected: selected,
-                    onSelected: (_) => onAssignedRpSelect(rpId),
-                    selectedColor: Colors.indigo,
-                    checkmarkColor: Theme.of(context).colorScheme.onPrimary,
-                    backgroundColor:
-                        colors.surfaceContainerHighest.withValues(alpha: 0.5),
-                    side: BorderSide(
-                      color: selected
-                          ? Colors.indigo
-                          : colors.onSurface.withValues(alpha: 0.15),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    visualDensity: VisualDensity.compact,
-                    showCheckmark: false,
-                    avatar: const Icon(
-                      Icons.badge_outlined,
-                      size: 14,
-                      color: Colors.indigo,
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Pipeline dropdown chip (location filters)
 // ---------------------------------------------------------------------------
 
@@ -1731,30 +1107,40 @@ class _PipelineDropdownChip extends StatelessWidget {
 // Bulk action bar
 // ---------------------------------------------------------------------------
 
+/// Sticky bulk action bar — always visible. Three primary actions:
+///   📨 Enviar invitación (outreach)
+///   👤 Asignar RP
+///   🚫 Marcar como (interesados/declinados/inalcanzables)
+/// All disabled when nothing is selected. The "Todos" pill helps select
+/// the entire current view in one tap.
 class _BulkActionBar extends StatelessWidget {
   final int count;
+  final int totalLoaded;
   final VoidCallback onOutreach;
-  final VoidCallback onStatus;
-  final VoidCallback onAssignRp;
-  final VoidCallback onUnassign;
-  final VoidCallback onExport;
-  final VoidCallback onClose;
+  final VoidCallback? onAssignRp;
+  final VoidCallback? onMarcar;
   final VoidCallback onSelectAll;
+  final VoidCallback? onClear;
 
   const _BulkActionBar({
     required this.count,
+    required this.totalLoaded,
     required this.onOutreach,
-    required this.onStatus,
     required this.onAssignRp,
-    required this.onUnassign,
-    required this.onExport,
-    required this.onClose,
+    required this.onMarcar,
     required this.onSelectAll,
+    required this.onClear,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final hasSelection = count > 0;
+    final caption = hasSelection
+        ? '$count de $totalLoaded'
+        : (totalLoaded == 0
+            ? 'Sin resultados'
+            : 'Toca un salon para seleccionarlo');
 
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -1780,88 +1166,78 @@ class _BulkActionBar extends StatelessWidget {
         top: false,
         child: Row(
           children: [
-            Text(
-              '$count',
-              style: GoogleFonts.poppins(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: colors.onSurface,
-              ),
-            ),
-            const SizedBox(width: 4),
-            // Select All button
-            TextButton(
-              onPressed: onSelectAll,
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                minimumSize: const Size(0, 28),
-              ),
-              child: Text(
-                'Todos',
-                style: GoogleFonts.nunito(fontSize: 12, fontWeight: FontWeight.w600),
-              ),
-            ),
-            const SizedBox(width: AppConstants.paddingSM),
             Expanded(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    // Assign RP (most important action)
-                    _ActionBtn(
-                      icon: Icons.person_add_outlined,
-                      label: 'Asignar RP',
-                      color: Colors.indigo,
-                      onTap: onAssignRp,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    caption,
+                    style: GoogleFonts.nunito(
+                      fontSize: 11,
+                      color: colors.onSurface.withValues(alpha: 0.65),
+                      fontWeight: FontWeight.w600,
                     ),
-                    const SizedBox(width: AppConstants.paddingSM),
-                    // Unassign
-                    _ActionBtn(
-                      icon: Icons.person_remove_outlined,
-                      label: 'Desasignar',
-                      color: Colors.deepOrange,
-                      onTap: onUnassign,
-                    ),
-                    const SizedBox(width: AppConstants.paddingSM),
-                    // Status
-                    _ActionBtn(
-                      icon: Icons.edit_outlined,
-                      label: 'Estado',
-                      color: Theme.of(context).extension<BCThemeExtension>()!.warningColor,
-                      onTap: onStatus,
-                    ),
-                    const SizedBox(width: AppConstants.paddingSM),
-                    // Outreach
-                    _ActionBtn(
-                      icon: Icons.send_outlined,
-                      label: 'Outreach',
-                      color: Colors.blue,
-                      onTap: onOutreach,
-                    ),
-                    const SizedBox(width: AppConstants.paddingSM),
-                    // Export
-                    _ActionBtn(
-                      icon: Icons.file_download_outlined,
-                      label: 'Exportar',
-                      color: Theme.of(context).extension<BCThemeExtension>()!.successColor,
-                      onTap: onExport,
-                    ),
-                  ],
-                ),
+                  ),
+                  Row(
+                    children: [
+                      TextButton(
+                        onPressed: totalLoaded > 0 ? onSelectAll : null,
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 6),
+                          minimumSize: const Size(0, 24),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: Text(
+                          'Todos',
+                          style: GoogleFonts.nunito(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      if (onClear != null)
+                        TextButton(
+                          onPressed: onClear,
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                            minimumSize: const Size(0, 24),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: Text(
+                            'Limpiar',
+                            style: GoogleFonts.nunito(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: colors.onSurface.withValues(alpha: 0.55),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
               ),
             ),
+            // Primary action: send invite. Always shown; disabled until selection.
+            _ActionBtn(
+              icon: Icons.send_outlined,
+              label: 'Invitar',
+              color: colors.primary,
+              onTap: hasSelection ? onOutreach : null,
+            ),
             const SizedBox(width: AppConstants.paddingSM),
-            // Close
-            IconButton(
-              icon: Icon(
-                Icons.close,
-                size: 20,
-                color: colors.onSurface.withValues(alpha: 0.6),
-              ),
-              tooltip: 'Deseleccionar',
-              onPressed: onClose,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            _ActionBtn(
+              icon: Icons.person_add_outlined,
+              label: 'Asignar',
+              color: Colors.indigo,
+              onTap: onAssignRp,
+            ),
+            const SizedBox(width: AppConstants.paddingSM),
+            _ActionBtn(
+              icon: Icons.flag_outlined,
+              label: 'Marcar',
+              color: Theme.of(context).extension<BCThemeExtension>()!.warningColor,
+              onTap: onMarcar,
             ),
           ],
         ),
@@ -1874,7 +1250,7 @@ class _ActionBtn extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   const _ActionBtn({
     required this.icon,
@@ -1885,6 +1261,9 @@ class _ActionBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final disabled = onTap == null;
+    final tone =
+        disabled ? Theme.of(context).disabledColor : color;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppConstants.radiusXS),
@@ -1896,15 +1275,268 @@ class _ActionBtn extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 18, color: color),
+            Icon(icon, size: 18, color: tone),
             const SizedBox(height: 2),
             Text(
               label,
               style: GoogleFonts.nunito(
                 fontSize: 10,
-                color: color,
+                color: tone,
                 fontWeight: FontWeight.w600,
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Smart-view selector — horizontal pill row pinned at the top of the screen.
+// ---------------------------------------------------------------------------
+
+class _PipelineViewBar extends StatelessWidget {
+  final _PipelineView current;
+  final ValueChanged<_PipelineView> onSelect;
+  final Map<_PipelineView, int?> counts;
+
+  const _PipelineViewBar({
+    required this.current,
+    required this.onSelect,
+    required this.counts,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        border: Border(
+          bottom: BorderSide(
+            color: colors.onSurface.withValues(alpha: 0.08),
+          ),
+        ),
+      ),
+      child: SizedBox(
+        height: 52,
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppConstants.paddingMD,
+            vertical: 8,
+          ),
+          children: _PipelineView.values.map((v) {
+            final selected = v == current;
+            final count = counts[v];
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(20),
+                onTap: () => onSelect(v),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 160),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? colors.primary
+                        : colors.surfaceContainerHighest
+                            .withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _viewIcons[v],
+                        size: 14,
+                        color: selected
+                            ? colors.onPrimary
+                            : colors.onSurface.withValues(alpha: 0.7),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        _viewLabels[v]!,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: selected
+                              ? colors.onPrimary
+                              : colors.onSurface,
+                        ),
+                      ),
+                      if (count != null) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: selected
+                                ? colors.onPrimary.withValues(alpha: 0.18)
+                                : colors.onSurface.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            count.toString(),
+                            style: GoogleFonts.nunito(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: selected
+                                  ? colors.onPrimary
+                                  : colors.onSurface
+                                      .withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Compact filter strip — geo dropdowns + WhatsApp/Email toggles. The
+// smart-view selector handles status; this strip is for orthogonal axes.
+// ---------------------------------------------------------------------------
+
+class _PipelineFilterStrip extends StatelessWidget {
+  final bool? hasWhatsapp;
+  final bool? hasEmail;
+  final String? countryFilter;
+  final String? stateFilter;
+  final String? cityFilter;
+  final List<String> countries;
+  final List<String> states;
+  final List<String> cities;
+  final void Function(String?) onCountrySelect;
+  final void Function(String?) onStateSelect;
+  final void Function(String?) onCitySelect;
+  final VoidCallback onWhatsappToggle;
+  final VoidCallback onEmailToggle;
+
+  const _PipelineFilterStrip({
+    required this.hasWhatsapp,
+    required this.hasEmail,
+    required this.countryFilter,
+    required this.stateFilter,
+    required this.cityFilter,
+    required this.countries,
+    required this.states,
+    required this.cities,
+    required this.onCountrySelect,
+    required this.onStateSelect,
+    required this.onCitySelect,
+    required this.onWhatsappToggle,
+    required this.onEmailToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final ext = Theme.of(context).extension<BCThemeExtension>()!;
+
+    Widget toggleChip({
+      required String label,
+      required bool selected,
+      required Color accent,
+      required VoidCallback onTap,
+      required IconData icon,
+    }) {
+      return Padding(
+        padding: const EdgeInsets.only(right: AppConstants.paddingXS),
+        child: FilterChip(
+          label: Text(
+            label,
+            style: GoogleFonts.nunito(
+              fontSize: 12,
+              color:
+                  selected ? colors.onPrimary : colors.onSurface,
+            ),
+          ),
+          selected: selected,
+          onSelected: (_) => onTap(),
+          selectedColor: accent,
+          checkmarkColor: colors.onPrimary,
+          backgroundColor:
+              colors.surfaceContainerHighest.withValues(alpha: 0.5),
+          side: BorderSide(
+            color:
+                selected ? accent : colors.onSurface.withValues(alpha: 0.15),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          visualDensity: VisualDensity.compact,
+          showCheckmark: false,
+          avatar: Icon(
+            icon,
+            size: 14,
+            color: selected ? colors.onPrimary : accent,
+          ),
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 40,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding:
+            const EdgeInsets.symmetric(horizontal: AppConstants.paddingMD),
+        child: Row(
+          children: [
+            _PipelineDropdownChip(
+              label: countryFilter ?? 'Pais',
+              isActive: countryFilter != null,
+              options: countries,
+              onSelected: onCountrySelect,
+              onClear: () => onCountrySelect(null),
+              colors: colors,
+            ),
+            const SizedBox(width: AppConstants.paddingXS),
+            _PipelineDropdownChip(
+              label: stateFilter ?? 'Estado',
+              isActive: stateFilter != null,
+              options: states,
+              onSelected: onStateSelect,
+              onClear: () => onStateSelect(null),
+              colors: colors,
+              enabled: countryFilter != null,
+            ),
+            const SizedBox(width: AppConstants.paddingXS),
+            _PipelineDropdownChip(
+              label: cityFilter ?? 'Ciudad',
+              isActive: cityFilter != null,
+              options: cities,
+              onSelected: onCitySelect,
+              onClear: () => onCitySelect(null),
+              colors: colors,
+              enabled: stateFilter != null,
+            ),
+            const SizedBox(width: AppConstants.paddingSM),
+            toggleChip(
+              label: 'WhatsApp',
+              selected: hasWhatsapp == true,
+              accent: ext.successColor,
+              onTap: onWhatsappToggle,
+              icon: Icons.phone_android_outlined,
+            ),
+            toggleChip(
+              label: 'Email',
+              selected: hasEmail == true,
+              accent: Colors.blueGrey,
+              onTap: onEmailToggle,
+              icon: Icons.email_outlined,
             ),
           ],
         ),
@@ -1920,16 +1552,14 @@ class _ActionBtn extends StatelessWidget {
 class _LeadCard extends StatelessWidget {
   final Map<String, dynamic> lead;
   final bool isSelected;
-  final bool selectionMode;
   final VoidCallback onTap;
-  final VoidCallback onLongPress;
+  final VoidCallback onToggleSelection;
 
   const _LeadCard({
     required this.lead,
     required this.isSelected,
-    required this.selectionMode,
     required this.onTap,
-    required this.onLongPress,
+    required this.onToggleSelection,
   });
 
   @override
@@ -1995,7 +1625,6 @@ class _LeadCard extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(AppConstants.radiusSM),
           onTap: onTap,
-          onLongPress: onLongPress,
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(AppConstants.radiusSM),
@@ -2173,28 +1802,25 @@ class _LeadCard extends StatelessWidget {
                     ),
                   ),
 
-                  // Checkbox in selection mode, chevron otherwise
+                  // Checkbox is always visible — the bulk action bar is
+                  // always present, so selection is the default mental
+                  // model. Tap card body to view detail; tap checkbox to
+                  // include in the next bulk action.
                   const SizedBox(width: AppConstants.paddingSM),
-                  if (selectionMode)
-                    AnimatedSwitcher(
-                      duration: AppConstants.shortAnimation,
-                      child: Checkbox(
-                        key: ValueKey(isSelected),
-                        value: isSelected,
-                        onChanged: (_) => onTap(),
-                        visualDensity: VisualDensity.compact,
-                        activeColor: colors.primary,
-                      ),
-                    )
-                  else
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Icon(
-                        Icons.chevron_right,
-                        size: 18,
-                        color: colors.onSurface.withValues(alpha: 0.3),
-                      ),
+                  Checkbox(
+                    value: isSelected,
+                    onChanged: (_) => onToggleSelection(),
+                    visualDensity: VisualDensity.compact,
+                    activeColor: colors.primary,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Icon(
+                      Icons.chevron_right,
+                      size: 18,
+                      color: colors.onSurface.withValues(alpha: 0.3),
                     ),
+                  ),
                 ],
               ),
             ),
