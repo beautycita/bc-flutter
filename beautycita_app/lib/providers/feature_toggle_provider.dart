@@ -50,6 +50,8 @@ const _defaults = <String, bool>{
   'enable_haptic_feedback': true,
   // Search modifiers
   'enable_service_modifiers': false,
+  // Admin shell v2 (Phase 1 redesign)
+  'admin_shell_v2_enabled': false,
 };
 
 /// Fetches all boolean feature toggles from app_config and returns a map.

@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:beautycita/config/fonts.dart';
 import 'admin_finance_dashboard_screen.dart';
 import 'admin_operations_dashboard_screen.dart';
-import 'analytics_screen.dart';
 
-/// Executive Dashboard wrapper — three sub-tabs: Finanzas, Operaciones, Analitica.
+/// Executive Dashboard wrapper — two sub-tabs: Finanzas, Operaciones.
+/// (Analitica sub-tab dropped 2026-05-01 per redesign decision #18 — its
+/// metrics were placeholder values; real charts arrive in Phase 3.)
 class AdminExecutiveDashboardScreen extends StatelessWidget {
   const AdminExecutiveDashboardScreen({super.key});
 
@@ -12,7 +13,7 @@ class AdminExecutiveDashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return DefaultTabController(
-      length: 3,
+      length: 2,
       child: Column(
         children: [
           TabBar(
@@ -30,7 +31,6 @@ class AdminExecutiveDashboardScreen extends StatelessWidget {
             tabs: const [
               Tab(text: 'Finanzas'),
               Tab(text: 'Operaciones'),
-              Tab(text: 'Analitica'),
             ],
           ),
           const Expanded(
@@ -38,7 +38,6 @@ class AdminExecutiveDashboardScreen extends StatelessWidget {
               children: [
                 AdminFinanceDashboardScreen(),
                 AdminOperationsDashboardScreen(),
-                AnalyticsScreen(),
               ],
             ),
           ),

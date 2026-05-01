@@ -53,6 +53,32 @@ final isSuperAdminProvider = FutureProvider<bool>((ref) async {
   return role == 'superadmin';
 });
 
+/// True for ops_admin OR admin OR superadmin. Phase-0 of the admin redesign:
+/// the lowest tier with admin-panel access.
+final isOpsAdminProvider = FutureProvider<bool>((ref) async {
+  final role = await ref.watch(userRoleProvider.future);
+  return role == 'ops_admin' || role == 'admin' || role == 'superadmin';
+});
+
+/// Three-tier permission ladder for the admin panel.
+enum AdminTier { none, opsAdmin, admin, superadmin }
+
+/// Current caller's admin tier. Used by the v2 shell for section visibility
+/// and by mutation sites for in-UI permission chips.
+final currentAdminTierProvider = FutureProvider<AdminTier>((ref) async {
+  final role = await ref.watch(userRoleProvider.future);
+  switch (role) {
+    case 'superadmin':
+      return AdminTier.superadmin;
+    case 'admin':
+      return AdminTier.admin;
+    case 'ops_admin':
+      return AdminTier.opsAdmin;
+    default:
+      return AdminTier.none;
+  }
+});
+
 /// True for RP (Public Relations / Outreach) role.
 final isRpProvider = FutureProvider<bool>((ref) async {
   final role = await ref.watch(userRoleProvider.future);

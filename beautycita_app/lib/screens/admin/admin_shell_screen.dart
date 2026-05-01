@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:beautycita/config/fonts.dart';
 import '../../config/constants.dart';
 import '../../providers/admin_provider.dart';
+import '../../providers/feature_toggle_provider.dart';
+import 'admin_shell_v2_screen.dart';
 import 'admin_salones_screen.dart';
 import 'admin_rp_tracking_screen.dart';
 import 'admin_tax_reports_screen.dart';
@@ -49,6 +51,14 @@ class AdminShellScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Phase 1 of admin redesign: when admin_shell_v2_enabled is on,
+    // delegate to the new 5-section bottom-tab shell. Toggle defaults
+    // off; superadmin flips it in Sistema → Toggles to test.
+    final toggles = ref.watch(featureTogglesProvider);
+    if (toggles.isEnabled('admin_shell_v2_enabled')) {
+      return const AdminShellV2Screen();
+    }
+
     final isAdmin = ref.watch(isAdminProvider);
     final colors = Theme.of(context).colorScheme;
 
