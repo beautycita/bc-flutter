@@ -345,50 +345,59 @@ class _State extends ConsumerState<OperacionesOutreach> {
         ),
         AdminCard(
           title: 'Vista previa',
-          trailing: _template == null
-              ? null
-              : TextButton.icon(
-                  onPressed: _previewBusy || _selected.isEmpty
-                      ? null
-                      : () async {
-                          final firstId = _selected.first;
-                          final list = ref.read(outreachRecipientsProvider(_audience)).valueOrNull ?? [];
-                          final r = list.firstWhere((x) => x.id == firstId, orElse: () => list.first);
-                          await _renderPreview(r);
-                        },
-                  icon: const Icon(Icons.refresh, size: 16),
-                  label: const Text('Renderizar'),
-                ),
-          child: _previewError != null
-              ? Text(_previewError!, style: AdminV2Tokens.body(context).copyWith(color: AdminV2Tokens.destructive(context)))
-              : _previewBody == null
-                  ? Text(
-                      _selected.isEmpty
-                          ? 'Selecciona al menos un destinatario para renderizar el mensaje exacto que se enviará.'
-                          : 'Toca "Renderizar" para ver el primer mensaje.',
-                      style: AdminV2Tokens.muted(context),
-                    )
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (_previewSubject != null) ...[
-                          Text('Asunto', style: AdminV2Tokens.muted(context)),
-                          const SizedBox(height: 2),
-                          Text(_previewSubject!, style: AdminV2Tokens.body(context).copyWith(fontWeight: FontWeight.w600)),
-                          const SizedBox(height: AdminV2Tokens.spacingMD),
-                        ],
-                        Text('Mensaje', style: AdminV2Tokens.muted(context)),
-                        const SizedBox(height: 2),
-                        Container(
-                          padding: const EdgeInsets.all(AdminV2Tokens.spacingMD),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(AdminV2Tokens.radiusSM),
-                          ),
-                          child: Text(_previewBody!, style: AdminV2Tokens.body(context)),
-                        ),
-                      ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (_previewError != null)
+                Text(_previewError!, style: AdminV2Tokens.body(context).copyWith(color: AdminV2Tokens.destructive(context)))
+              else if (_previewBody == null)
+                Text(
+                  _template == null
+                      ? 'Selecciona un template para previsualizar el mensaje.'
+                      : _selected.isEmpty
+                          ? 'Selecciona al menos un destinatario y luego toca "Renderizar previa".'
+                          : 'Toca "Renderizar previa" para ver el primer mensaje exacto que se enviará.',
+                  style: AdminV2Tokens.muted(context),
+                )
+              else
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (_previewSubject != null) ...[
+                      Text('Asunto', style: AdminV2Tokens.muted(context)),
+                      const SizedBox(height: 2),
+                      Text(_previewSubject!, style: AdminV2Tokens.body(context).copyWith(fontWeight: FontWeight.w600)),
+                      const SizedBox(height: AdminV2Tokens.spacingMD),
+                    ],
+                    Text('Mensaje', style: AdminV2Tokens.muted(context)),
+                    const SizedBox(height: 2),
+                    Container(
+                      padding: const EdgeInsets.all(AdminV2Tokens.spacingMD),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(AdminV2Tokens.radiusSM),
+                      ),
+                      child: Text(_previewBody!, style: AdminV2Tokens.body(context)),
                     ),
+                  ],
+                ),
+              const SizedBox(height: AdminV2Tokens.spacingMD),
+              AdminActionButton(
+                label: _previewBody == null ? 'Renderizar previa' : 'Volver a renderizar',
+                icon: Icons.visibility_outlined,
+                variant: AdminActionVariant.secondary,
+                isLoading: _previewBusy,
+                onPressed: (_template == null || _selected.isEmpty || _previewBusy)
+                    ? null
+                    : () async {
+                        final firstId = _selected.first;
+                        final list = ref.read(outreachRecipientsProvider(_audience)).valueOrNull ?? [];
+                        final r = list.firstWhere((x) => x.id == firstId, orElse: () => list.first);
+                        await _renderPreview(r);
+                      },
+              ),
+            ],
+          ),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(vertical: AdminV2Tokens.spacingMD),
