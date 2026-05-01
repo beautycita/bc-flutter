@@ -203,26 +203,16 @@ BEGIN
       IF NOT public.is_ops_admin() THEN
         RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
       END IF;
-    WHEN 'clabe' THEN
-      -- Banking identity — admin+ only
-      IF NOT public.is_admin() THEN
-        RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
-      END IF;
     ELSE
       -- Field not in allowlist — refuse even if caller is superadmin.
       -- Forces all other mutations through dedicated RPCs.
-      -- 'rfc' lands here intentionally — see comment above.
+      -- 'rfc' AND 'clabe' land here intentionally — see comment above.
+      -- Adding an additional bank account (with matching RFC + beneficiary)
+      -- is a future flow with its own dedicated RPC, not an edit of this one.
       RAISE EXCEPTION 'field_not_allowed' USING ERRCODE = '42501';
   END CASE;
 
   -- Field-specific validation
-  IF p_field = 'clabe' AND v_normalized_value IS NOT NULL THEN
-    -- CLABE: 18 digits
-    IF v_normalized_value !~ '^[0-9]{18}$' THEN
-      RAISE EXCEPTION 'invalid_clabe' USING ERRCODE = '22023';
-    END IF;
-  END IF;
-
   IF p_field = 'phone' AND v_normalized_value IS NOT NULL THEN
     -- E.164-ish: + then 10-15 digits
     IF v_normalized_value !~ '^\+?[0-9]{10,15}$' THEN
@@ -305,6 +295,6 @@ COMMENT ON FUNCTION public.admin_set_salon_verified(uuid, boolean) IS
 COMMENT ON FUNCTION public.admin_reset_salon_onboarding(uuid) IS
   'admin+ AND step-up. Resets onboarding to step services in a single transaction.';
 COMMENT ON FUNCTION public.admin_update_salon_field(uuid, text, text) IS
-  'Field allowlist enforced server-side: name/address/phone (ops_admin+); clabe (admin+). RFC is INTENTIONALLY immutable post-onboarding — fiscal-trail integrity. Other fields rejected with field_not_allowed.';
+  'Field allowlist enforced server-side: name/address/phone (ops_admin+). RFC and CLABE are INTENTIONALLY immutable post-onboarding (fiscal-trail integrity + bank-account stability). Adding an additional bank account requires matching RFC+beneficiary via a dedicated future RPC — never via this generic edit. Other fields rejected with field_not_allowed.';
 COMMENT ON FUNCTION public.admin_salon_financial_summary(uuid) IS
   'Read-only saldo/debt/revenue/appointment-count summary for admin detail screen.';

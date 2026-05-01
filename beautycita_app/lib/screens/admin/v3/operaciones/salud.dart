@@ -62,17 +62,27 @@ class OperacionesSalud extends ConsumerWidget {
                 title: 'Servicios externos',
                 child: Column(
                   children: [
-                    _ServiceLine(label: 'Stripe charges 24h', valuePct: stripeChg),
-                    _ServiceLine(label: 'Stripe payouts 24h', valuePct: stripePay),
+                    _ServiceLine(
+                      label: 'Stripe charges 24h',
+                      valuePct: stripeChg,
+                      noDataHint: 'Sin actividad de pagos en 24h',
+                    ),
+                    _ServiceLine(
+                      label: 'Stripe payouts 24h',
+                      valuePct: stripePay,
+                      noDataHint: 'Sin payouts hasta que cuentas bancarias estén activas',
+                    ),
                     _ServiceLine(
                       label: 'WhatsApp gateway',
                       valuePct: null,
                       explicitOk: waUp,
+                      noDataHint: 'Sin probe — wa_service_up no se está escribiendo',
                     ),
                     _ServiceLine(
                       label: 'Backup edad',
-                      valueText: backupAge != null ? '${backupAge.toStringAsFixed(1)}h' : '—',
+                      valueText: backupAge != null ? '${backupAge.toStringAsFixed(1)}h' : null,
                       okIfText: backupAge != null && backupAge < 24,
+                      noDataHint: 'Sin probe — backup_age_hours no se está escribiendo',
                     ),
                   ],
                 ),
@@ -106,31 +116,63 @@ class OperacionesSalud extends ConsumerWidget {
 }
 
 class _ServiceLine extends StatelessWidget {
-  const _ServiceLine({required this.label, this.valuePct, this.valueText, this.explicitOk, this.okIfText});
+  const _ServiceLine({
+    required this.label,
+    this.valuePct,
+    this.valueText,
+    this.explicitOk,
+    this.okIfText,
+    this.noDataHint,
+  });
   final String label;
   final double? valuePct;
   final String? valueText;
   final bool? explicitOk;
   final bool? okIfText;
 
+  /// Shown beneath the row label when no probe value exists (e.g. nobody
+  /// has run a charge in the last 24h, or the probe writer doesn't fill
+  /// this column yet). Distinguishes "no data" from "service down".
+  final String? noDataHint;
+
   @override
   Widget build(BuildContext context) {
+    final hasValue = valuePct != null || valueText != null || explicitOk != null;
     final ok = explicitOk ?? (valuePct != null ? valuePct! >= 95.0 : (okIfText ?? false));
-    final color = ok ? AdminV2Tokens.success(context) : AdminV2Tokens.warning(context);
-    final value = valuePct != null
-        ? '${valuePct!.toStringAsFixed(1)}%'
-        : (valueText ?? (explicitOk == null ? '—' : (explicitOk! ? 'OK' : 'Caído')));
+    final color = !hasValue
+        ? AdminV2Tokens.subtle(context)
+        : (ok ? AdminV2Tokens.success(context) : AdminV2Tokens.warning(context));
+    final value = !hasValue
+        ? 'Sin datos'
+        : valuePct != null
+            ? '${valuePct!.toStringAsFixed(1)}%'
+            : (valueText ?? (explicitOk == true ? 'OK' : 'Caído'));
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AdminV2Tokens.spacingSM),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          Padding(
+            padding: const EdgeInsets.only(top: 5),
+            child: Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
           ),
           const SizedBox(width: AdminV2Tokens.spacingSM),
-          Expanded(child: Text(label, style: AdminV2Tokens.body(context))),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: AdminV2Tokens.body(context)),
+                if (!hasValue && noDataHint != null) ...[
+                  const SizedBox(height: 2),
+                  Text(noDataHint!, style: AdminV2Tokens.muted(context).copyWith(fontSize: 11)),
+                ],
+              ],
+            ),
+          ),
           Text(value, style: AdminV2Tokens.body(context).copyWith(fontWeight: FontWeight.w700, color: color)),
         ],
       ),

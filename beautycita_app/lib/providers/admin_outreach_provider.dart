@@ -69,11 +69,14 @@ class OutreachTemplateFilter {
 }
 
 final outreachTemplatesProvider = FutureProvider.family<List<OutreachTemplate>, OutreachTemplateFilter>((ref, filter) async {
+  // inFilter is unambiguous when chained with subsequent .eq()s — the SDK's
+  // .or() builder occasionally drops rows when combined with eq filters
+  // in a particular order.
   final res = await SupabaseClientService.client
       .from('outreach_templates')
       .select()
       .eq('is_active', true)
-      .or('recipient_table.eq.${filter.audience.table},recipient_table.eq.both')
+      .inFilter('recipient_table', [filter.audience.table, 'both'])
       .eq('channel', filter.channel.templateValue)
       .order('sort_order', ascending: true);
   return (res as List)

@@ -99,6 +99,7 @@ class _BankingSetupScreenState extends ConsumerState<BankingSetupScreen> {
   String? _beneficiaryError;
   String? _rfcError;
   bool _rfcLocked = false; // true once an RFC is on file. Immutable after that — fiscal-trail integrity. Admin UI also cannot edit it; corrections require a separate data-fix migration with superadmin sign-off.
+  bool _clabeLocked = false; // true once CLABE is on file. Immutable after onboarding (BC directive 2026-05-01) — bank account stability. Adding an additional bank account is a future flow that requires matching RFC + beneficiary; never an in-place edit of this one.
 
   // Step 2 fields
   Uint8List? _idFrontBytes;
@@ -132,6 +133,7 @@ class _BankingSetupScreenState extends ConsumerState<BankingSetupScreen> {
         }
         if (clabe.isNotEmpty) {
           _clabeController.text = clabe;
+          _clabeLocked = true; // immutable post-onboarding
           // Mirror the onChanged detect — programmatic .text= doesn't
           // fire the listener, so without this the confirmation card
           // shows "No identificado" on every re-edit.
@@ -330,9 +332,10 @@ class _BankingSetupScreenState extends ConsumerState<BankingSetupScreen> {
         ),
         const SizedBox(height: AppConstants.paddingSM),
 
-        // CLABE input
+        // CLABE input — locked once a CLABE is on file (BC directive 2026-05-01)
         TextField(
           controller: _clabeController,
+          enabled: !_clabeLocked,
           keyboardType: TextInputType.number,
           maxLength: 18,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -350,7 +353,11 @@ class _BankingSetupScreenState extends ConsumerState<BankingSetupScreen> {
             ),
             counterText: '',
             errorText: _clabeError,
-            prefixIcon: const Icon(Icons.account_balance_rounded),
+            prefixIcon: Icon(_clabeLocked ? Icons.lock_outline : Icons.account_balance_rounded),
+            helperText: _clabeLocked
+                ? 'Bloqueada después del onboarding. Para una cuenta adicional con el mismo RFC y beneficiario, abre soporte.'
+                : null,
+            helperMaxLines: 2,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppConstants.radiusMD),
             ),
@@ -1197,16 +1204,19 @@ class _BankingSetupScreenState extends ConsumerState<BankingSetupScreen> {
           );
 
       // 3. Save CLABE + beneficiary + RFC + ID URLs to businesses table.
-      //    Only write rfc when not locked AND it actually changed — prevents
-      //    a benign re-save from tripping the payout-lock audit on every edit.
+      //    CLABE and RFC are immutable once on file (BC directive 2026-05-01).
+      //    Only write either when not locked AND not previously stored, so a
+      //    benign re-save can't accidentally mutate them.
       final updatePayload = <String, dynamic>{
-        'clabe': clabe,
         'beneficiary_name': beneficiary,
         'bank_name': _detectedBank ?? '',
         'id_front_url': frontPath,
         'id_back_url': backPath,
         'banking_complete': false, // set true by edge function on verification
       };
+      if (!_clabeLocked && (existingClabe == null || existingClabe.isEmpty)) {
+        updatePayload['clabe'] = clabe;
+      }
       if (!_rfcLocked && (existingRfc == null || existingRfc.isEmpty || rfcChanged)) {
         updatePayload['rfc'] = rfc;
       }

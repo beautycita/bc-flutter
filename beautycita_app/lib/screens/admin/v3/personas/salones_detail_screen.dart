@@ -473,7 +473,6 @@ class _FieldsCard extends StatelessWidget {
   final Future<void> Function(String, String, String?) onEdit;
 
   bool get _canEditBasic => tier.index >= AdminTier.opsAdmin.index;
-  bool get _canEditFinancial => tier.index >= AdminTier.admin.index;
 
   @override
   Widget build(BuildContext context) {
@@ -510,12 +509,18 @@ class _FieldsCard extends StatelessWidget {
               child: AdminPermissionChip(state: AdminPermissionState.readOnly),
             ),
           ),
+          // CLABE is intentionally read-only (BC directive 2026-05-01).
+          // Once onboarding completes, the bank account doesn't change.
+          // Adding an additional bank account is a future flow that
+          // requires matching RFC + beneficiary, not a free-form edit.
           AdminListRow(
             label: 'CLABE',
             value: (salon['clabe'] as String?)?.replaceAllMapped(RegExp(r'(\d{4})(?=\d)'), (m) => '${m[1]} '),
-            editable: _canEditFinancial,
-            onEdit: busy ? null : () => onEdit('clabe', 'CLABE', salon['clabe'] as String?),
-            trailing: _canEditFinancial ? null : const Padding(padding: EdgeInsets.only(left: AdminV2Tokens.spacingSM), child: AdminPermissionChip(state: AdminPermissionState.readOnly)),
+            editable: false,
+            trailing: const Padding(
+              padding: EdgeInsets.only(left: AdminV2Tokens.spacingSM),
+              child: AdminPermissionChip(state: AdminPermissionState.readOnly),
+            ),
           ),
         ],
       ),
