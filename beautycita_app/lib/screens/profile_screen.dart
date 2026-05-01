@@ -9,7 +9,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:beautycita/widgets/bc_image_picker_sheet.dart';
-import 'package:beautycita/widgets/gyro_3d_hero.dart';
+import 'package:beautycita/widgets/gyro_reflection_hero.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/config/theme_extension.dart';
 import 'package:beautycita/providers/auth_provider.dart';
@@ -217,10 +217,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     BCThemeExtension ext,
     int completionPercent,
   ) {
-    // Gyro3DHero gives the hero physical thickness + ball-fulcrum tilt.
-    // The drop-shadow is moved into Gyro3DHero (parallax-projected); the
-    // inner container is now just the gradient surface + child layout.
-    return Gyro3DHero(
+    // GyroReflectionHero overlays a moving specular highlight on the hero.
+    // The hero itself stays flat — no rotation, no parallax shadow. Only
+    // the reflection sweeps across the surface in response to the gyro,
+    // like a glossy tile catching light from a moving source.
+    return GyroReflectionHero(
       borderRadius: BorderRadius.circular(AppConstants.radiusLG),
       child: AnimatedContainer(
       duration: const Duration(milliseconds: 800),
@@ -229,6 +230,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       decoration: BoxDecoration(
         gradient: ext.primaryGradient,
         borderRadius: BorderRadius.circular(AppConstants.radiusLG),
+        boxShadow: [
+          BoxShadow(
+            color: cs.primary.withValues(alpha: 0.25),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         children: [
