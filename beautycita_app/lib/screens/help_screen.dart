@@ -696,8 +696,8 @@ class _ContactAccordion extends StatelessWidget {
             _ContactTile(
               icon: Icons.phone_rounded,
               label: 'Telefono',
-              value: '+52 (720) 677-7800',
-              onTap: () => onLaunch('tel:+527206777800'),
+              value: AppConstants.bcContactPhone,
+              onTap: () => onLaunch('tel:${AppConstants.bcContactPhone}'),
               colorScheme: colorScheme,
             ),
             const SizedBox(height: AppConstants.paddingSM),

@@ -369,9 +369,9 @@ class PressScreen extends StatelessWidget {
                   const SizedBox(height: AppConstants.paddingSM),
                   _ContactRow(
                     icon: Icons.phone_outlined,
-                    label: '+52 (720) 677-7800',
+                    label: AppConstants.bcContactPhone,
                     accentColor: accentColor,
-                    onTap: () => _launchPhone('+527206777800'),
+                    onTap: () => _launchPhone(AppConstants.bcContactPhone),
                   ),
                 ],
               ),

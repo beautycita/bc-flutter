@@ -153,8 +153,10 @@ class AppConstants {
   static const String supportEmail = 'soporte@beautycita.com';
   // Contact card we offer to add to the user's address book so push/SMS/WA
   // alerts from us aren't filtered as spam by the carrier or system.
+  // BC's official platform line — set 2026-04-29. Single source of truth
+  // for "the BeautyCita phone" anywhere in the app — never inline another.
   static const String bcContactName = 'BeautyCita';
-  static const String bcContactPhone = '+527206777800';
+  static const String bcContactPhone = '+523223208884';
   static const String bcContactOrganization = 'BeautyCita S.A. de C.V.';
 
   // Regex Patterns

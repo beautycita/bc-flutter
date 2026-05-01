@@ -253,7 +253,7 @@ class MainActivity : FlutterFragmentActivity() {
                     "saveContact" -> {
                         try {
                             val name = call.argument<String>("name") ?: "BeautyCita"
-                            val phone = call.argument<String>("phone") ?: "+527206777800"
+                            val phone = call.argument<String>("phone") ?: "+523223208884"
                             val org = call.argument<String>("organization") ?: ""
 
                             val intent = android.content.Intent(android.content.Intent.ACTION_INSERT_OR_EDIT).apply {

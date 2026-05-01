@@ -109,7 +109,8 @@ class _ContactPanelState extends ConsumerState<ContactPanel> {
 
   String get _rpPhone {
     final user = BCSupabase.client.auth.currentUser;
-    return user?.userMetadata?['phone'] as String? ?? '+52 720 677 7800';
+    // Fallback is BC's official platform contact line.
+    return user?.userMetadata?['phone'] as String? ?? '+52 322 320 8884';
   }
 
   String _substituteVars(String template) {
