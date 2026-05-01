@@ -98,7 +98,7 @@ class _BankingSetupScreenState extends ConsumerState<BankingSetupScreen> {
   String? _clabeError;
   String? _beneficiaryError;
   String? _rfcError;
-  bool _rfcLocked = false; // true once an RFC is on file (edits go through admin)
+  bool _rfcLocked = false; // true once an RFC is on file. Immutable after that — fiscal-trail integrity. Admin UI also cannot edit it; corrections require a separate data-fix migration with superadmin sign-off.
 
   // Step 2 fields
   Uint8List? _idFrontBytes;

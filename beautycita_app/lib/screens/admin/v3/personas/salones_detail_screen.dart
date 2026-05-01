@@ -78,7 +78,6 @@ class _State extends ConsumerState<PersonasSalonesDetailScreen> {
     if (s.contains('step_up_required')) return 'La sesión expiró — reintenta para volver a confirmar identidad.';
     if (s.contains('reason_required')) return 'Se requiere motivo para suspender.';
     if (s.contains('field_not_allowed')) return 'Ese campo no se puede editar desde aquí.';
-    if (s.contains('invalid_rfc')) return 'RFC con formato inválido.';
     if (s.contains('invalid_clabe')) return 'CLABE debe tener 18 dígitos.';
     if (s.contains('invalid_phone')) return 'Teléfono con formato inválido.';
     if (s.contains('invalid_tier')) return 'Tier inválido (1, 2 o 3).';
@@ -500,12 +499,16 @@ class _FieldsCard extends StatelessWidget {
             editable: _canEditBasic,
             onEdit: busy ? null : () => onEdit('phone', 'Teléfono', salon['phone'] as String?),
           ),
+          // RFC is intentionally read-only for everyone (admin + salon).
+          // Once verified at onboarding, it doesn't change — fiscal trail.
           AdminListRow(
             label: 'RFC',
             value: salon['rfc'] as String?,
-            editable: _canEditFinancial,
-            onEdit: busy ? null : () => onEdit('rfc', 'RFC', salon['rfc'] as String?),
-            trailing: _canEditFinancial ? null : const Padding(padding: EdgeInsets.only(left: AdminV2Tokens.spacingSM), child: AdminPermissionChip(state: AdminPermissionState.readOnly)),
+            editable: false,
+            trailing: const Padding(
+              padding: EdgeInsets.only(left: AdminV2Tokens.spacingSM),
+              child: AdminPermissionChip(state: AdminPermissionState.readOnly),
+            ),
           ),
           AdminListRow(
             label: 'CLABE',

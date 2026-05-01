@@ -191,31 +191,31 @@ AS $$
 DECLARE
   v_normalized_value text := nullif(trim(coalesce(p_value, '')), '');
 BEGIN
-  -- Field allowlist + per-field tier
+  -- Field allowlist + per-field tier.
+  -- RFC is intentionally NOT editable here. Once a salon's RFC is set
+  -- through onboarding (and SAT-verified), it does not change. Mutating
+  -- it post-verification breaks the fiscal trail and CFDI lookups. If
+  -- a real correction is ever needed, it goes through a separate
+  -- migration / data-fix path with explicit superadmin sign-off, not
+  -- through the admin UI.
   CASE p_field
     WHEN 'name', 'address', 'phone' THEN
       IF NOT public.is_ops_admin() THEN
         RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
       END IF;
-    WHEN 'rfc', 'clabe' THEN
-      -- Financial identity — admin+ only
+    WHEN 'clabe' THEN
+      -- Banking identity — admin+ only
       IF NOT public.is_admin() THEN
         RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
       END IF;
     ELSE
       -- Field not in allowlist — refuse even if caller is superadmin.
       -- Forces all other mutations through dedicated RPCs.
+      -- 'rfc' lands here intentionally — see comment above.
       RAISE EXCEPTION 'field_not_allowed' USING ERRCODE = '42501';
   END CASE;
 
   -- Field-specific validation
-  IF p_field = 'rfc' AND v_normalized_value IS NOT NULL THEN
-    -- Mexican RFC: 12 (PM) or 13 (PF) chars, uppercase letters + digits
-    IF v_normalized_value !~ '^[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}$' THEN
-      RAISE EXCEPTION 'invalid_rfc' USING ERRCODE = '22023';
-    END IF;
-  END IF;
-
   IF p_field = 'clabe' AND v_normalized_value IS NOT NULL THEN
     -- CLABE: 18 digits
     IF v_normalized_value !~ '^[0-9]{18}$' THEN
@@ -305,6 +305,6 @@ COMMENT ON FUNCTION public.admin_set_salon_verified(uuid, boolean) IS
 COMMENT ON FUNCTION public.admin_reset_salon_onboarding(uuid) IS
   'admin+ AND step-up. Resets onboarding to step services in a single transaction.';
 COMMENT ON FUNCTION public.admin_update_salon_field(uuid, text, text) IS
-  'Field allowlist enforced server-side: name/address/phone (ops_admin+); rfc/clabe (admin+). Other fields rejected with field_not_allowed.';
+  'Field allowlist enforced server-side: name/address/phone (ops_admin+); clabe (admin+). RFC is INTENTIONALLY immutable post-onboarding — fiscal-trail integrity. Other fields rejected with field_not_allowed.';
 COMMENT ON FUNCTION public.admin_salon_financial_summary(uuid) IS
   'Read-only saldo/debt/revenue/appointment-count summary for admin detail screen.';
