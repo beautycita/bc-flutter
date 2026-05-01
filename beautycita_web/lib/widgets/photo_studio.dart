@@ -1216,9 +1216,13 @@ class _PortfolioBuilderState extends State<PortfolioBuilder>
     final isMobile = WebBreakpoints.isMobile(screenWidth);
 
     if (isMobile) {
+      // Wrap controls in [Expanded] so the inner [SingleChildScrollView]
+      // gets a bounded viewport and actually scrolls. Preview takes a
+      // fixed slice at the bottom so the live render is always visible
+      // without competing for the same scroll axis.
       return Column(
         children: [
-          _buildControls(context),
+          Expanded(child: _buildControls(context)),
           const Divider(height: 1),
           SizedBox(
             height: 600,
@@ -1228,8 +1232,13 @@ class _PortfolioBuilderState extends State<PortfolioBuilder>
       );
     }
 
+    // Desktop: stretch children vertically so each side gets a bounded
+    // height and its own scroll view. With [start] (the previous default)
+    // the controls' [SingleChildScrollView] saw infinite vertical space
+    // and rendered all content uncropped, causing the page to overflow
+    // its [Expanded] parent with no scrollbar.
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // ── Controls panel (left) ──────────────────────────────
         SizedBox(

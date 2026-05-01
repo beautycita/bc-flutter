@@ -9,6 +9,9 @@ abstract final class DemoData {
     'id': businessId,
     'owner_id': 'eef1c030-c1ae-49ec-9352-684f018c0e56',
     'name': 'Ejemplo Salon',
+    'slug': 'ejemplo-salon',
+    'description':
+        'Belleza profesional en el corazon de Puerto Vallarta. Reserva en segundos.',
     'phone': '(322) 380-0207',
     'whatsapp': '+523223800207',
     'address': 'Calle Ejemplo 123, Colonia Ejemplo',
@@ -18,6 +21,8 @@ abstract final class DemoData {
     'lat': 20.6645623744056,
     'lng': -105.230326730276,
     'photo_url': 'https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/media/web/img/demo-staff/salon.jpg',
+    'cover_photo_url':
+        'https://pub-56305a12c77043c9bd5de9db79a5e542.r2.dev/media/web/img/demo-staff/salon.jpg',
     'average_rating': 4.75,
     'total_reviews': 16,
     'service_categories': [
@@ -60,6 +65,13 @@ abstract final class DemoData {
     'has_services': true,
     'has_schedule': true,
     'no_show_policy': 'forfeit_deposit',
+    'pos_enabled': true,
+    // Salon-owned QR program (free tier) — pre-activated so the demo
+    // shows the "active" state with both internal and external QRs
+    // visible. Stamp is a fixed ISO string so the cache-key for the
+    // const map stays stable across rebuilds.
+    'free_tier_agreements_accepted_at': '2026-03-15T17:00:00Z',
+    'internal_qr_slug': 'ejs-mt7q',
   };
 
   // ── Staff ──────────────────────────────────────────────────────────────
@@ -1040,6 +1052,300 @@ abstract final class DemoData {
         'cancelled_at': iso(now.subtract(const Duration(days: 2))),
       },
     ];
+  }
+
+  // ── POS products ───────────────────────────────────────────────────────
+  // Catalog the salon could resell. Schema mirrors `products` table fields
+  // read by biz_pos_page (name, brand, price, photo_url, category, in_stock,
+  // created_at, updated_at). Categories MUST match keys in Product.categories
+  // — the POS form/edit row reads them as keys, not display labels.
+  static List<Map<String, dynamic>> get products {
+    const created = '2026-01-15T12:00:00Z';
+    const updated = '2026-04-20T12:00:00Z';
+    return const [
+      {
+        'id': 'prod-demo-001',
+        'business_id': businessId,
+        'name': 'Mascarilla Capilar Olaplex No.3',
+        'brand': 'Olaplex',
+        'price': 580.0,
+        'photo_url':
+            'https://placehold.co/400x400/F8F0E5/333?text=Olaplex+No.3',
+        'category': 'moisturisers',
+        'in_stock': true,
+        'created_at': created,
+        'updated_at': updated,
+      },
+      {
+        'id': 'prod-demo-002',
+        'business_id': businessId,
+        'name': 'Tinte Wella Koleston 7/0',
+        'brand': 'Wella',
+        'price': 240.0,
+        'photo_url':
+            'https://placehold.co/400x400/EFE4DC/333?text=Wella+Koleston',
+        'category': 'shampoo',
+        'in_stock': true,
+        'created_at': created,
+        'updated_at': updated,
+      },
+      {
+        'id': 'prod-demo-003',
+        'business_id': businessId,
+        'name': 'Kit Manicure Profesional OPI',
+        'brand': 'OPI',
+        'price': 1250.0,
+        'photo_url':
+            'https://placehold.co/400x400/F5DAE0/333?text=Kit+OPI',
+        'category': 'nail_tools',
+        'in_stock': true,
+        'created_at': created,
+        'updated_at': updated,
+      },
+      {
+        'id': 'prod-demo-004',
+        'business_id': businessId,
+        'name': 'Plancha BaByliss Pro Nano Titanium',
+        'brand': 'BaByliss',
+        'price': 2400.0,
+        'photo_url':
+            'https://placehold.co/400x400/E0E0E0/333?text=BaByliss+Pro',
+        'category': 'hair_tools',
+        'in_stock': false,
+        'created_at': created,
+        'updated_at': updated,
+      },
+      {
+        'id': 'prod-demo-005',
+        'business_id': businessId,
+        'name': 'Champu Redken All Soft 1L',
+        'brand': 'Redken',
+        'price': 720.0,
+        'photo_url':
+            'https://placehold.co/400x400/F2E4D7/333?text=Redken+All+Soft',
+        'category': 'shampoo',
+        'in_stock': true,
+        'created_at': created,
+        'updated_at': updated,
+      },
+      {
+        'id': 'prod-demo-006',
+        'business_id': businessId,
+        'name': 'Set Brochas Real Techniques',
+        'brand': 'Real Techniques',
+        'price': 890.0,
+        'photo_url':
+            'https://placehold.co/400x400/F5E6C8/333?text=Real+Techniques',
+        'category': 'foundation',
+        'in_stock': true,
+        'created_at': created,
+        'updated_at': updated,
+      },
+      {
+        'id': 'prod-demo-007',
+        'business_id': businessId,
+        'name': 'Labial Maybelline Sky High',
+        'brand': 'Maybelline',
+        'price': 320.0,
+        'photo_url':
+            'https://placehold.co/400x400/E8C9CD/333?text=Maybelline',
+        'category': 'lipstick',
+        'in_stock': true,
+        'created_at': created,
+        'updated_at': updated,
+      },
+      {
+        'id': 'prod-demo-008',
+        'business_id': businessId,
+        'name': 'Locion Hidratante Cetaphil 500ml',
+        'brand': 'Cetaphil',
+        'price': 410.0,
+        'photo_url':
+            'https://placehold.co/400x400/E1ECF0/333?text=Cetaphil+500ml',
+        'category': 'moisturisers',
+        'in_stock': true,
+        'created_at': created,
+        'updated_at': updated,
+      },
+    ];
+  }
+
+  /// Showcase rows joined with their underlying product (the real query
+  /// returns `*, products(name, photo_url, price)`).
+  static List<Map<String, dynamic>> get productShowcases {
+    final now = DateTime.now();
+    String iso(DateTime d) => d.toUtc().toIso8601String();
+    final items = [
+      {
+        'product_id': 'prod-demo-001',
+        'caption': 'Mi favorito post-keratina. Pelo como seda en 8 minutos.',
+        'days_ago': 1,
+      },
+      {
+        'product_id': 'prod-demo-005',
+        'caption': 'El champu que recomiendo despues de cada balayage.',
+        'days_ago': 4,
+      },
+      {
+        'product_id': 'prod-demo-007',
+        'caption': 'Mascara que tenemos en kit de novia. No se corre, jamas.',
+        'days_ago': 9,
+      },
+    ];
+    return items.map((it) {
+      final pid = it['product_id'] as String;
+      final prod =
+          products.firstWhere((p) => p['id'] == pid, orElse: () => products.first);
+      return {
+        'id': 'show-$pid',
+        'business_id': businessId,
+        'product_id': pid,
+        'caption': it['caption'],
+        'created_at':
+            iso(now.subtract(Duration(days: it['days_ago'] as int))),
+        'products': {
+          'name': prod['name'],
+          'photo_url': prod['photo_url'],
+          'price': prod['price'],
+        },
+      };
+    }).toList();
+  }
+
+  // ── Tax / payout / CFDI demo aggregates ────────────────────────────────
+  // Computed from appointments so the dashboard "ingresos / retenciones /
+  // pagos" cards drift in lock-step with the calendar mutations.
+
+  /// YTD revenue + retenciones derived from completed appointments. Used by
+  /// the businessTaxSummaryProvider override in demo mode.
+  static ({double ytdRevenue, double ytdRetained}) taxYtdFromAppts(
+      List<Map<String, dynamic>> appts) {
+    final now = DateTime.now();
+    final yearStr = '${now.year}-';
+    double rev = 0;
+    double retained = 0;
+    for (final a in appts) {
+      if (a['status'] != 'completed') continue;
+      final starts = a['starts_at'] as String? ?? '';
+      if (!starts.startsWith(yearStr)) continue;
+      rev += (a['price'] as num? ?? 0).toDouble();
+      retained += (a['isr_withheld'] as num? ?? 0).toDouble();
+      retained += (a['iva_withheld'] as num? ?? 0).toDouble();
+    }
+    return (ytdRevenue: rev, ytdRetained: retained);
+  }
+
+  /// Synthetic CFDI rows so the dashboard CFDI card is non-empty. Five
+  /// rows, mixed status (issued / pending / cancelled).
+  static List<Map<String, dynamic>> get cfdiRecords {
+    final now = DateTime.now();
+    String iso(DateTime d) => d.toUtc().toIso8601String();
+    return [
+      {
+        'id': 'cfdi-demo-001',
+        'business_id': businessId,
+        'uuid': 'A1B2C3D4-E5F6-7890-ABCD-EF1234567890',
+        'folio': 'BC-2026-0042',
+        'amount': 1800.0,
+        'iva': 248.28,
+        'isr': 77.59,
+        'status': 'issued',
+        'issued_at': iso(now.subtract(const Duration(days: 1))),
+        'created_at': iso(now.subtract(const Duration(days: 1))),
+      },
+      {
+        'id': 'cfdi-demo-002',
+        'business_id': businessId,
+        'uuid': 'B2C3D4E5-F6A7-8901-BCDE-F23456789012',
+        'folio': 'BC-2026-0041',
+        'amount': 700.0,
+        'iva': 96.55,
+        'isr': 30.17,
+        'status': 'issued',
+        'issued_at': iso(now.subtract(const Duration(days: 3))),
+        'created_at': iso(now.subtract(const Duration(days: 3))),
+      },
+      {
+        'id': 'cfdi-demo-003',
+        'business_id': businessId,
+        'uuid': 'C3D4E5F6-A7B8-9012-CDEF-345678901234',
+        'folio': 'BC-2026-0040',
+        'amount': 2500.0,
+        'iva': 344.83,
+        'isr': 107.76,
+        'status': 'issued',
+        'issued_at': iso(now.subtract(const Duration(days: 5))),
+        'created_at': iso(now.subtract(const Duration(days: 5))),
+      },
+      {
+        'id': 'cfdi-demo-004',
+        'business_id': businessId,
+        'uuid': null,
+        'folio': 'BC-2026-0039',
+        'amount': 500.0,
+        'iva': 68.97,
+        'isr': 21.55,
+        'status': 'pending',
+        'issued_at': null,
+        'created_at': iso(now.subtract(const Duration(days: 6))),
+      },
+      {
+        'id': 'cfdi-demo-005',
+        'business_id': businessId,
+        'uuid': 'E5F6A7B8-C9D0-1234-EFAB-567890123456',
+        'folio': 'BC-2026-0038',
+        'amount': 1200.0,
+        'iva': 165.52,
+        'isr': 51.72,
+        'status': 'cancelled',
+        'issued_at': iso(now.subtract(const Duration(days: 12))),
+        'created_at': iso(now.subtract(const Duration(days: 12))),
+      },
+    ];
+  }
+
+  /// Synthetic payout history. Weekly disbursements over the last 6 weeks.
+  static List<Map<String, dynamic>> get payoutRecords {
+    final now = DateTime.now();
+    String iso(DateTime d) => d.toUtc().toIso8601String();
+    return List.generate(6, (i) {
+      final weeksAgo = i + 1;
+      final amount = 4500.0 + (i * 350) + (weeksAgo.isEven ? 220 : -140);
+      return {
+        'id': 'payout-demo-${100 - i}',
+        'business_id': businessId,
+        'amount': amount,
+        'currency': 'MXN',
+        'status': 'paid',
+        'period_start':
+            iso(now.subtract(Duration(days: weeksAgo * 7 + 7))),
+        'period_end': iso(now.subtract(Duration(days: weeksAgo * 7))),
+        'paid_at': iso(now.subtract(Duration(days: weeksAgo * 7 - 1))),
+        'created_at': iso(now.subtract(Duration(days: weeksAgo * 7))),
+      };
+    });
+  }
+
+  /// Synthetic commission breakdown (last 30 days).
+  static List<Map<String, dynamic>> get commissionRecords {
+    final now = DateTime.now();
+    String iso(DateTime d) => d.toUtc().toIso8601String();
+    final out = <Map<String, dynamic>>[];
+    for (var i = 0; i < 14; i++) {
+      final daysAgo = i * 2 + 1;
+      final base = 350.0 + (i * 27.5);
+      out.add({
+        'id': 'comm-demo-${500 - i}',
+        'business_id': businessId,
+        'appointment_id': 'demo-past-${1000 - daysAgo}-0-0',
+        'amount': base * 0.03,
+        'gross_amount': base,
+        'rate': 0.03,
+        'status': 'collected',
+        'created_at': iso(now.subtract(Duration(days: daysAgo))),
+      });
+    }
+    return out;
   }
 
   // ── Payments (derived from completed/no-show appointments) ─────────────

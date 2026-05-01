@@ -64,6 +64,16 @@ List<Override> get demoProviderOverrides => [
       }),
       businessScheduleBlocksProvider.overrideWith((ref, range) async => []),
       allStaffServicesProvider.overrideWith((ref) async => _demoStaffServices()),
+      // Dashboard finance cards — synthetic but coherent with appointments.
+      businessTaxSummaryProvider.overrideWith((ref) async {
+        final session = ref.watch(demoSessionStoreProvider);
+        return _demoTaxSummary(session.appointments);
+      }),
+      businessCfdiProvider.overrideWith((ref) async => DemoData.cfdiRecords),
+      businessPayoutRecordsProvider
+          .overrideWith((ref) async => DemoData.payoutRecords),
+      businessCommissionRecordsProvider
+          .overrideWith((ref) async => DemoData.commissionRecords),
     ];
 
 // ── Computed demo stats ─────────────────────────────────────────────────────
@@ -178,6 +188,20 @@ List<Map<String, dynamic>> _demoPayments(List<Map<String, dynamic>> appts) {
             'created_at': a['starts_at'],
           })
       .toList();
+}
+
+TaxSummary _demoTaxSummary(List<Map<String, dynamic>> appts) {
+  final ytd = DemoData.taxYtdFromAppts(appts);
+  // Synthetic year-to-date expenses so the "Net" panel reflects something
+  // believable for a busy salon (rent, utilities, supplies).
+  const ytdExpenses = 28400.0;
+  final now = DateTime.now();
+  return TaxSummary(
+    ytdRevenue: ytd.ytdRevenue,
+    ytdExpenses: ytdExpenses,
+    outstandingDebt: 0,
+    daysUntilYearEnd: DateTime(now.year, 12, 31).difference(now).inDays,
+  );
 }
 
 List<Map<String, dynamic>> _demoMonthlyDaily(List<Map<String, dynamic>> appts) {

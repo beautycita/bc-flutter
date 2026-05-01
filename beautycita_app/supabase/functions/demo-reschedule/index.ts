@@ -140,6 +140,30 @@ serve(async (req: Request) => {
       );
     }
 
+    // 24h-per-phone cooldown so a salon owner dragging appointments around
+    // doesn't trigger a flood of WA messages. Once any demo message has
+    // been queued for this phone in the last 24h we silently no-op the
+    // sends (calendar UI still updates via the session store; only the
+    // labeled WA preview is suppressed).
+    const cooldownPhone = (profile.phone as string).replace(/\D/g, "");
+    const cooldownSince = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    let onCooldown = false;
+    try {
+      const { data: recentRows } = await adminClient
+        .from("wa_message_queue")
+        .select("id")
+        .eq("phone", cooldownPhone)
+        .eq("source", "demo-reschedule")
+        .gte("created_at", cooldownSince)
+        .limit(1);
+      onCooldown = (recentRows ?? []).length > 0;
+    } catch (e) {
+      // Cooldown probe is best-effort: if it fails, fall through and let
+      // the in-process rate limiter (3/10min) catch egregious abuse. We
+      // still log so a real RLS/connectivity break surfaces.
+      console.warn("[demo-reschedule] cooldown probe failed:", e);
+    }
+
     const body: DemoReschedulePayload = await req.json();
     const kind = body.kind === "cancel" ? "cancel" : "reschedule";
     const isCancel = kind === "cancel";
@@ -269,19 +293,31 @@ serve(async (req: Request) => {
 
     // Send in sequence so the demo user sees the labeled messages
     // arrive in the same order they'd arrive for the real parties.
+    // Per-phone 24h cooldown: skip the WA fan-out but still 200 so the
+    // calendar caller treats it as a successful no-op.
     let sent = 0;
-    if (await sendDemo(phone, clientMsg)) sent++;
-    await new Promise((r) => setTimeout(r, INTER_MESSAGE_DELAY_MS));
-    if (await sendDemo(phone, stylistMsg)) sent++;
-    if (newStaffMsg) {
+    if (!onCooldown) {
+      if (await sendDemo(phone, clientMsg)) sent++;
       await new Promise((r) => setTimeout(r, INTER_MESSAGE_DELAY_MS));
-      if (await sendDemo(phone, newStaffMsg)) sent++;
+      if (await sendDemo(phone, stylistMsg)) sent++;
+      if (newStaffMsg) {
+        await new Promise((r) => setTimeout(r, INTER_MESSAGE_DELAY_MS));
+        if (await sendDemo(phone, newStaffMsg)) sent++;
+      }
     }
 
-    console.log(`[demo-reschedule] kind=${kind} reassignment=${isReassignment} sent=${sent}`);
+    console.log(
+      `[demo-reschedule] kind=${kind} reassignment=${isReassignment} sent=${sent} cooldown=${onCooldown}`,
+    );
 
     return new Response(
-      JSON.stringify({ success: true, messages_sent: sent, kind, reassignment: isReassignment }),
+      JSON.stringify({
+        success: true,
+        messages_sent: sent,
+        kind,
+        reassignment: isReassignment,
+        cooldown: onCooldown,
+      }),
       { status: 200, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   } catch (e) {

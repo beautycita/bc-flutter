@@ -41,6 +41,18 @@ class _BizCalendarSyncPageState extends ConsumerState<BizCalendarSyncPage> {
   @override
   void initState() {
     super.initState();
+    // Demo mode: skip the edge-fn probe (it'd fail anon) and seed a
+    // believable "connected since yesterday" state so the page shows what
+    // an owner with Google linked actually sees.
+    final isDemo = ref.read(isDemoProvider);
+    if (isDemo) {
+      _googleConnected = true;
+      _googleLastSync =
+          DateTime.now().subtract(const Duration(hours: 3)).toIso8601String();
+      _bizFeedUrl =
+          'https://beautycita.com/calendar/ejemplo-salon.ics';
+      return;
+    }
     _checkGoogleStatus();
   }
 
