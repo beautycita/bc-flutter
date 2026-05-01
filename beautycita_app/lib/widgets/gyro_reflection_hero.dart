@@ -80,9 +80,14 @@ class _GyroReflectionHeroState extends State<GyroReflectionHero> {
     final ax = (-nx * 0.85).clamp(-1.0, 1.0);
     final ay = (-ny * 0.85).clamp(-1.0, 1.0);
 
+    // StackFit.passthrough so the parent's horizontal constraint passes
+    // to the AnimatedContainer child — otherwise Stack defaults to .loose
+    // and the child wraps to its column's intrinsic width (about a quarter
+    // of the screen instead of the original full-width hero).
     return ClipRRect(
       borderRadius: widget.borderRadius,
       child: Stack(
+        fit: StackFit.passthrough,
         children: [
           widget.child,
           Positioned.fill(
