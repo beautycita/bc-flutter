@@ -43,11 +43,13 @@ final adminQueueCountsProvider = FutureProvider<AdminQueueCounts>((ref) async {
 });
 
 /// Recent activity feed sourced from audit_log.
+/// Phase 0 extended an existing table — the original columns kept their
+/// names: admin_id (actor), target_type (table), created_at (when).
 final adminRecentAuditProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final res = await SupabaseClientService.client
       .from('audit_log')
-      .select('id, occurred_at, actor_id, actor_role, action, target_table, target_id, after_data')
-      .order('occurred_at', ascending: false)
+      .select('id, created_at, admin_id, actor_role, action, target_type, target_id, details, after_data')
+      .order('created_at', ascending: false)
       .limit(50);
   return (res as List).cast<Map<String, dynamic>>();
 });

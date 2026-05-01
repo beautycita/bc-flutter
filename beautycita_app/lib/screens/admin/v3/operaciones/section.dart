@@ -1,10 +1,11 @@
-// Operaciones section host — Cola · Actividad · Salud.
+// Operaciones section host — Cola · Actividad · Salud · Outreach.
 
 import 'package:flutter/material.dart';
 
 import '../../../../widgets/admin/v2/tokens.dart';
-import 'cola.dart';
 import 'actividad.dart';
+import 'cola.dart';
+import 'outreach.dart';
 import 'salud.dart';
 
 class OperacionesSection extends StatelessWidget {
@@ -13,17 +14,19 @@ class OperacionesSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Column(
         children: [
           Material(
             color: Theme.of(context).colorScheme.surface,
             child: TabBar(
+              isScrollable: true,
               labelColor: Theme.of(context).colorScheme.primary,
               unselectedLabelColor: AdminV2Tokens.subtle(context),
               indicatorColor: Theme.of(context).colorScheme.primary,
               tabs: const [
                 Tab(text: 'Cola'),
+                Tab(text: 'Outreach'),
                 Tab(text: 'Actividad'),
                 Tab(text: 'Salud'),
               ],
@@ -33,6 +36,7 @@ class OperacionesSection extends StatelessWidget {
             child: TabBarView(
               children: [
                 OperacionesCola(),
+                OperacionesOutreach(),
                 OperacionesActividad(),
                 OperacionesSalud(),
               ],

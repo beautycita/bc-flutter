@@ -1,22 +1,21 @@
 // AdminShellV3 — the new admin panel.
 //
-// 5-section bottom-tab navigation. Tier-gated visibility (sections without
-// access are HIDDEN, not greyed). Header: section title · global search ·
-// role chip. No carryover from v1 — every section is composed of v3 screens
-// built against the v2 design system primitives.
+// Bottom-tab nav with the daily-driver sections only. Operaciones (work
+// queue + outreach) and Personas (user/salon management) are the only ones
+// that need to be one tap away. Sistema (toggles + auditoría) lives behind
+// the superadmin overflow menu in the header — BC's directive: "the admin
+// will never need to access the toggles or the auditor."
 //
-// Sections by tier:
-//   ops_admin+   : Operaciones · Personas
-//   admin+       : + Dinero
-//   superadmin   : + Motor · Sistema
-//
-// Sections marked "in_progress" in their _Section.status field are NOT shown
-// in the nav until they ship — build-complete rule (no placeholder screens).
+// Tier-gated visibility:
+//   ops_admin / admin / superadmin : Operaciones · Personas
+//   admin+ : + (Dinero — hidden until ready)
+//   superadmin : + overflow menu with Toggles · Auditoría
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../config/routes.dart';
 import '../../../providers/admin_provider.dart';
 import '../../../widgets/admin/v2/layout/empty_state.dart';
 import '../../../widgets/admin/v2/shell/global_search_sheet.dart';
@@ -26,10 +25,7 @@ import '../../../widgets/lobby_music_pill.dart';
 
 import 'operaciones/section.dart';
 import 'personas/section.dart';
-import 'sistema/section.dart';
 
-/// Section index in the bottom nav. Backwards-compat alias `adminTabProvider`
-/// kept so existing callers (profile_sections, home_screen) keep compiling.
 final adminV3SectionProvider = StateProvider<int>((ref) => 0);
 final adminTabProvider = adminV3SectionProvider;
 
@@ -81,8 +77,8 @@ class _Body extends ConsumerWidget {
   static const _sections = <AdminSection>[
     AdminSection.operaciones,
     AdminSection.personas,
-    AdminSection.sistema,
     // Dinero / Motor: not in nav until their screens land — build-complete rule.
+    // Sistema (Toggles + Auditoría) lives in the superadmin overflow menu.
   ];
 
   List<AdminSection> _visible() => _sections.where((s) => s.minTier.index <= tier.index).toList();
@@ -99,6 +95,7 @@ class _Body extends ConsumerWidget {
     }
     final selected = ref.watch(adminV3SectionProvider).clamp(0, sections.length - 1);
     final current = sections[selected];
+    final isSuperadmin = tier == AdminTier.superadmin;
 
     return Scaffold(
       backgroundColor: colors.surfaceContainerLowest,
@@ -124,6 +121,25 @@ class _Body extends ConsumerWidget {
             tooltip: 'Búsqueda global',
             onPressed: () => AdminGlobalSearchSheet.show(context),
           ),
+          if (isSuperadmin)
+            PopupMenuButton<_SuperadminAction>(
+              tooltip: 'Más',
+              icon: const Icon(Icons.more_vert),
+              onSelected: (a) => switch (a) {
+                _SuperadminAction.toggles => context.push(AppRoutes.adminV3SistemaToggles),
+                _SuperadminAction.auditoria => context.push(AppRoutes.adminV3SistemaAuditoria),
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(
+                  value: _SuperadminAction.toggles,
+                  child: ListTile(leading: Icon(Icons.toggle_on_outlined), title: Text('Toggles'), dense: true),
+                ),
+                PopupMenuItem(
+                  value: _SuperadminAction.auditoria,
+                  child: ListTile(leading: Icon(Icons.fact_check_outlined), title: Text('Auditoría'), dense: true),
+                ),
+              ],
+            ),
         ],
       ),
       body: _SectionBody(section: current),
@@ -147,7 +163,6 @@ class _SectionBody extends StatelessWidget {
     return switch (section) {
       AdminSection.operaciones => const OperacionesSection(),
       AdminSection.personas => const PersonasSection(),
-      AdminSection.sistema => const SistemaSection(),
       AdminSection.dinero => const _NotShipped(label: 'Dinero'),
       AdminSection.motor => const _NotShipped(label: 'Motor'),
     };
@@ -158,14 +173,15 @@ enum AdminSection {
   operaciones(label: 'Operaciones', icon: Icons.dashboard_customize_outlined, minTier: AdminTier.opsAdmin),
   personas(label: 'Personas', icon: Icons.groups_outlined, minTier: AdminTier.opsAdmin),
   dinero(label: 'Dinero', icon: Icons.payments_outlined, minTier: AdminTier.admin),
-  motor(label: 'Motor', icon: Icons.tune, minTier: AdminTier.superadmin),
-  sistema(label: 'Sistema', icon: Icons.settings_outlined, minTier: AdminTier.superadmin);
+  motor(label: 'Motor', icon: Icons.tune, minTier: AdminTier.superadmin);
 
   const AdminSection({required this.label, required this.icon, required this.minTier});
   final String label;
   final IconData icon;
   final AdminTier minTier;
 }
+
+enum _SuperadminAction { toggles, auditoria }
 
 class _NotShipped extends StatelessWidget {
   const _NotShipped({required this.label});

@@ -13,6 +13,9 @@ import 'package:beautycita/screens/my_bookings_screen.dart';
 import 'package:beautycita/screens/booking_flow_screen.dart';
 import 'package:beautycita/screens/admin/v3/shell.dart';
 import 'package:beautycita/screens/admin/v3/personas/salones_detail_screen.dart';
+import 'package:beautycita/screens/admin/v3/sistema/toggles.dart';
+import 'package:beautycita/screens/admin/v3/sistema/auditoria.dart';
+import 'package:beautycita/screens/admin/v3/operaciones/cola_drill.dart';
 import 'package:beautycita/screens/invite_salon_screen.dart';
 import 'package:beautycita/screens/invite/invite_experience_screen.dart';
 import 'package:beautycita/screens/invite/invite_salon_detail_screen.dart';
@@ -66,6 +69,9 @@ class AppRoutes {
   static const String book = '/book';
   static const String admin = '/admin';
   static const String adminV3PersonasSalonDetail = '/admin/v3/personas/salones/:id';
+  static const String adminV3SistemaToggles = '/admin/v3/sistema/toggles';
+  static const String adminV3SistemaAuditoria = '/admin/v3/sistema/auditoria';
+  static const String adminV3OperacionesColaDrill = '/admin/v3/operaciones/cola/:queue';
   static const String business = '/business';
   static const String inviteSalon = '/invite';
   static const String salonOnboarding = '/registro';
@@ -251,6 +257,41 @@ class AppRoutes {
           return bcSweepPage(
             key: state.pageKey,
             child: PersonasSalonesDetailScreen(businessId: id),
+          );
+        },
+      ),
+      GoRoute(
+        path: adminV3SistemaToggles,
+        name: 'admin-v3-sistema-toggles',
+        pageBuilder: (context, state) => bcSweepPage(
+          key: state.pageKey,
+          child: const SistemaTogglesPage(),
+        ),
+      ),
+      GoRoute(
+        path: adminV3SistemaAuditoria,
+        name: 'admin-v3-sistema-auditoria',
+        pageBuilder: (context, state) => bcSweepPage(
+          key: state.pageKey,
+          child: const SistemaAuditoriaPage(),
+        ),
+      ),
+      GoRoute(
+        path: adminV3OperacionesColaDrill,
+        name: 'admin-v3-operaciones-cola-drill',
+        pageBuilder: (context, state) {
+          final raw = state.pathParameters['queue'] ?? '';
+          final queue = switch (raw) {
+            'disputes' => ColaQueue.disputes,
+            'arco' => ColaQueue.arco,
+            'role-change' => ColaQueue.roleChange,
+            'banking' => ColaQueue.banking,
+            'alerts' => ColaQueue.alerts,
+            _ => ColaQueue.disputes,
+          };
+          return bcSweepPage(
+            key: state.pageKey,
+            child: ColaDrillPage(queue: queue),
           );
         },
       ),

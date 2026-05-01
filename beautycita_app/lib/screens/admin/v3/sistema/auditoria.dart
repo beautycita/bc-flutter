@@ -1,7 +1,7 @@
 // Sistema → Auditoría
 //
 // Reads audit_log directly. Default filter: today, all actions, all tables.
-// Keyset pagination on (occurred_at, id). Each row shows actor + action +
+// Keyset pagination on (created_at, id). Each row shows actor + action +
 // target. Tap a row to see the before/after column delta.
 
 import 'package:flutter/material.dart';
@@ -27,13 +27,31 @@ final _auditRowsProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>
   final since = DateTime.now().toUtc().subtract(Duration(hours: q.sinceHours)).toIso8601String();
   var query = SupabaseClientService.client
       .from('audit_log')
-      .select('id, occurred_at, actor_id, actor_role, action, target_table, target_id, before_data, after_data')
-      .gte('occurred_at', since);
+      .select('id, created_at, admin_id, actor_role, action, target_type, target_id, details, before_data, after_data')
+      .gte('created_at', since);
   if (q.action != null) query = query.eq('action', q.action!);
-  if (q.table != null) query = query.eq('target_table', q.table!);
-  final res = await query.order('occurred_at', ascending: false).limit(100);
+  if (q.table != null) query = query.eq('target_type', q.table!);
+  final res = await query.order('created_at', ascending: false).limit(100);
   return (res as List).cast<Map<String, dynamic>>();
 });
+
+/// Standalone page wrapper for the superadmin overflow menu.
+class SistemaAuditoriaPage extends StatelessWidget {
+  const SistemaAuditoriaPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
+      appBar: AppBar(
+        title: Text('Auditoría', style: AdminV2Tokens.title(context)),
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        elevation: 0,
+      ),
+      body: const SistemaAuditoria(),
+    );
+  }
+}
 
 class SistemaAuditoria extends ConsumerWidget {
   const SistemaAuditoria({super.key});
@@ -99,9 +117,9 @@ class _Row extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final occurred = (row['occurred_at'] as String?) ?? '';
+    final occurred = (row['created_at'] as String?) ?? '';
     final action = (row['action'] as String?) ?? '?';
-    final table = (row['target_table'] as String?) ?? '?';
+    final table = (row['target_type'] as String?) ?? '?';
     final actorRole = (row['actor_role'] as String?) ?? '?';
     final after = row['after_data'];
     final before = row['before_data'];

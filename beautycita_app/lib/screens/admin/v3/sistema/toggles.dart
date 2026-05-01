@@ -15,6 +15,24 @@ import '../../../../widgets/admin/v2/layout/card.dart';
 import '../../../../widgets/admin/v2/layout/empty_state.dart';
 import '../../../../widgets/admin/v2/tokens.dart';
 
+/// Standalone page wrapper for the superadmin overflow menu.
+class SistemaTogglesPage extends StatelessWidget {
+  const SistemaTogglesPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
+      appBar: AppBar(
+        title: Text('Toggles', style: AdminV2Tokens.title(context)),
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        elevation: 0,
+      ),
+      body: const SistemaToggles(),
+    );
+  }
+}
+
 class SistemaToggles extends ConsumerStatefulWidget {
   const SistemaToggles({super.key});
 

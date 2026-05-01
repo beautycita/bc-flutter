@@ -75,9 +75,9 @@ class _Row extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final action = row['action'] as String?;
-    final table = row['target_table'] as String? ?? '?';
-    final actorRole = row['actor_role'] as String? ?? '?';
-    final occurred = _fmtTime(row['occurred_at'] as String?);
+    final table = row['target_type'] as String? ?? '?';
+    final actorRole = row['actor_role'] as String? ?? row['admin_id'] as String? ?? '?';
+    final occurred = _fmtTime(row['created_at'] as String?);
     final color = _color(context, action);
     return AdminCard(
       margin: const EdgeInsets.only(bottom: AdminV2Tokens.spacingSM),
