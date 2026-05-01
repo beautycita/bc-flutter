@@ -21,7 +21,7 @@ import 'package:beautycita/providers/business_provider.dart';
 import 'package:beautycita/providers/feature_toggle_provider.dart';
 import 'package:beautycita/providers/profile_provider.dart';
 import 'package:beautycita/providers/security_provider.dart';
-import 'package:beautycita/screens/admin/admin_shell_screen.dart' show adminTabProvider;
+import 'package:beautycita/screens/admin/v3/shell.dart' show adminTabProvider;
 import 'package:beautycita/screens/business/business_shell_screen.dart' show businessTabProvider;
 import 'package:beautycita/services/toast_service.dart';
 

@@ -11,7 +11,7 @@ import 'package:beautycita/screens/provider_detail_screen.dart';
 import 'package:beautycita/screens/booking_screen.dart';
 import 'package:beautycita/screens/my_bookings_screen.dart';
 import 'package:beautycita/screens/booking_flow_screen.dart';
-import 'package:beautycita/screens/admin/admin_shell_screen.dart';
+import 'package:beautycita/screens/admin/v3/shell.dart';
 import 'package:beautycita/screens/admin/v3/personas/salones_detail_screen.dart';
 import 'package:beautycita/screens/invite_salon_screen.dart';
 import 'package:beautycita/screens/invite/invite_experience_screen.dart';
@@ -240,7 +240,7 @@ class AppRoutes {
         name: 'admin',
         pageBuilder: (context, state) => bcSweepPage(
           key: state.pageKey,
-          child: const AdminShellScreen(),
+          child: const AdminShellV3(),
         ),
       ),
       GoRoute(

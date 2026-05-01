@@ -948,7 +948,7 @@ final adminAllSalonsProvider = FutureProvider.family<List<Map<String, dynamic>>,
 
   var q = SupabaseClientService.client
       .from(BCTables.businesses)
-      .select('id, name, phone, whatsapp, address, city, state, tier, is_active, is_verified, average_rating, total_reviews, owner_id, photo_url, created_at');
+      .select('id, name, phone, whatsapp, address, city, state, tier, is_active, is_verified, average_rating, total_reviews, owner_id, photo_url, created_at, rfc, clabe, stripe_charges_enabled, stripe_payouts_enabled, onboarding_complete, onboarding_step, has_services, has_schedule, id_verification_status');
 
   if (query.length >= 2) {
     q = q.or('name.ilike.%$query%,phone.ilike.%$query%,city.ilike.%$query%,whatsapp.ilike.%$query%');

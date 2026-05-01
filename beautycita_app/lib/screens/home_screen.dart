@@ -32,7 +32,7 @@ import '../widgets/cinematic_question_text.dart';
 import 'onboarding_screen.dart';
 import 'subcategory_sheet.dart';
 import 'business/business_shell_screen.dart' show businessTabProvider;
-import 'admin/admin_shell_screen.dart' show adminTabProvider;
+import 'admin/v3/shell.dart' show adminTabProvider;
 import '../providers/feature_toggle_provider.dart';
 import '../providers/review_prompt_provider.dart';
 import '../widgets/particle_rain.dart';
@@ -1308,15 +1308,12 @@ class _HomeAdminDrawer extends StatelessWidget {
   final void Function(int index) onSelectTab;
   const _HomeAdminDrawer({required this.onSelectTab});
 
+  // Maps to AdminShellV3 section indices (Operaciones=0, Personas=1, Sistema=2).
+  // Sub-screens within each section are reached via the in-shell tab bar.
   static const _tabs = <(IconData, String, String)>[
-    (Icons.dashboard, 'Dashboard', 'Gestion'),
-    (Icons.people, 'Usuarios', 'Gestion'),
-    (Icons.assignment, 'Solicitudes', 'Gestion'),
-    (Icons.calendar_today, 'Citas', 'Gestion'),
-    (Icons.gavel, 'Disputas', 'Gestion'),
-    (Icons.store, 'Salones', 'Gestion'),
-    (Icons.analytics, 'Analitica', 'Gestion'),
-    (Icons.rate_review, 'Resenas', 'Gestion'),
+    (Icons.dashboard_customize_outlined, 'Operaciones', 'Admin'),
+    (Icons.groups_outlined, 'Personas', 'Admin'),
+    (Icons.settings_outlined, 'Sistema', 'Admin'),
   ];
 
   @override
