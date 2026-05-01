@@ -107,17 +107,21 @@ class OutreachRecipient {
 final outreachSendRecipientsProvider =
     FutureProvider.family<List<OutreachRecipient>, OutreachAudience>((ref, audience) async {
   if (audience == OutreachAudience.discovered) {
+    // discovered_salons uses business_name / location_city / location_state.
+    // Filter out already-registered + opted-out rows.
     final res = await BCSupabase.client
         .from('discovered_salons')
-        .select('id, name, city, state, phone, email')
+        .select('id, business_name, location_city, location_state, phone, email, opted_out, registered_business_id')
+        .filter('registered_business_id', 'is', null)
+        .neq('opted_out', true)
         .order('updated_at', ascending: false)
         .limit(500);
     return (res as List).cast<Map<String, dynamic>>().map((r) {
-      final city = (r['city'] as String?) ?? '';
-      final state = (r['state'] as String?) ?? '';
+      final city = (r['location_city'] as String?) ?? '';
+      final state = (r['location_state'] as String?) ?? '';
       return OutreachRecipient(
         id: r['id'] as String,
-        name: (r['name'] as String?) ?? '(sin nombre)',
+        name: (r['business_name'] as String?) ?? '(sin nombre)',
         subtitle: [city, state].where((s) => s.isNotEmpty).join(', '),
         phone: r['phone'] as String?,
         email: r['email'] as String?,
