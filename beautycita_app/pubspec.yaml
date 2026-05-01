@@ -1,7 +1,7 @@
 name: beautycita
 description: "BeautyCita — Intelligent Beauty Booking Agent"
 publish_to: 'none'
-version: 1.2.1+60163
+version: 1.2.1+60164
 
 environment:
   sdk: ^3.10.8
