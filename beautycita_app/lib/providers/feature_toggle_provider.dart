@@ -52,6 +52,9 @@ const _defaults = <String, bool>{
   'enable_service_modifiers': false,
   // Admin shell v2 (Phase 1 redesign)
   'admin_shell_v2_enabled': false,
+  // Admin v3 ground-up rebuild — per-section toggles. Each defaults off.
+  // Old admin keeps serving until BC verifies + flips per section.
+  'admin_v2_section_personas_salones_enabled': false,
 };
 
 /// Fetches all boolean feature toggles from app_config and returns a map.

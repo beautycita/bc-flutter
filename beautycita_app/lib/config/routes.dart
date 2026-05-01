@@ -12,6 +12,7 @@ import 'package:beautycita/screens/booking_screen.dart';
 import 'package:beautycita/screens/my_bookings_screen.dart';
 import 'package:beautycita/screens/booking_flow_screen.dart';
 import 'package:beautycita/screens/admin/admin_shell_screen.dart';
+import 'package:beautycita/screens/admin/v3/personas/salones_detail_screen.dart';
 import 'package:beautycita/screens/invite_salon_screen.dart';
 import 'package:beautycita/screens/invite/invite_experience_screen.dart';
 import 'package:beautycita/screens/invite/invite_salon_detail_screen.dart';
@@ -64,6 +65,7 @@ class AppRoutes {
   static const String myBookings = '/my-bookings';
   static const String book = '/book';
   static const String admin = '/admin';
+  static const String adminV3PersonasSalonDetail = '/admin/v3/personas/salones/:id';
   static const String business = '/business';
   static const String inviteSalon = '/invite';
   static const String salonOnboarding = '/registro';
@@ -240,6 +242,17 @@ class AppRoutes {
           key: state.pageKey,
           child: const AdminShellScreen(),
         ),
+      ),
+      GoRoute(
+        path: adminV3PersonasSalonDetail,
+        name: 'admin-v3-personas-salon-detail',
+        pageBuilder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          return bcSweepPage(
+            key: state.pageKey,
+            child: PersonasSalonesDetailScreen(businessId: id),
+          );
+        },
       ),
       GoRoute(
         path: rp,

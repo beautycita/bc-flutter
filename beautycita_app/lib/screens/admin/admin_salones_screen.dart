@@ -16,6 +16,8 @@ import '../../services/toast_service.dart';
 import 'admin_pipeline_screen.dart';
 import 'admin_salon_detail_screen.dart';
 import 'admin_salones_insights_screen.dart';
+import 'v3/personas/salones_detail_screen.dart';
+import '../../providers/feature_toggle_provider.dart';
 import '../../widgets/admin/outreach_send_sheet.dart';
 
 const _salonExportColumns = [
@@ -626,7 +628,7 @@ class _SalonesTabState extends ConsumerState<_SalonesTab> {
 // Salon result card
 // ---------------------------------------------------------------------------
 
-class _SalonResultCard extends StatelessWidget {
+class _SalonResultCard extends ConsumerWidget {
   final Map<String, dynamic> salon;
   final bool selected;
   final VoidCallback? onSelectionToggle;
@@ -656,8 +658,10 @@ class _SalonResultCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).colorScheme;
+    final toggles = ref.watch(featureTogglesProvider);
+    final useV3 = toggles.isEnabled('admin_v2_section_personas_salones_enabled');
 
     final name = salon['name'] as String? ?? 'Sin nombre';
     final city = salon['city'] as String? ?? '';
@@ -691,7 +695,9 @@ class _SalonResultCard extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => AdminSalonDetailScreen(businessId: id),
+                builder: (_) => useV3
+                    ? PersonasSalonesDetailScreen(businessId: id)
+                    : AdminSalonDetailScreen(businessId: id),
               ),
             );
           },

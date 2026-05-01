@@ -243,11 +243,7 @@ class _AdminContent extends ConsumerWidget {
       case 'Sistema':
         return const AdminSystemScreen();
       default:
-        return _PlaceholderTab(
-          icon: tab.icon,
-          label: tab.label,
-          subtitle: 'Proximamente',
-        );
+        return const SizedBox.shrink();
     }
   }
 }
@@ -392,49 +388,6 @@ class _AdminDrawer extends StatelessWidget {
   }
 }
 
-class _PlaceholderTab extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String subtitle;
-  const _PlaceholderTab({
-    required this.icon,
-    required this.label,
-    required this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 48, color: colors.primary.withValues(alpha: 0.4)),
-          const SizedBox(height: AppConstants.paddingMD),
-          Text(
-            label,
-            style: GoogleFonts.poppins(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: colors.onSurface,
-            ),
-          ),
-          const SizedBox(height: AppConstants.paddingSM),
-          Text(
-            subtitle,
-            style: GoogleFonts.nunito(
-              fontSize: 14,
-              color: colors.onSurface.withValues(alpha: 0.6),
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _AdminTab {
   final IconData icon;
   final String label;
@@ -445,85 +398,4 @@ class _AdminTab {
     required this.label,
     required this.section,
   });
-}
-
-// -- Spectrum shimmer text --
-
-class _BrandShimmerText extends StatefulWidget {
-  final String text;
-  const _BrandShimmerText({required this.text});
-
-  @override
-  State<_BrandShimmerText> createState() => _BrandShimmerTextState();
-}
-
-class _BrandShimmerTextState extends State<_BrandShimmerText>
-    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 2500),
-      vsync: this,
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
-      _controller.stop();
-    } else if (state == AppLifecycleState.resumed) {
-      _controller.repeat();
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        final shimmerOffset = _controller.value * 3.0 - 1.0;
-        return ShaderMask(
-          shaderCallback: (bounds) {
-            return LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: const [
-                Color(0xFF00D4AA), // aqua
-                Color(0xFF06B6D4), // teal
-                Color(0xFF3B82F6), // blue
-                Color(0xFF8B5CF6), // purple
-                Color(0xFFC026D3), // magenta
-                Color(0xFFEC4899), // pink
-              ],
-              stops: [
-                (shimmerOffset - 0.3).clamp(0.0, 1.0),
-                (shimmerOffset - 0.1).clamp(0.0, 1.0),
-                shimmerOffset.clamp(0.0, 1.0),
-                (shimmerOffset + 0.1).clamp(0.0, 1.0),
-                (shimmerOffset + 0.3).clamp(0.0, 1.0),
-                (shimmerOffset + 0.5).clamp(0.0, 1.0),
-              ],
-            ).createShader(bounds);
-          },
-          child: Text(
-            widget.text,
-            style: const TextStyle().copyWith(
-              color: Theme.of(context).colorScheme.onPrimary,
-            ),
-          ),
-        );
-      },
-    );
-  }
 }
