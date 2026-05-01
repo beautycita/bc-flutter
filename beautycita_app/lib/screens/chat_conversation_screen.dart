@@ -17,6 +17,7 @@ import 'package:beautycita/widgets/bc_image_picker_sheet.dart';
 import 'package:beautycita/widgets/media_viewer.dart';
 import 'package:beautycita/services/media_service.dart';
 import 'package:beautycita/widgets/chat_animations.dart';
+import 'package:beautycita/widgets/lobby_music_pill.dart';
 
 class ChatConversationScreen extends ConsumerStatefulWidget {
   final String threadId;
@@ -193,7 +194,8 @@ class _ChatConversationScreenState
     final isEros = (thread?.isEros ?? false) && toggles.isEnabled('enable_eros_support');
     final title = isAphrodite ? 'Afrodita' : isSupport ? 'Soporte en Vivo' : (thread?.displayName ?? 'Chat');
 
-    return Scaffold(
+    return LobbyMusicSuppressor(
+      child: Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -396,6 +398,7 @@ class _ChatConversationScreenState
             onCamera: () => _handleCamera(),
           ),
         ],
+      ),
       ),
     );
   }

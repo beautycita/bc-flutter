@@ -18,6 +18,7 @@ import 'reviews_screen.dart';
 import 'admin_chat_screen.dart';
 import 'admin_intelligence_screen.dart';
 import '../../widgets/admin/outreach_jobs_banner.dart';
+import '../../widgets/lobby_music_pill.dart';
 
 /// Index of the currently selected admin tab.
 final adminTabProvider = StateProvider<int>((ref) => 0);
@@ -51,7 +52,8 @@ class AdminShellScreen extends ConsumerWidget {
     final isAdmin = ref.watch(isAdminProvider);
     final colors = Theme.of(context).colorScheme;
 
-    return isAdmin.when(
+    return LobbyMusicSuppressor(
+      child: isAdmin.when(
       data: (admin) {
         if (!admin) {
           return Scaffold(
@@ -111,6 +113,7 @@ class AdminShellScreen extends ConsumerWidget {
             style: GoogleFonts.poppins(color: colors.onSurface.withValues(alpha: 0.6)),
           ),
         ),
+      ),
       ),
     );
   }

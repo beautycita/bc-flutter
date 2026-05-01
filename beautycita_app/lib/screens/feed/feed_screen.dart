@@ -6,6 +6,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/providers/feed_provider.dart';
 import 'package:beautycita/screens/feed/feed_card.dart';
+import 'package:beautycita/widgets/lobby_music_pill.dart';
 
 // Feed category labels. null value means "all".
 const _kCategories = <(String, String?)>[
@@ -115,7 +116,8 @@ class _FeedScreenState extends ConsumerState<FeedScreen>
   Widget build(BuildContext context) {
     final palette = Theme.of(context).colorScheme;
 
-    return Scaffold(
+    return LobbyMusicPillScope(
+      child: Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
@@ -173,6 +175,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen>
             onSelectCategory: _selectCategory,
           ),
         ],
+      ),
       ),
     );
   }

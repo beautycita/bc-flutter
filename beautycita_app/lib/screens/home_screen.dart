@@ -37,6 +37,9 @@ import '../providers/feature_toggle_provider.dart';
 import '../providers/review_prompt_provider.dart';
 import '../widgets/particle_rain.dart';
 import '../widgets/review_prompt_sheet.dart';
+import '../widgets/lobby_music_pill.dart';
+import '../widgets/lobby_music_prompt.dart';
+import '../services/lobby_music_service.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -61,6 +64,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         .addPostFrameCallback((_) => _checkReviewPrompt());
     WidgetsBinding.instance
         .addPostFrameCallback((_) => _checkOnboarding());
+    // Lobby music: lift any prior suppression set by chat/payments/etc.,
+    // and on first launch ask the user once whether they want background
+    // music. Honors their saved preference on every subsequent visit.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(lobbyMusicProvider.notifier).setSuppressed(false);
+      LobbyMusicPrompt.maybeShow(context, ref);
+    });
     // Precache category background videos for instant loading
     WidgetsBinding.instance
         .addPostFrameCallback((_) => VideoPrecacheService.instance.precacheAll());
@@ -280,7 +291,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       });
     }
 
-    return Scaffold(
+    return LobbyMusicPillScope(
+      child: Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       // Left-edge swipe → Business panel (only for service providers)
       drawer: isBizOwner.when(
@@ -567,6 +579,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: ParticleRain(),
           ),
         ],
+      ),
       ),
     );
   }

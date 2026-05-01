@@ -11,6 +11,7 @@ import 'package:beautycita/services/toast_service.dart';
 import '../providers/feature_toggle_provider.dart';
 import '../services/lightx_service.dart';
 import '../services/media_service.dart';
+import '../widgets/lobby_music_pill.dart';
 
 /// Opens a fullscreen image viewer with pinch-to-zoom and optional save/share.
 ///
@@ -56,7 +57,8 @@ class _FullscreenImageView extends StatelessWidget {
     final primary = Theme.of(context).colorScheme.primary;
     final hasUrl = url != null && url!.isNotEmpty;
 
-    return Scaffold(
+    return LobbyMusicSuppressor(
+      child: Scaffold(
       backgroundColor: Theme.of(context).colorScheme.scrim,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
@@ -146,6 +148,7 @@ class _FullscreenImageView extends StatelessWidget {
               ),
             )
           : null,
+      ),
     );
   }
 }

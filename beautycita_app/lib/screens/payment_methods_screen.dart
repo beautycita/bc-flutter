@@ -9,6 +9,7 @@ import 'package:beautycita_core/supabase.dart';
 import 'package:beautycita/services/supabase_client.dart';
 import 'package:beautycita/services/toast_service.dart';
 import 'package:beautycita/widgets/settings_widgets.dart';
+import 'package:beautycita/widgets/lobby_music_pill.dart';
 
 final _saldoProvider = FutureProvider<double>((ref) async {
   final userId = SupabaseClientService.currentUserId;
@@ -154,7 +155,8 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen>
     final cs = Theme.of(context).colorScheme;
     final ext = Theme.of(context).extension<BCThemeExtension>()!;
 
-    return Scaffold(
+    return LobbyMusicSuppressor(
+      child: Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(title: const Text('Metodos de pago')),
       body: ListView(
@@ -380,6 +382,7 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen>
 
           const SizedBox(height: AppConstants.paddingXXL),
         ],
+      ),
       ),
     );
   }

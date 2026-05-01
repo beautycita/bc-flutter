@@ -8,6 +8,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/services/toast_service.dart';
+import 'package:beautycita/widgets/lobby_music_pill.dart';
 
 /// Consistent card decoration
 BoxDecoration _cardDecoration(ColorScheme cs) => BoxDecoration(
@@ -80,9 +81,11 @@ class _CashPaymentScreenState extends ConsumerState<CashPaymentScreen> {
   Widget build(BuildContext context) {
     final data = widget.data;
     if (data == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Pago en efectivo')),
-        body: const Center(child: Text('Sin datos de pago')),
+      return LobbyMusicSuppressor(
+        child: Scaffold(
+          appBar: AppBar(title: const Text('Pago en efectivo')),
+          body: const Center(child: Text('Sin datos de pago')),
+        ),
       );
     }
     final payment = data;
@@ -96,7 +99,8 @@ class _CashPaymentScreenState extends ConsumerState<CashPaymentScreen> {
     final isExpired = remaining.isNegative;
     final timeLabel = _formatRemaining(remaining);
 
-    return Scaffold(
+    return LobbyMusicSuppressor(
+      child: Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Row(
@@ -384,6 +388,7 @@ class _CashPaymentScreenState extends ConsumerState<CashPaymentScreen> {
 
           const SizedBox(height: AppConstants.paddingXL),
         ],
+      ),
       ),
     );
   }

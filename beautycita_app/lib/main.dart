@@ -28,6 +28,7 @@ import 'package:beautycita/services/debug_log.dart';
 import 'package:beautycita/services/presence_service.dart';
 import 'package:beautycita/services/contact_match_service.dart';
 import 'package:beautycita/services/behavior_event_service.dart';
+import 'package:beautycita/services/lobby_music_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
 
@@ -145,7 +146,8 @@ class BeautyCitaApp extends ConsumerStatefulWidget {
   ConsumerState<BeautyCitaApp> createState() => _BeautyCitaAppState();
 }
 
-class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
+class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp>
+    with WidgetsBindingObserver {
   late final AppLinks _appLinks;
   StreamSubscription<Uri>? _linkSub;
 
@@ -157,8 +159,21 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _appLinks = AppLinks();
     _initDeepLinks();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final notifier = ref.read(lobbyMusicProvider.notifier);
+    if (state == AppLifecycleState.resumed) {
+      notifier.resumeAfterLifecycle();
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden) {
+      notifier.pauseForLifecycle();
+    }
   }
 
   void _initDeepLinks() {
@@ -358,6 +373,7 @@ class _BeautyCitaAppState extends ConsumerState<BeautyCitaApp> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _linkSub?.cancel();
     super.dispose();
   }

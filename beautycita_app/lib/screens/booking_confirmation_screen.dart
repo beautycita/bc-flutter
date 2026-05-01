@@ -12,6 +12,7 @@ import '../config/constants.dart';
 import '../config/theme_extension.dart';
 import '../models/booking.dart';
 import '../providers/booking_detail_provider.dart';
+import '../widgets/lobby_music_pill.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Booking Confirmation Screen
@@ -168,7 +169,8 @@ class _BookingConfirmationScreenState
     final palette = Theme.of(context).colorScheme;
     final ext = Theme.of(context).extension<BCThemeExtension>()!;
 
-    return Scaffold(
+    return LobbyMusicSuppressor(
+      child: Scaffold(
       backgroundColor: palette.surface,
       body: bookingAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -541,6 +543,7 @@ class _BookingConfirmationScreenState
             ),
           );
         },
+      ),
       ),
     );
   }

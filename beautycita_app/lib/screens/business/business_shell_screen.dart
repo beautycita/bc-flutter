@@ -22,6 +22,7 @@ import 'business_staff_analytics_screen.dart';
 import 'business_gift_cards_screen.dart';
 import 'orders_screen.dart';
 import 'pos_management_screen.dart';
+import '../../widgets/lobby_music_pill.dart';
 
 final businessTabProvider = StateProvider<int>((ref) => 0);
 
@@ -97,7 +98,8 @@ class BusinessShellScreen extends ConsumerWidget {
     final bizAsync = ref.watch(currentBusinessProvider);
     final colors = Theme.of(context).colorScheme;
 
-    return bizAsync.when(
+    return LobbyMusicSuppressor(
+      child: bizAsync.when(
       data: (biz) {
         if (biz == null) {
           return Scaffold(
@@ -193,6 +195,7 @@ class BusinessShellScreen extends ConsumerWidget {
             ],
           ),
         ),
+      ),
       ),
     );
   }
