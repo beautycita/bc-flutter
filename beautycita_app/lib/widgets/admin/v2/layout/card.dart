@@ -15,6 +15,7 @@ class AdminCard extends StatelessWidget {
     this.trailing,
     this.padding = const EdgeInsets.all(AdminV2Tokens.spacingMD),
     this.margin = const EdgeInsets.only(bottom: AdminV2Tokens.spacingMD),
+    this.onTap,
   });
 
   final Widget child;
@@ -22,36 +23,49 @@ class AdminCard extends StatelessWidget {
   final Widget? trailing;
   final EdgeInsets padding;
   final EdgeInsets margin;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(AdminV2Tokens.radiusMD);
+    final inner = Padding(
+      padding: padding,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (title != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AdminV2Tokens.spacingMD),
+              child: Row(
+                children: [
+                  Expanded(child: Text(title!, style: AdminV2Tokens.subtitle(context))),
+                  ?trailing,
+                ],
+              ),
+            ),
+          child,
+        ],
+      ),
+    );
     return Container(
       margin: margin,
       decoration: BoxDecoration(
         color: AdminV2Tokens.cardBg(context),
-        borderRadius: BorderRadius.circular(AdminV2Tokens.radiusMD),
+        borderRadius: radius,
         border: Border.all(color: AdminV2Tokens.cardBorder(context), width: 1),
       ),
-      child: Padding(
-        padding: padding,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (title != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: AdminV2Tokens.spacingMD),
-                child: Row(
-                  children: [
-                    Expanded(child: Text(title!, style: AdminV2Tokens.subtitle(context))),
-                    ?trailing,
-                  ],
-                ),
+      clipBehavior: onTap == null ? Clip.none : Clip.antiAlias,
+      child: onTap == null
+          ? inner
+          : Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: onTap,
+                borderRadius: radius,
+                child: inner,
               ),
-            child,
-          ],
-        ),
-      ),
+            ),
     );
   }
 }

@@ -1,6 +1,6 @@
 // Personas → Usuarios list (v3).
-// Search across full_name / username / phone / email. Tap a user to drill
-// down (detail screen lands in a follow-up; for now tile shows enough).
+// Search across full_name / username / phone / email. Tap a user to open
+// the detail screen with role / suspension / ToS-violation actions.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +9,7 @@ import '../../../../providers/admin_provider.dart';
 import '../../../../widgets/admin/v2/layout/card.dart';
 import '../../../../widgets/admin/v2/layout/empty_state.dart';
 import '../../../../widgets/admin/v2/tokens.dart';
+import 'usuario_detail_screen.dart';
 
 class PersonasUsuariosList extends ConsumerStatefulWidget {
   const PersonasUsuariosList({super.key});
@@ -96,6 +97,11 @@ class _Row extends StatelessWidget {
     return AdminCard(
       margin: const EdgeInsets.only(bottom: AdminV2Tokens.spacingSM),
       padding: const EdgeInsets.all(AdminV2Tokens.spacingMD),
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => AdminUsuarioDetailScreen(userId: user.id),
+        ),
+      ),
       child: Row(
         children: [
           CircleAvatar(
