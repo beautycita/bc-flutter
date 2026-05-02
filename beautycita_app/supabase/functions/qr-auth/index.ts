@@ -332,41 +332,64 @@ serve(async (req) => {
       // Rate limit: 5 per minute per session_id
       if (!checkRateLimit(`qr_verify_${session_id}`, 5, 60000)) return json({ error: "Too many verify attempts." }, 429);
 
-      const { data: session, error: sessError } = await supabase
+      // Atomic compare-and-swap: flip 'authorized' → 'consuming' so a racing
+      // caller (broadcast handler + 3s poll handler firing within the same
+      // tick) can't both reach gotrue.verifyOtp. The OTP from generateLink
+      // is single-use; if both callers got past the SELECT-then-update
+      // pattern, one would succeed and the other would 403 otp_expired —
+      // surfacing as "QR sign-in works some times and fails others."
+      const { data: claimed, error: claimError } = await supabase
         .from("qr_auth_sessions")
-        .select("id, status, email, email_otp, expires_at, verify_token")
+        .update({ status: "consuming" })
         .eq("id", session_id)
         .eq("status", "authorized")
+        .select("id, email, email_otp, expires_at, verify_token")
         .maybeSingle();
 
-      if (sessError) throw sessError;
-      if (!session) return json({ error: "Session not authorized" }, 404);
+      if (claimError) throw claimError;
+      if (!claimed) {
+        // Either never authorized, already consumed, or another caller won
+        // the race. Surface a stable 409 the client can ignore as benign.
+        return json({ error: "Session not in verifiable state" }, 409);
+      }
 
       // Verify the caller holds the verify_token (only the web client that
-      // created this session knows the token — prevents session_id guessing)
-      if (!session.verify_token || session.verify_token !== verify_token) {
+      // created this session knows the token — prevents session_id guessing).
+      // Done after the CAS so a guessing attacker still can't drain OTPs.
+      if (!claimed.verify_token || claimed.verify_token !== verify_token) {
+        // Roll the row back so the legitimate caller can still complete.
+        await supabase
+          .from("qr_auth_sessions")
+          .update({ status: "authorized" })
+          .eq("id", claimed.id);
         return json({ error: "Invalid verify token" }, 403);
       }
 
       // Check expiry
-      if (new Date(session.expires_at) < new Date()) {
+      if (new Date(claimed.expires_at) < new Date()) {
         await supabase
           .from("qr_auth_sessions")
           .update({ status: "expired" })
-          .eq("id", session.id);
+          .eq("id", claimed.id);
         return json({ error: "Session expired" }, 410);
       }
 
-      // Verify OTP server-side first (must succeed before we mark consumed,
-      // so a verifyOtp failure doesn't leave the row in a half-state).
+      // Verify OTP server-side. Must run after the CAS above so racing
+      // callers can't both reach gotrue with the single-use OTP.
       const { data: verifyData, error: verifyError } =
         await supabase.auth.verifyOtp({
-          email: session.email,
-          token: session.email_otp,
+          email: claimed.email,
+          token: claimed.email_otp,
           type: "magiclink",
         });
 
       if (verifyError || !verifyData?.session) {
+        // Roll back so the user can retry without regenerating the QR.
+        await supabase
+          .from("qr_auth_sessions")
+          .update({ status: "authorized" })
+          .eq("id", claimed.id);
+        console.error("verifyOtp failed:", verifyError);
         return json({ error: "OTP verification failed" }, 500);
       }
 
@@ -384,7 +407,7 @@ serve(async (req) => {
           verify_token: null,
           auth_session_id: authSessionId,
         })
-        .eq("id", session.id);
+        .eq("id", claimed.id);
 
       return json({
         access_token: verifyData.session.access_token,

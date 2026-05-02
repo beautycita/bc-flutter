@@ -258,6 +258,31 @@ if [[ "$DO_WEB" == "true" ]]; then
         "chown www-data:www-data ${WEB_REMOTE_DIR}portfolio-upload.html"
       say "[web] portfolio-upload.html pushed"
     fi
+
+    # Generate /portfolio-upload-config.json from the web .env so the
+    # stylist upload page has the anon key it needs to clear Kong's
+    # apikey check. Without this file present on prod, the page fetches
+    # 404 and Kong rejects every PIN-verify with 401 — exactly the
+    # "stylist upload doesn't work" failure mode we hit before. The file
+    # is generated at deploy time (not committed) so Deploy Guardian
+    # doesn't flag the JWT-shaped string in source.
+    WEB_ENV="$WEB_DIR/.env"
+    if [[ -f "$WEB_ENV" ]]; then
+      ANON_KEY="$(grep -E '^SUPABASE_ANON_KEY=' "$WEB_ENV" | head -1 | cut -d= -f2-)"
+      if [[ -n "$ANON_KEY" ]]; then
+        TMP_CFG="$(mktemp)"
+        printf '{"anon_key":"%s"}\n' "$ANON_KEY" > "$TMP_CFG"
+        scp -q "$TMP_CFG" "${EDGE_REMOTE_HOST}:${WEB_REMOTE_DIR}portfolio-upload-config.json"
+        ssh "${EDGE_REMOTE_HOST}" \
+          "chown www-data:www-data ${WEB_REMOTE_DIR}portfolio-upload-config.json && chmod 644 ${WEB_REMOTE_DIR}portfolio-upload-config.json"
+        rm -f "$TMP_CFG"
+        say "[web] portfolio-upload-config.json regenerated"
+      else
+        warn "[web] SUPABASE_ANON_KEY not set in $WEB_ENV — portfolio-upload-config.json NOT regenerated"
+      fi
+    else
+      warn "[web] $WEB_ENV missing — portfolio-upload-config.json NOT regenerated"
+    fi
   fi
 fi
 

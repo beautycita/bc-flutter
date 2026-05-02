@@ -125,7 +125,7 @@ class _QrPageState extends ConsumerState<QrPage> {
         .onBroadcast(
           event: 'session_authorized',
           callback: (payload) {
-            if (!mounted || _isExpired || _isSigningIn) return;
+            if (!_claimSignInLock()) return;
             _pollTimer?.cancel();
             _expiryTimer?.cancel();
             _completeSignIn(sessionId);
@@ -147,6 +147,10 @@ class _QrPageState extends ConsumerState<QrPage> {
         );
         final data = response.data as Map<String, dynamic>?;
         if (data?['authorized'] == true) {
+          if (!_claimSignInLock()) {
+            timer.cancel();
+            return;
+          }
           timer.cancel();
           _expiryTimer?.cancel();
           final sessionId = data?['session_id'] as String? ?? _sessionId;
@@ -160,10 +164,25 @@ class _QrPageState extends ConsumerState<QrPage> {
     });
   }
 
+  /// Synchronous one-shot lock so the broadcast handler and the 3s poll
+  /// can't both reach `_completeSignIn` for the same session. The OTP
+  /// minted by qr-auth/authorize is single-use; if both callers raced
+  /// past the previous async `_isSigningIn` check, the second verify
+  /// would 403 with otp_expired and the user would see "Error al
+  /// iniciar sesion" even though they were already signed in.
+  bool _claimSignInLock() {
+    if (!mounted || _isExpired || _isSigningIn) return false;
+    _isSigningIn = true;
+    return true;
+  }
+
   /// Call verify to get the OTP, then sign in with it.
   Future<void> _completeSignIn(String sessionId) async {
     if (!mounted) return;
-    setState(() => _isSigningIn = true);
+    // Lock is already claimed by the caller (broadcast or poll handler).
+    // Reflect it in the UI here.
+    if (!_isSigningIn) _isSigningIn = true;
+    setState(() {});
 
     try {
       final response = await BCSupabase.client.functions.invoke(
