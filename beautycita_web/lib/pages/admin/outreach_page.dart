@@ -13,6 +13,7 @@ import '../../providers/admin_salons_provider.dart' as salons_provider;
 import '../../providers/rp_centro_provider.dart';
 import '../../widgets/contact_panel.dart';
 import '../../widgets/web_design_system.dart';
+import 'outreach_send_panel.dart';
 
 /// Outreach pipeline page — `/app/admin/outreach`
 ///
@@ -60,7 +61,9 @@ class _OutreachPageState extends ConsumerState<OutreachPage> {
         final isMobile = WebBreakpoints.isMobile(width);
         final isDesktop = WebBreakpoints.isDesktop(width);
 
-        return Column(
+        return DefaultTabController(
+          length: 2,
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _Header(
@@ -75,11 +78,31 @@ class _OutreachPageState extends ConsumerState<OutreachPage> {
                 });
               },
             ),
-            // Enrichment monitor card
-            _EnrichmentMonitorCard(enrichmentAsync: enrichmentAsync),
+            // Top-level tabs: bulk-send templates (new) and pipeline (existing kanban)
+            Material(
+              color: Theme.of(context).colorScheme.surface,
+              child: TabBar(
+                isScrollable: true,
+                tabs: const [
+                  Tab(text: 'Envío de templates'),
+                  Tab(text: 'Pipeline'),
+                ],
+              ),
+            ),
             const Divider(height: 1),
             Expanded(
-              child: salonsAsync.when(
+              child: TabBarView(
+                children: [
+                  // Tab 0: bulk-send templates panel
+                  const OutreachSendPanel(),
+                  // Tab 1: existing pipeline body
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _EnrichmentMonitorCard(enrichmentAsync: enrichmentAsync),
+                      const Divider(height: 1),
+                      Expanded(
+                        child: salonsAsync.when(
                 loading: () => const Center(
                     child: CircularProgressIndicator(strokeWidth: 2)),
                 error: (e, _) => Center(child: Text('Error: $e')),
@@ -136,8 +159,14 @@ class _OutreachPageState extends ConsumerState<OutreachPage> {
                   );
                 },
               ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
+          ),
         );
       },
     );
