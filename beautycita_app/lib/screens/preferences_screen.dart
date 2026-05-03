@@ -18,6 +18,7 @@ import 'package:beautycita/services/location_service.dart';
 import 'package:beautycita/services/places_service.dart';
 import 'package:beautycita/services/toast_service.dart';
 import 'package:beautycita/services/supabase_client.dart';
+import 'package:beautycita/widgets/gyro_reflection_hero.dart';
 import 'package:beautycita/widgets/location_picker_sheet.dart';
 import 'package:beautycita_core/supabase.dart';
 
@@ -186,7 +187,9 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
 
   Widget _buildHeroBanner(ColorScheme cs, BCThemeExtension ext) {
     final onBrand = Theme.of(context).colorScheme.onPrimary;
-    return AnimatedContainer(
+    return GyroReflectionHero(
+      borderRadius: BorderRadius.circular(AppConstants.radiusLG),
+      child: AnimatedContainer(
       duration: const Duration(milliseconds: 800),
       curve: Curves.easeInOut,
       width: double.infinity,
@@ -287,6 +290,7 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
           ),
         ],
       ),
+    ),
     );
   }
 

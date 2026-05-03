@@ -1,4 +1,5 @@
 import 'package:beautycita/widgets/cached_image.dart';
+import 'package:beautycita/widgets/gyro_reflection_hero.dart';
 import 'package:beautycita/widgets/salon_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -197,20 +198,26 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
             fontSize: 17,
           ),
         ),
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: RadialGradient(
-              center: Alignment.center,
-              radius: 1.2,
-              colors: [Color(0xFF128C7E), Color(0xFF075E54)],
+        flexibleSpace: const GyroReflectionHero(
+          borderRadius: BorderRadius.zero,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment.center,
+                radius: 1.2,
+                colors: [Color(0xFF128C7E), Color(0xFF075E54)],
+              ),
             ),
+            child: SizedBox.expand(),
           ),
         ),
       ),
       body: Column(
         children: [
           // Subtitle on gradient
-          Container(
+          GyroReflectionHero(
+            borderRadius: BorderRadius.zero,
+            child: Container(
             width: double.infinity,
             padding: EdgeInsets.symmetric(
               horizontal: AppConstants.paddingLG,
@@ -229,6 +236,7 @@ class _InviteSalonScreenState extends ConsumerState<InviteSalonScreen> {
                 color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
               ),
             ),
+          ),
           ),
           const SizedBox(height: AppConstants.paddingSM),
 

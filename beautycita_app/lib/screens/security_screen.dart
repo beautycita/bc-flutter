@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/config/theme_extension.dart';
+import 'package:beautycita/widgets/gyro_reflection_hero.dart';
 import 'package:beautycita/providers/profile_provider.dart';
 import 'package:beautycita/providers/security_provider.dart';
 import 'package:beautycita/services/biometric_preferences.dart';
@@ -503,7 +504,9 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen>
       String label, Color scoreColor) {
     final onBrand = cs.onPrimary;
     final pct = (score / 5).clamp(0.0, 1.0);
-    return AnimatedContainer(
+    return GyroReflectionHero(
+      borderRadius: BorderRadius.circular(AppConstants.radiusLG),
+      child: AnimatedContainer(
       duration: const Duration(milliseconds: 800),
       curve: Curves.easeInOut,
       width: double.infinity,
@@ -589,6 +592,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen>
           ),
         ],
       ),
+    ),
     );
   }
 

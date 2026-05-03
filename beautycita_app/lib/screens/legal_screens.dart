@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../config/constants.dart';
 import '../config/theme_extension.dart';
 import '../providers/chat_provider.dart';
+import '../widgets/gyro_reflection_hero.dart';
 
 // ---------------------------------------------------------------------------
 // Combined Terms & Policy screen with tabs
@@ -191,7 +192,9 @@ class _LegalTabState extends State<_LegalTab>
       ),
       children: [
         // ── Hero banner (rounded card inside page) ──
-        _animated(0, Container(
+        _animated(0, GyroReflectionHero(
+          borderRadius: BorderRadius.circular(AppConstants.radiusLG),
+          child: Container(
           decoration: BoxDecoration(
             gradient: ext.primaryGradient,
             borderRadius: BorderRadius.circular(AppConstants.radiusLG),
@@ -240,6 +243,7 @@ class _LegalTabState extends State<_LegalTab>
                 ),
               ),
             ],
+          ),
           ),
         )),
 
