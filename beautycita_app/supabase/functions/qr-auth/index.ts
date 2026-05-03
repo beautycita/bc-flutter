@@ -387,28 +387,53 @@ serve(async (req) => {
         return json({ error: "Session expired" }, 410);
       }
 
-      // Verify OTP server-side. Must run after the CAS above so racing
-      // callers can't both reach gotrue with the single-use OTP.
-      const { data: verifyData, error: verifyError } =
-        await supabase.auth.verifyOtp({
+      // Verify OTP server-side via raw fetch — bypasses supabase-js's Auth
+      // client entirely. Earlier attempts using `supabase.auth.verifyOtp(...)`
+      // hung the Edge Runtime isolate AFTER gotrue returned 200 but BEFORE
+      // the qr_auth_sessions UPDATE landed, even with persistSession:false.
+      // Some supabase-js v2 internal listener kept the event loop alive; the
+      // wall clock killed the isolate mid-write. Direct fetch has no such
+      // hidden state.
+      const verifyResp = await fetch(`${supabaseUrl}/auth/v1/verify`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: serviceRoleKey,
+          Authorization: `Bearer ${serviceRoleKey}`,
+        },
+        body: JSON.stringify({
+          type: "magiclink",
           email: claimed.email,
           token: claimed.email_otp,
-          type: "magiclink",
-        });
+        }),
+      });
 
-      if (verifyError || !verifyData?.session) {
-        // Roll back so the user can retry without regenerating the QR.
+      if (!verifyResp.ok) {
+        const errBody = await verifyResp.text().catch(() => "");
         await supabase
           .from("qr_auth_sessions")
           .update({ status: "authorized" })
           .eq("id", claimed.id);
-        console.error("verifyOtp failed:", verifyError);
+        console.error("verifyOtp failed:", verifyResp.status, errBody);
+        return json({ error: "OTP verification failed" }, 500);
+      }
+
+      const verifyJson = await verifyResp.json();
+      const accessToken = verifyJson?.access_token as string | undefined;
+      const refreshToken = verifyJson?.refresh_token as string | undefined;
+
+      if (!accessToken || !refreshToken) {
+        await supabase
+          .from("qr_auth_sessions")
+          .update({ status: "authorized" })
+          .eq("id", claimed.id);
+        console.error("verifyOtp returned no tokens");
         return json({ error: "OTP verification failed" }, 500);
       }
 
       // Capture the canonical auth.sessions.id from the access_token's
       // session_id claim so a future revoke can authoritatively kill it.
-      const authSessionId = decodeJwtSessionId(verifyData.session.access_token);
+      const authSessionId = decodeJwtSessionId(accessToken);
 
       // Mark consumed, store the auth_session_id, clear OTP / verify_token
       await supabase
@@ -423,8 +448,8 @@ serve(async (req) => {
         .eq("id", claimed.id);
 
       return json({
-        access_token: verifyData.session.access_token,
-        refresh_token: verifyData.session.refresh_token,
+        access_token: accessToken,
+        refresh_token: refreshToken,
       });
     }
 
