@@ -4,6 +4,7 @@ import 'package:beautycita/config/fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/constants.dart';
 import '../config/theme_extension.dart';
+import '../widgets/gyro_reflection_hero.dart';
 import '../providers/admin_provider.dart';
 import 'package:beautycita_core/supabase.dart';
 import '../services/supabase_client.dart';
@@ -271,7 +272,9 @@ class _HeroCard extends StatelessWidget {
         ),
     };
 
-    return Container(
+    return GyroReflectionHero(
+      borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+      child: Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(
         horizontal: AppConstants.paddingLG,
@@ -330,6 +333,7 @@ class _HeroCard extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
   }
 }
