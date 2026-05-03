@@ -32,9 +32,14 @@ class LobbyMusicPrompt {
       builder: (_) => const _PromptSheet(),
     );
 
-    if (accepted == true) {
-      await ref.read(lobbyMusicProvider.notifier).setEnabled(true);
-    }
+    // Always honour the user's choice — don't only act on the YES path.
+    // Before this, "No, gracias" (false) and barrier-tap-out (null) left
+    // the saved preference untouched, so music started by a previous
+    // session's _enabled=true would keep playing despite the user
+    // declining the popup. setEnabled(false) stops the player AND
+    // persists the choice so the next launch starts silent.
+    final wantsMusic = accepted == true;
+    await ref.read(lobbyMusicProvider.notifier).setEnabled(wantsMusic);
   }
 }
 
