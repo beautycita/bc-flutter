@@ -7,6 +7,7 @@ import '../../config/constants.dart';
 import '../../config/theme_extension.dart';
 import '../../providers/business_provider.dart';
 import 'package:beautycita_core/supabase.dart';
+import '../../services/google_calendar_oauth.dart';
 import '../../services/supabase_client.dart';
 import '../../services/toast_service.dart';
 import 'package:beautycita/widgets/admin/admin_widgets.dart';
@@ -1996,12 +1997,79 @@ class _GoogleCalendarSyncCardState
     }
   }
 
-  Future<void> _openWebPortal() async {
-    final uri = Uri.parse('https://beautycita.com/negocio/calendar-sync');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else if (mounted) {
-      ToastService.showError('No se pudo abrir el navegador');
+  /// Native connect path: pop the Google account picker, request the
+  /// calendar.events scope, get a server auth code, and ship it to the
+  /// `connect` action of google-calendar-connect. The edge fn exchanges
+  /// the code for offline access + refresh tokens. The user never leaves
+  /// the app.
+  ///
+  /// Disconnect goes through the same edge fn's `disconnect` action.
+  Future<void> _connectNative() async {
+    if (_running) return;
+    setState(() {
+      _running = true;
+      _runningLabel = 'Conectando';
+    });
+    try {
+      final code = await GoogleCalendarOAuth.requestServerAuthCode();
+      if (code == null) {
+        // User cancelled or empty client id — silent.
+        return;
+      }
+      final res = await SupabaseClientService.client.functions.invoke(
+        'google-calendar-connect',
+        body: {
+          'action': 'connect',
+          'code': code,
+          // Empty redirect_uri matches the SDK's server-auth-code flow:
+          // Google's token endpoint accepts an empty redirect_uri when the
+          // code originated from a native client via google_sign_in.
+          'redirect_uri': '',
+        },
+      );
+      final data = res.data;
+      if (data is Map && data['connected'] == true) {
+        if (mounted) ToastService.showSuccess('Google Calendar conectado');
+        await _loadStatus();
+      } else {
+        final err = (data is Map ? data['error'] as String? : null) ??
+            'No se pudo conectar';
+        if (mounted) ToastService.showError(err);
+      }
+    } catch (e) {
+      if (mounted) ToastService.showError('Error: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _running = false;
+          _runningLabel = null;
+        });
+      }
+    }
+  }
+
+  Future<void> _disconnect() async {
+    if (_running) return;
+    setState(() {
+      _running = true;
+      _runningLabel = 'Desconectando';
+    });
+    try {
+      await SupabaseClientService.client.functions.invoke(
+        'google-calendar-connect',
+        body: {'action': 'disconnect'},
+      );
+      if (mounted) ToastService.showSuccess('Google Calendar desconectado');
+      await _loadStatus();
+    } catch (e) {
+      if (mounted) ToastService.showError('Error: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _running = false;
+          _runningLabel = null;
+        });
+      }
     }
   }
 
@@ -2104,7 +2172,7 @@ class _GoogleCalendarSyncCardState
                       ],
                     ),
                   ),
-                  if (_loadingStatus)
+                  if (_loadingStatus || _running)
                     const SizedBox(
                         width: 16,
                         height: 16,
@@ -2112,10 +2180,10 @@ class _GoogleCalendarSyncCardState
                   else
                     IconButton(
                       icon: Icon(_connected
-                          ? Icons.settings_outlined
-                          : Icons.open_in_new_rounded),
-                      tooltip: _connected ? 'Configurar' : 'Conectar',
-                      onPressed: _openWebPortal,
+                          ? Icons.link_off_rounded
+                          : Icons.link_rounded),
+                      tooltip: _connected ? 'Desconectar' : 'Conectar',
+                      onPressed: _connected ? _disconnect : _connectNative,
                     ),
                 ],
               ),
@@ -2198,10 +2266,10 @@ class _GoogleCalendarSyncCardState
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton.tonalIcon(
-                    onPressed: _openWebPortal,
+                    onPressed: _running ? null : _connectNative,
                     icon: const Icon(Icons.link_rounded, size: 18),
                     label: Text(
-                      'Conectar en el portal web',
+                      'Conectar Google Calendar',
                       style: GoogleFonts.nunito(fontSize: 13),
                     ),
                   ),

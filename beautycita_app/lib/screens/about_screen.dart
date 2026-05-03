@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:beautycita/config/fonts.dart';
 import 'package:beautycita/config/constants.dart';
 import 'package:beautycita/config/theme_extension.dart';
+import 'package:beautycita/widgets/gyro_reflection_hero.dart';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
@@ -62,7 +63,9 @@ class _HeroSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Container(
+    return GyroReflectionHero(
+      borderRadius: BorderRadius.zero,
+      child: Container(
       width: double.infinity,
       decoration: BoxDecoration(gradient: gradient),
       padding: const EdgeInsets.fromLTRB(
@@ -119,6 +122,7 @@ class _HeroSection extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
   }
 }

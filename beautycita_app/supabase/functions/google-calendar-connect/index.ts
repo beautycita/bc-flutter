@@ -116,7 +116,14 @@ Deno.serve(async (req: Request) => {
     // ---------------------------------------------------------------------------
     if (action === "connect") {
       const authCode = body.code;
-      const redirectUri = body.redirect_uri ?? DEFAULT_REDIRECT_URI;
+      // An explicit empty string means: native server-auth-code flow from
+      // google_sign_in on mobile. Google's token endpoint expects the
+      // redirect_uri param to be ABSENT in that case (passing "" yields
+      // redirect_uri_mismatch). Treat undefined as the web flow default.
+      const redirectUri = body.redirect_uri === undefined
+        ? DEFAULT_REDIRECT_URI
+        : body.redirect_uri;
+      const isNativeMobile = redirectUri === "";
 
       if (!authCode) {
         return json({ error: "code required" }, 400);
@@ -144,17 +151,21 @@ Deno.serve(async (req: Request) => {
         return json({ error: "Only the business owner can connect calendars" }, 403);
       }
 
-      // Exchange authorization code for tokens
+      // Exchange authorization code for tokens. For native mobile (empty
+      // redirect_uri), omit the param entirely.
+      const tokenParams: Record<string, string> = {
+        client_id: GOOGLE_CLIENT_ID,
+        client_secret: GOOGLE_CLIENT_SECRET,
+        code: authCode,
+        grant_type: "authorization_code",
+      };
+      if (!isNativeMobile) {
+        tokenParams.redirect_uri = redirectUri;
+      }
       const tokenResp = await fetch(GOOGLE_TOKEN_URL, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          client_id: GOOGLE_CLIENT_ID,
-          client_secret: GOOGLE_CLIENT_SECRET,
-          code: authCode,
-          grant_type: "authorization_code",
-          redirect_uri: redirectUri,
-        }),
+        body: new URLSearchParams(tokenParams),
       });
 
       if (!tokenResp.ok) {

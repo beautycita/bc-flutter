@@ -6,6 +6,7 @@ import 'package:beautycita/config/fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/constants.dart';
 import '../config/theme_extension.dart';
+import '../widgets/gyro_reflection_hero.dart';
 import '../providers/chat_provider.dart';
 
 // ── Data model ──────────────────────────────────────────────────────────────
@@ -238,7 +239,9 @@ class _HeroSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GyroReflectionHero(
+      borderRadius: BorderRadius.zero,
+      child: Container(
       decoration: BoxDecoration(gradient: gradient),
       padding: const EdgeInsets.fromLTRB(
         AppConstants.screenPaddingHorizontal,
@@ -284,6 +287,7 @@ class _HeroSection extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
   }
 }

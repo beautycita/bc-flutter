@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/constants.dart';
 import '../config/theme_extension.dart';
 import '../services/toast_service.dart';
+import '../widgets/gyro_reflection_hero.dart';
 
 // ── Problem categories ──
 
@@ -336,7 +337,9 @@ class _HeroHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GyroReflectionHero(
+      borderRadius: BorderRadius.zero,
+      child: Container(
       width: double.infinity,
       decoration: BoxDecoration(gradient: gradient),
       padding: const EdgeInsets.fromLTRB(
@@ -383,6 +386,7 @@ class _HeroHeader extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
   }
 }

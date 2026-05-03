@@ -3,6 +3,7 @@ import 'package:beautycita/config/fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/constants.dart';
 import '../config/theme_extension.dart';
+import '../widgets/gyro_reflection_hero.dart';
 
 class PressScreen extends StatelessWidget {
   const PressScreen({super.key});
@@ -45,7 +46,9 @@ class PressScreen extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: AppConstants.paddingXXL),
         children: [
           // ── Hero / Gradient Header ──────────────────────────────────────
-          Container(
+          GyroReflectionHero(
+            borderRadius: BorderRadius.zero,
+            child: Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(
               AppConstants.paddingLG,
@@ -101,6 +104,7 @@ class PressScreen extends StatelessWidget {
                 ),
               ],
             ),
+          ),
           ),
 
           const SizedBox(height: AppConstants.paddingLG),
