@@ -50,10 +50,18 @@ String? validateSupabaseAccessToken(String token, {required String supabaseUrl})
 
   if (claims.aud != 'authenticated') return 'token_aud_mismatch';
 
-  final base = supabaseUrl.replaceAll(RegExp(r'/+$'), '');
-  if (base.isEmpty) return 'supabase_url_unset';
-  final expectedIss = '$base/auth/v1';
-  if (claims.iss != expectedIss) return 'token_iss_mismatch';
+  // iss is optional — this prod's gotrue mints access_tokens without a
+  // top-level iss claim, so a hard mismatch check would block every QR
+  // sign-in (the user-facing "Token rechazado por el navegador" error).
+  // Defense-in-depth: if a future gotrue version starts adding iss, we
+  // still validate it; a missing iss is not a rejection.
+  final iss = claims.iss;
+  if (iss != null && iss.isNotEmpty) {
+    final base = supabaseUrl.replaceAll(RegExp(r'/+$'), '');
+    if (base.isEmpty) return 'supabase_url_unset';
+    final expectedIss = '$base/auth/v1';
+    if (iss != expectedIss) return 'token_iss_mismatch';
+  }
 
   return null;
 }
