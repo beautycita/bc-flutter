@@ -61,7 +61,20 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-    const supabase = createClient(supabaseUrl, serviceRoleKey);
+    // Disable supabase-js auth state machinery — without these flags, calling
+    // supabase.auth.verifyOtp() from a server-side service-role client leaves
+    // the isolate's event loop alive (autoRefresh timers, session listeners).
+    // Edge Runtime then triggers `wall clock duration warning` + `early
+    // termination`, killing the function AFTER verifyOtp succeeds but BEFORE
+    // the final qr_auth_sessions UPDATE lands. Result: status sticks at
+    // 'consuming', user can never sign in. (Discovered 2026-05-02.)
+    const supabase = createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false,
+      },
+    });
 
     const body = await req.json();
     const { action } = body;
