@@ -256,6 +256,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           path.startsWith('/explorar') ||
           path.startsWith('/reservar') ||
           path.startsWith('/registro') ||
+          path.startsWith('/onboard') ||
+          path.startsWith('/r/') ||
           path.startsWith('/expresscita') ||
           path == '/registrar' ||
           path == '/invitar' ||
@@ -361,8 +363,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       // ── Salon registration with pre-fill (public, no shell) ───────────
+      // Path moved from /registro/:salonId to /onboard/:salonId on 2026-05-04
+      // because /registro/:slug is the QR free-tier client landing — both
+      // routes used to match the same path and the salon-onboarding form
+      // shadowed every QR scan.
       GoRoute(
-        path: '/registro/:salonId',
+        path: '/onboard/:salonId',
         builder: (context, state) => RegistroPage(
           salonId: state.pathParameters['salonId'] ?? '',
         ),
@@ -406,8 +412,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       // ── QR free-tier registration (public, no shell, no auth) ─────────
+      // Path is /r/:slug (short, QR-friendly). /registro/:slug was unusable
+      // because nginx proxies that prefix to the salon-registro edge fn for
+      // the WhatsApp salon-onboarding flow.
       GoRoute(
-        path: '/registro/:slug',
+        path: '/r/:slug',
         builder: (context, state) => QrRegistroPage(
           slug: state.pathParameters['slug'] ?? '',
         ),

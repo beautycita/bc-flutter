@@ -47,6 +47,37 @@ class _QrRegistroPageState extends State<QrRegistroPage> {
   bool _done = false;
   bool _redirectToAppInstall = false;
 
+  Future<bool> _confirmInSalon() async {
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Estas en el salon?'),
+        content: const Text(
+          'Te asignaremos al primer estilista disponible en el horario mas cercano. '
+          'Confirma solo si ya estas presente — recibiras tu hora exacta y estilista por WhatsApp '
+          'en cuanto el salon te asigne.',
+          style: TextStyle(height: 1.45),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Aun no'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEC4899),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Si, estoy aqui'),
+          ),
+        ],
+      ),
+    );
+    return result == true;
+  }
+
   late String _deviceUuid;
 
   @override
@@ -138,6 +169,12 @@ class _QrRegistroPageState extends State<QrRegistroPage> {
 
   Future<void> _submit() async {
     if (!_formValid) return;
+    // Only gate the FIRST submit on the in-salon confirmation. Once the OTP
+    // round-trip starts, we already have the user's commitment.
+    if (!_needsOtp) {
+      final ok = await _confirmInSalon();
+      if (!ok) return;
+    }
     setState(() {
       _submitting = true;
       _submitError = null;
@@ -308,6 +345,13 @@ class _QrRegistroPageState extends State<QrRegistroPage> {
           onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 12),
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 6),
+          child: Text(
+            'Pagas en el salon. BeautyCita no cobra ni procesa pagos en este registro.',
+            style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+          ),
+        ),
         DropdownButtonFormField<String>(
           initialValue: _serviceId,
           decoration: const InputDecoration(
@@ -315,6 +359,9 @@ class _QrRegistroPageState extends State<QrRegistroPage> {
             border: OutlineInputBorder(),
           ),
           items: _services.map((s) {
+            // Price IS shown — the free-tier QR flow doubles as an off-platform
+            // income tracker for the salon, so the salon's books reflect what
+            // the client agreed to pay.
             final price = s['price'];
             final priceLabel = price != null
                 ? ' — \$${(price as num).toStringAsFixed(0)}'
@@ -392,7 +439,7 @@ class _QrRegistroPageState extends State<QrRegistroPage> {
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                   )
-                : const Text('Registrarme', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                : const Text('Reservar mi cita', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
           ),
         ),
         const SizedBox(height: 40),

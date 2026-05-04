@@ -120,8 +120,16 @@ final businessStatsProvider =
       .eq('id', bizId)
       .single();
 
+  // Self-remit rates (free-tier external_free appointments only — BC does
+  // not withhold ISR/IVA on these). Read from app_config so SAT regime
+  // changes are tunable without a redeploy.
+  final selfRemitConfig = client
+      .from('app_config')
+      .select('key, value')
+      .inFilter('key', ['external_self_remit_isr_rate', 'external_self_remit_iva_rate']);
+
   final results = await Future.wait<dynamic>(
-      [todayAppts, weekAppts, monthRevenue, pendingQ, bizInfo, monthRevenueExternal]);
+      [todayAppts, weekAppts, monthRevenue, pendingQ, bizInfo, monthRevenueExternal, selfRemitConfig]);
 
   List safeAt(int i) => i < results.length ? (results[i] as List) : [];
 
@@ -135,6 +143,17 @@ final businessStatsProvider =
     revenueExternal += ((row as Map)['price'] as num?)?.toDouble() ?? 0;
   }
 
+  double isrRate = 0.05;
+  double ivaRate = 0.16;
+  for (final row in safeAt(6)) {
+    final m = row as Map;
+    final k = m['key']?.toString();
+    final v = double.tryParse(m['value']?.toString() ?? '');
+    if (v == null) continue;
+    if (k == 'external_self_remit_isr_rate') isrRate = v;
+    if (k == 'external_self_remit_iva_rate') ivaRate = v;
+  }
+
   final bizData = results.length > 4 ? (results[4] as Map<String, dynamic>) : <String, dynamic>{};
 
   return BusinessStats(
@@ -142,6 +161,8 @@ final businessStatsProvider =
     appointmentsWeek: safeAt(1).length,
     revenueMonth: revenue,
     revenueExternalMonth: revenueExternal,
+    externalIsrRate: isrRate,
+    externalIvaRate: ivaRate,
     pendingConfirmations: safeAt(3).length,
     averageRating: (bizData['average_rating'] as num?)?.toDouble() ?? 0,
     totalReviews: bizData['total_reviews'] as int? ?? 0,
@@ -697,6 +718,8 @@ class BusinessStats {
   final int appointmentsWeek;
   final double revenueMonth;
   final double revenueExternalMonth; // QR free-tier / external_free appointments
+  final double externalIsrRate; // 0..1, salon's self-remit ISR rate
+  final double externalIvaRate; // 0..1, salon's self-remit IVA rate
   final int pendingConfirmations;
   final double averageRating;
   final int totalReviews;
@@ -706,10 +729,16 @@ class BusinessStats {
     required this.appointmentsWeek,
     required this.revenueMonth,
     this.revenueExternalMonth = 0,
+    this.externalIsrRate = 0.05,
+    this.externalIvaRate = 0.16,
     required this.pendingConfirmations,
     required this.averageRating,
     required this.totalReviews,
   });
+
+  double get externalIsrOwed => revenueExternalMonth * externalIsrRate;
+  double get externalIvaOwed => revenueExternalMonth * externalIvaRate;
+  double get externalSatTotal => externalIsrOwed + externalIvaOwed;
 
   factory BusinessStats.empty() => const BusinessStats(
         appointmentsToday: 0,

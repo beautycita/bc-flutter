@@ -233,7 +233,7 @@ class _RegistrarPageState extends ConsumerState<RegistrarPage> {
                                       state: salon['location_state'] as String? ?? '',
                                       phone: salon['phone'] as String? ?? '',
                                       imageUrl: salon['feature_image_url'] as String?,
-                                      onTap: () => context.go('/registro/${salon['id']}'),
+                                      onTap: () => context.go('/onboard/${salon['id']}'),
                                     );
                                   }),
                                 ],

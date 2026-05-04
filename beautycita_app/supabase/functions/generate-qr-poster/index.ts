@@ -175,7 +175,9 @@ Deno.serve(async (req: Request) => {
     if (!biz.internal_qr_slug) {
       return json({ error: "internal_qr_slug missing — activate program first" }, 409);
     }
-    const targetUrl = `${PUBLIC_BASE}/registro/${biz.internal_qr_slug}`;
+    // Path is /r/:slug — /registro/:slug is intercepted by nginx and routed
+    // to the salon-registro edge fn for the WhatsApp onboarding flow.
+    const targetUrl = `${PUBLIC_BASE}/r/${biz.internal_qr_slug}`;
     return htmlResponse(internalPoster({ salonName, targetUrl }));
   }
 

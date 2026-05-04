@@ -68,6 +68,18 @@ class BusinessDashboardScreen extends ConsumerWidget {
             ),
           ),
 
+          // External (free-QR / manual walk-in) SAT remittance breakdown.
+          // Only renders when external_free revenue exists this month.
+          statsAsync.maybeWhen(
+            data: (stats) => stats.revenueExternalMonth > 0
+                ? Padding(
+                    padding: const EdgeInsets.only(top: AppConstants.paddingMD),
+                    child: _ExternalSatBreakdownCard(stats: stats),
+                  )
+                : const SizedBox.shrink(),
+            orElse: () => const SizedBox.shrink(),
+          ),
+
           const SizedBox(height: AppConstants.paddingLG),
 
           // Top Staff this month
@@ -218,6 +230,132 @@ class _StatsGrid extends StatelessWidget {
           label: 'Resenas',
           value: '${stats.totalReviews}',
           color: Colors.purple,
+        ),
+      ],
+    );
+  }
+}
+
+class _ExternalSatBreakdownCard extends StatelessWidget {
+  final BusinessStats stats;
+  const _ExternalSatBreakdownCard({required this.stats});
+
+  String _money(double v) => '\$${v.toStringAsFixed(2)}';
+  String _pct(double r) => '${(r * 100).toStringAsFixed(0)}%';
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final isr = stats.externalIsrOwed;
+    final iva = stats.externalIvaOwed;
+    final total = stats.externalSatTotal;
+
+    return Card(
+      elevation: 0,
+      color: Colors.teal.withValues(alpha: 0.06),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        side: BorderSide(color: Colors.teal.withValues(alpha: 0.25)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppConstants.paddingMD),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.receipt_long_rounded, size: 18, color: Colors.teal),
+                const SizedBox(width: 6),
+                Text(
+                  'A remitir a SAT (citas externas)',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: colors.onSurface,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Sobre \$${stats.revenueExternalMonth.toStringAsFixed(0)} este mes (BeautyCita no retiene nada en estas citas — la remision es directa tuya).',
+              style: GoogleFonts.nunito(
+                fontSize: 11,
+                color: colors.onSurface.withValues(alpha: 0.7),
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 10),
+            _BreakdownRow(label: 'ISR (${_pct(stats.externalIsrRate)})', amount: _money(isr)),
+            const SizedBox(height: 4),
+            _BreakdownRow(label: 'IVA (${_pct(stats.externalIvaRate)})', amount: _money(iva)),
+            const Divider(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Total a remitir',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: colors.onSurface,
+                    ),
+                  ),
+                ),
+                Text(
+                  _money(total),
+                  style: TextStyle(fontFamily: 'monospace',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.teal,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Estimado conservador. Tu obligacion real depende de tu regimen fiscal — '
+              'consulta a tu contador para la cifra exacta.',
+              style: GoogleFonts.nunito(
+                fontSize: 10,
+                fontStyle: FontStyle.italic,
+                color: colors.onSurface.withValues(alpha: 0.55),
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BreakdownRow extends StatelessWidget {
+  final String label;
+  final String amount;
+  const _BreakdownRow({required this.label, required this.amount});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: GoogleFonts.nunito(
+              fontSize: 12,
+              color: colors.onSurface.withValues(alpha: 0.85),
+            ),
+          ),
+        ),
+        Text(
+          amount,
+          style: TextStyle(fontFamily: 'monospace',
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: colors.onSurface,
+          ),
         ),
       ],
     );

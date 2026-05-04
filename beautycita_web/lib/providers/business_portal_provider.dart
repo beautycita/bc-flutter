@@ -108,6 +108,19 @@ final businessStatsProvider =
         .select('average_rating, total_reviews')
         .eq('id', bizId)
         .maybeSingle(),
+    // 5: external_free revenue this month (free-QR + manual walk-in)
+    client
+        .from(BCTables.appointments)
+        .select('price')
+        .eq('business_id', bizId)
+        .eq('payment_method', 'external_free')
+        .gte('starts_at', '${monthStart}T00:00:00')
+        .lte('starts_at', '${monthEnd}T23:59:59'),
+    // 6: SAT self-remit rates from app_config
+    client
+        .from('app_config')
+        .select('key, value')
+        .inFilter('key', ['external_self_remit_isr_rate', 'external_self_remit_iva_rate']),
   ]);
 
   // Month revenue: get payment amounts for this month's appointment IDs
@@ -129,10 +142,28 @@ final businessStatsProvider =
 
   final bizInfo = results[4] as Map<String, dynamic>?;
 
+  double revenueExternal = 0;
+  for (final row in (results[5] as List)) {
+    revenueExternal += ((row as Map<String, dynamic>)['price'] as num?)?.toDouble() ?? 0;
+  }
+
+  double isrRate = 0.05;
+  double ivaRate = 0.16;
+  for (final row in (results[6] as List)) {
+    final m = row as Map<String, dynamic>;
+    final v = double.tryParse(m['value']?.toString() ?? '');
+    if (v == null) continue;
+    if (m['key'] == 'external_self_remit_isr_rate') isrRate = v;
+    if (m['key'] == 'external_self_remit_iva_rate') ivaRate = v;
+  }
+
   return BusinessStats(
     appointmentsToday: (results[0] as List).length,
     appointmentsWeek: (results[1] as List).length,
     revenueMonth: revenueMonth,
+    revenueExternalMonth: revenueExternal,
+    externalIsrRate: isrRate,
+    externalIvaRate: ivaRate,
     pendingConfirmations: (results[3] as List).length,
     averageRating:
         (bizInfo?['average_rating'] as num?)?.toDouble() ?? 0.0,
@@ -677,6 +708,9 @@ class BusinessStats {
   final int appointmentsToday;
   final int appointmentsWeek;
   final double revenueMonth;
+  final double revenueExternalMonth;
+  final double externalIsrRate;
+  final double externalIvaRate;
   final int pendingConfirmations;
   final double averageRating;
   final int totalReviews;
@@ -685,10 +719,17 @@ class BusinessStats {
     required this.appointmentsToday,
     required this.appointmentsWeek,
     required this.revenueMonth,
+    this.revenueExternalMonth = 0,
+    this.externalIsrRate = 0.05,
+    this.externalIvaRate = 0.16,
     required this.pendingConfirmations,
     required this.averageRating,
     required this.totalReviews,
   });
+
+  double get externalIsrOwed => revenueExternalMonth * externalIsrRate;
+  double get externalIvaOwed => revenueExternalMonth * externalIvaRate;
+  double get externalSatTotal => externalIsrOwed + externalIvaOwed;
 
   factory BusinessStats.empty() => const BusinessStats(
         appointmentsToday: 0,

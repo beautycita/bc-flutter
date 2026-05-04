@@ -71,6 +71,8 @@ class _DashboardContent extends ConsumerWidget {
               const _StripeConnectBanner(),
               const SizedBox(height: 8),
               _KpiSection(ref: ref, isDesktop: isDesktop, isMobile: isMobile),
+              const SizedBox(height: 12),
+              _ExternalSatBreakdown(ref: ref, isMobile: isMobile),
               const SizedBox(height: 16),
               _QuickActions(isMobile: isMobile),
               const SizedBox(height: 24),
@@ -259,6 +261,145 @@ class _KpiSection extends StatelessWidget {
     if (amount >= 1000000) return '${(amount / 1000000).toStringAsFixed(1)}M';
     if (amount >= 1000) return '${(amount / 1000).toStringAsFixed(1)}k';
     return amount.toStringAsFixed(0);
+  }
+}
+
+// ── External SAT Breakdown (free-QR / manual walk-in) ─────────────────────
+
+class _ExternalSatBreakdown extends StatelessWidget {
+  const _ExternalSatBreakdown({required this.ref, required this.isMobile});
+  final WidgetRef ref;
+  final bool isMobile;
+
+  String _money(double v) => '\$${v.toStringAsFixed(2)}';
+  String _pct(double r) => '${(r * 100).toStringAsFixed(0)}%';
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final statsAsync = ref.watch(businessStatsProvider);
+    return statsAsync.maybeWhen(
+      data: (stats) {
+        if (stats.revenueExternalMonth <= 0) return const SizedBox.shrink();
+        final isr = stats.externalIsrOwed;
+        final iva = stats.externalIvaOwed;
+        final total = stats.externalSatTotal;
+
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF009688).withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFF009688).withValues(alpha: 0.25)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.receipt_long_outlined, size: 18, color: Color(0xFF009688)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'A remitir a SAT (citas externas)',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: colors.onSurface,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Sobre \$${stats.revenueExternalMonth.toStringAsFixed(0)} este mes (citas con QR interno o calendario manual). BeautyCita no retiene nada — la remision es directa tuya.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: colors.onSurface.withValues(alpha: 0.7),
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(child: _SatRow(label: 'ISR (${_pct(stats.externalIsrRate)})', amount: _money(isr))),
+                  const SizedBox(width: 16),
+                  Expanded(child: _SatRow(label: 'IVA (${_pct(stats.externalIvaRate)})', amount: _money(iva))),
+                ],
+              ),
+              const Divider(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Total a remitir',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: colors.onSurface,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    _money(total),
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF009688),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Estimado conservador. Tu obligacion real depende de tu regimen fiscal — consulta a tu contador para la cifra exacta.',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontStyle: FontStyle.italic,
+                  color: colors.onSurface.withValues(alpha: 0.55),
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+      orElse: () => const SizedBox.shrink(),
+    );
+  }
+}
+
+class _SatRow extends StatelessWidget {
+  const _SatRow({required this.label, required this.amount});
+  final String label;
+  final String amount;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: colors.onSurface.withValues(alpha: 0.85),
+            ),
+          ),
+        ),
+        Text(
+          amount,
+          style: const TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
   }
 }
 
