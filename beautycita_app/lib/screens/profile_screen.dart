@@ -30,15 +30,20 @@ import 'package:beautycita/widgets/profile_sections.dart';
 
 // ── Profile stat providers ──
 
-final _profileSaldoProvider = FutureProvider<double>((ref) async {
+// StreamProvider so saldo top-ups (admin tools, refunds, payouts) reflect
+// live without an app restart. Backed by Postgres Changes on profiles
+// (added to supabase_realtime publication 2026-05-03). RLS still enforces
+// self-only reads, so the stream only delivers the caller's own row.
+final _profileSaldoProvider = StreamProvider<double>((ref) {
   final userId = SupabaseClientService.currentUserId;
-  if (userId == null) return 0;
-  final data = await SupabaseClientService.client
+  if (userId == null) return Stream.value(0);
+  return SupabaseClientService.client
       .from(BCTables.profiles)
-      .select('saldo')
+      .stream(primaryKey: ['id'])
       .eq('id', userId)
-      .maybeSingle();
-  return (data?['saldo'] as num?)?.toDouble() ?? 0;
+      .map((rows) => rows.isEmpty
+          ? 0.0
+          : (rows.first['saldo'] as num?)?.toDouble() ?? 0.0);
 });
 
 final _profileBookingCountProvider = FutureProvider<int>((ref) async {

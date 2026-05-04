@@ -350,7 +350,6 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
     return LayoutBuilder(
       builder: (context, constraints) {
         final cardWidth = constraints.maxWidth * 0.90;
-        final cardHeight = constraints.maxHeight * 0.70;
         final hPad = (constraints.maxWidth - cardWidth) / 2;
         final progress = _dragProgress(cardWidth);
 
@@ -372,66 +371,64 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
         final nextIndex = (currentIndex + 1) % total;
         final nextNextIndex = (currentIndex + 2) % total;
 
-        return Stack(
-          alignment: Alignment.topCenter,
-          children: [
-            // Card 3 (bottom) -- only show if 3+ cards
-            if (total >= 3)
-              Positioned(
-                top: card3Top,
-                left: hPad + 8,
-                right: hPad + 8,
-                child: Transform.scale(
-                  scale: card3Scale.clamp(0.83, 0.93),
-                  child: Opacity(
-                    opacity: card3Opacity.clamp(0.35, 0.65),
-                    child: SizedBox(
-                      height: cardHeight,
+        return SingleChildScrollView(
+          physics: const ClampingScrollPhysics(),
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.topCenter,
+            children: [
+              // Card 3 (bottom) -- only show if 3+ cards
+              if (total >= 3)
+                Positioned(
+                  top: card3Top,
+                  left: hPad + 8,
+                  right: hPad + 8,
+                  child: Transform.scale(
+                    scale: card3Scale.clamp(0.83, 0.93),
+                    child: Opacity(
+                      opacity: card3Opacity.clamp(0.35, 0.65),
                       child: _buildCard(results[nextNextIndex], false),
                     ),
                   ),
                 ),
-              ),
 
-            // Card 2 (middle) -- only show if 2+ cards
-            if (total >= 2)
-              Positioned(
-                top: card2Top.clamp(0.0, 14.0),
-                left: hPad + 4,
-                right: hPad + 4,
-                child: Transform.scale(
-                  scale: card2Scale.clamp(0.88, 1.0),
-                  child: Opacity(
-                    opacity: card2Opacity.clamp(0.55, 1.0),
-                    child: SizedBox(
-                      height: cardHeight,
+              // Card 2 (middle) -- only show if 2+ cards
+              if (total >= 2)
+                Positioned(
+                  top: card2Top.clamp(0.0, 14.0),
+                  left: hPad + 4,
+                  right: hPad + 4,
+                  child: Transform.scale(
+                    scale: card2Scale.clamp(0.88, 1.0),
+                    child: Opacity(
+                      opacity: card2Opacity.clamp(0.55, 1.0),
                       child: _buildCard(results[nextIndex], false),
                     ),
                   ),
                 ),
-              ),
 
-            // Card 1 (top, draggable) with gyro parallax
-            Positioned(
-              top: frontOffset.dy,
-              left: hPad + frontOffset.dx,
-              right: hPad - frontOffset.dx,
-              child: GestureDetector(
-                onPanUpdate: (details) => _onDragUpdate(details, cardWidth),
-                onPanEnd: (details) => _onDragEnd(details, cardWidth),
-                child: Opacity(
-                  opacity: frontOpacity.clamp(0.0, 1.0),
-                  child: Transform.rotate(
-                    angle: rotation,
-                    child: SizedBox(
-                      height: cardHeight,
-                      child: _buildCard(results[currentIndex], true),
+              // Card 1 (top, draggable) with gyro parallax.
+              // Non-positioned so Stack sizes to its intrinsic height,
+              // letting the card grow with text scale.
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: hPad),
+                child: Transform.translate(
+                  offset: frontOffset,
+                  child: GestureDetector(
+                    onPanUpdate: (details) => _onDragUpdate(details, cardWidth),
+                    onPanEnd: (details) => _onDragEnd(details, cardWidth),
+                    child: Opacity(
+                      opacity: frontOpacity.clamp(0.0, 1.0),
+                      child: Transform.rotate(
+                        angle: rotation,
+                        child: _buildCard(results[currentIndex], true),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         );
       },
     );
@@ -492,7 +489,7 @@ class _ResultCardsScreenState extends ConsumerState<ResultCardsScreen>
                   const SizedBox(height: 8),
                   _buildModifierBadges(result.business.modifierTags),
                 ],
-                const Spacer(),
+                const SizedBox(height: 20),
                 _buildActionButtons(result),
               ],
             ),
